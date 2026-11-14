@@ -1,0 +1,58 @@
+# ==============================================================================
+# Great-Favour Montessori School (GFMS)
+# cPanel Subdomain Configuration for CBT Portal (cbt.greatfavourmontessori.com.ng)
+# ==============================================================================
+# Place this .htaccess file inside your subdomain document root folder in cPanel
+# (e.g., /home/username/public_html/cbt OR /home/username/cbt.greatfavourmontessori.com.ng)
+# ==============================================================================
+
+# Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Force HTTPS
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # 2. OPTION 1: Apache Reverse Proxy to Node.js / Passenger Port (if running on standard port)
+  # Uncomment the lines below if your cPanel Node.js app runs on a dedicated localhost port:
+  # RewriteCond %{REQUEST_FILENAME} !-f
+  # RewriteCond %{REQUEST_FILENAME} !-d
+  # RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+  # RequestHeader set X-Forwarded-Proto "https"
+  # RequestHeader set X-Forwarded-Host "cbt.greatfavourmontessori.com.ng"
+</IfModule>
+
+# 3. Phusion Passenger Direct Binding for CloudLinux / LiteSpeed (Truehost)
+<IfModule mod_passenger.c>
+  PassengerAppRoot "/home/mqqfpopx/gfms_app"
+  PassengerAppType node
+  PassengerStartupFile server.js
+  PassengerNodejs "/home/mqqfpopx/nodevenv/gfms_app/20/bin/node"
+</IfModule>
+
+# 4. MIME Types for Progressive Web App (PWA)
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType application/manifest+json .json
+  AddType application/javascript .js
+  AddType image/svg+xml .svg
+</IfModule>
+
+# 5. Cache Control for PWA Service Worker & Manifest
+<IfModule mod_headers.c>
+  # Never cache Service Worker to guarantee instant updates
+  <Files "cbt-sw.js">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+    Header set Service-Worker-Allowed "/"
+  </Files>
+
+  # Short cache for Manifest
+  <Files "cbt-manifest.webmanifest">
+    Header set Cache-Control "public, max-age=3600"
+    Header set Access-Control-Allow-Origin "*"
+  </Files>
+</IfModule>

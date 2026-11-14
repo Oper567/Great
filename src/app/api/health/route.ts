@@ -1,0 +1,99 @@
+import { NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import net from "net";
+
+export const dynamic = "force-dynamic";
+
+function testTcpPort(host: string, port: number, timeoutMs = 3000): Promise<{ open: boolean; error?: string; durationMs: number }> {
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let isResolved = false;
+
+    socket.setTimeout(timeoutMs);
+
+    socket.connect(port, host, () => {
+      if (!isResolved) {
+        isResolved = true;
+        socket.end();
+        resolve({ open: true, durationMs: Date.now() - start });
+      }
+    });
+
+    socket.on("error", (err) => {
+      if (!isResolved) {
+        isResolved = true;
+        resolve({ open: false, error: err.message, durationMs: Date.now() - start });
+      }
+    });
+
+    socket.on("timeout", () => {
+      if (!isResolved) {
+        isResolved = true;
+        socket.destroy();
+        resolve({ open: false, error: `Connection timed out after ${timeoutMs}ms`, durationMs: Date.now() - start });
+      }
+    });
+  });
+}
+
+export async function GET() {
+  let targetHost = "localhost";
+  let targetPort = 5432;
+
+  if (process.env.DATABASE_URL) {
+    try {
+      const parsed = new URL(process.env.DATABASE_URL);
+      targetHost = parsed.hostname || "localhost";
+      targetPort = parsed.port ? parseInt(parsed.port, 10) : 5432;
+    } catch {
+      const match = process.env.DATABASE_URL.match(/@([^:/]+)(?::(\d+))?/);
+      if (match) {
+        targetHost = match[1];
+        targetPort = match[2] ? parseInt(match[2], 10) : 5432;
+      }
+    }
+  }
+
+  // 1. Test Network Port to Target Database Host
+  const portReachable = await testTcpPort(targetHost, targetPort, 3000);
+
+  // 2. Test Prisma Database Execution
+  let dbSuccess = false;
+  let adminCount = 0;
+  let dbError: string | null = null;
+
+  try {
+    adminCount = await prisma.adminUser.count();
+    dbSuccess = true;
+  } catch (err: any) {
+    dbError = err?.message || String(err);
+  }
+
+  // 3. Masked Database URL
+  const maskedUrl = process.env.DATABASE_URL
+    ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ":***@")
+    : "NOT_SET";
+
+  return NextResponse.json({
+    status: dbSuccess ? "healthy" : "unhealthy",
+    timestamp: new Date().toISOString(),
+    environment: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      databaseUrlConfigured: !!process.env.DATABASE_URL,
+      activeDatabaseUrl: maskedUrl,
+    },
+    network: {
+      targetHost,
+      targetPort,
+      portReachable,
+    },
+    database: {
+      success: dbSuccess,
+      adminUserCount: adminCount,
+      error: dbError,
+    },
+  });
+}

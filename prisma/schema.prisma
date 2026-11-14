@@ -1,0 +1,203 @@
+// Great-Favour Montessori School (GFMS)
+// School Management System & CBT Examination Portal
+// Established September 2014 | Motto: "Leadership Academy"
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x", "rhel-openssl-1.1.x", "rhel-openssl-3.0.x", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ----------------------------------------------------------------------------
+// CBT Examination Portal Models
+// ----------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  TEACHER
+}
+
+model AdminUser {
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  password        String   // Hashed with bcrypt
+  fullName        String   @map("full_name")
+  role            Role     @default(SUPER_ADMIN)
+  assignedClass   String?  @map("assigned_class")
+  assignedSubject String?  @map("assigned_subject")
+  phone           String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("admin_users")
+}
+
+model Student {
+  id           Int      @id @default(autoincrement())
+  admNo        String   @unique @map("adm_no")
+  surname      String
+  fullName     String   @map("full_name")
+  currentClass String   @map("current_class") // e.g., "SS 1A", "SS 2", "JSS 2 Diamond"
+  arm          String?  @default("") // Optional Arm / Stream: "Science", "Art", "Commercial", etc.
+  gender       String?  @default("MALE")
+  session      String?  @default("2025/2026")
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  attempts     ExamAttempt[]
+
+  @@map("students")
+}
+
+model Exam {
+  id              Int                 @id @default(autoincrement())
+  title           String              // e.g., "First Term Examination"
+  subject         String              // e.g., "Mathematics"
+  targetClass     String              @map("target_class") // e.g., "SS 1", "SS 2", or "SS 3"
+  examDate        DateTime            @map("exam_date") 
+  durationMinutes Int                 @default(60) @map("duration_minutes")
+  isActive        Boolean             @default(true) @map("is_active")
+  isArchived      Boolean             @default(false) @map("is_archived")
+  hasTheory       Boolean             @default(true) @map("has_theory")
+  createdBy       String?             @map("created_by")
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  objectiveQuestions ObjectiveQuestion[]
+  theoryQuestions    TheoryQuestion[]
+  attempts           ExamAttempt[]
+
+  @@map("exams")
+}
+
+model ObjectiveQuestion {
+  id            Int      @id @default(autoincrement())
+  examId        Int      @map("exam_id")
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionText  String   @map("question_text") @db.Text
+  options       String   // Stringified JSON Array: '["Option A", "Option B", "Option C", "Option D"]'
+  correctAnswer String   @map("correct_answer") // "A", "B", "C", or "D"
+  points        Float    @default(0.5)
+  imageUrl      String?  @map("image_url") @db.Text
+
+  @@map("objective_questions")
+}
+
+model TheoryQuestion {
+  id            Int      @id @default(autoincrement())
+  examId        Int      @map("exam_id")
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  questionNum   Int      @map("question_num")
+  questionText  String   @map("question_text") @db.Text
+  maxScore      Int      @map("max_score")
+  instructions  String?  @db.Text
+  imageUrl      String?  @map("image_url") @db.Text
+
+  @@map("theory_questions")
+}
+
+model ExamAttempt {
+  id                   Int       @id @default(autoincrement())
+  studentId            Int       @map("student_id")
+  student              Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  examId               Int       @map("exam_id")
+  exam                 Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  startedAt            DateTime  @default(now()) @map("started_at")
+  submittedAt          DateTime? @map("submitted_at")
+  isCompleted          Boolean   @default(false) @map("is_completed")
+  objectiveScore       Float     @default(0) @map("objective_score")
+  theoryScore          Float?    @map("theory_score") // Null until graded physically
+  totalScore           Float     @default(0) @map("total_score")
+  studentAnswers       String    @default("{}") @map("student_answers") // Stringified JSON: '{"questionId": "B"}'
+  isTransmittedToAdmin Boolean   @default(false) @map("is_transmitted_to_admin")
+  teacherComment       String?   @map("teacher_comment") @db.Text
+  gradedByTeacherName  String?   @map("graded_by_teacher_name")
+
+  @@unique([studentId, examId])
+  @@map("exam_attempts")
+}
+
+// ----------------------------------------------------------------------------
+// Scratch Card Authentication Model (Preserved for Result Checker)
+// ----------------------------------------------------------------------------
+
+model ScratchCard {
+  id           String    @id @default(cuid())
+  pin          String    @unique // e.g., "GFMS-8492-1049"
+  serialNumber String?   @unique // e.g., "SN-GFMS-2025-001"
+  admNo        String?   // NULL when fresh; locked to Student Admission Number upon 1st use
+  usageCount   Int       @default(0)
+  maxUsage     Int       @default(3) // Strictly 3 uses per check
+  status       String    @default("active") // "active" | "exhausted"
+  session      String?   // e.g., "2025/2026"
+  term         String?   // e.g., "THIRD_TERM"
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([pin])
+  @@index([admNo])
+  @@map("scratch_cards")
+}
+
+// ----------------------------------------------------------------------------
+// Prepared Student Terminal Result Dossier (For Scratch Card Checking)
+// ----------------------------------------------------------------------------
+
+model TerminalResult {
+  id              Int      @id @default(autoincrement())
+  admNo           String   @map("adm_no")
+  studentName     String   @map("student_name")
+  className       String   @map("class_name")
+  session         String   // e.g., "2025/2026"
+  term            String   // e.g., "First Term", "Second Term", "Third Term"
+  termLabel       String?  @map("term_label") // e.g., "First Term (Terminal Assessment)"
+  totalScore      Int      @default(0) @map("total_score")
+  totalPossible   Int      @default(0) @map("total_possible")
+  average         Float    @default(0)
+  position        Int?
+  numberInClass   Int?     @map("number_in_class")
+  nextClass       String?  @map("next_class")
+  nextTermBegins  String?  @map("next_term_begins")
+  daysPresent     Int?     @default(0) @map("days_present")
+  daysOpened      Int?     @default(0) @map("days_opened")
+  daysAbsent      Int?     @default(0) @map("days_absent")
+  decision        String?  @default("PASSED")
+  teacherRemark   String?  @map("teacher_remark")
+  principalRemark String?  @map("principal_remark")
+  resultPayload   String   @map("result_payload") @db.Text // Full JSON of subjects, CA scores, psychomotor ratings
+  isPublished     Boolean  @default(true) @map("is_published")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([admNo, session, term])
+  @@index([admNo])
+  @@map("terminal_results")
+}
+
+// ----------------------------------------------------------------------------
+// Teacher Question Submissions (Manual or Image/Document Upload)
+// ----------------------------------------------------------------------------
+
+model TeacherQuestionSubmission {
+  id              Int      @id @default(autoincrement())
+  teacherName     String   @map("teacher_name")
+  teacherEmail    String?  @map("teacher_email")
+  subject         String
+  targetClass     String   @map("target_class")
+  submissionType  String   @default("MANUAL") @map("submission_type") // "MANUAL" or "IMAGE"
+  durationMinutes Int      @default(60) @map("duration_minutes")
+  totalMarks      Int      @default(100) @map("total_marks")
+  questionData    String?  @map("question_data") @db.Text // JSON string of questions, options, answers
+  imageUrl        String?  @map("image_url") @db.Text // Data URL or upload path if submitted as image
+  instructions    String?  @db.Text
+  status          String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  adminFeedback   String?  @map("admin_feedback") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("teacher_question_submissions")
+}
+

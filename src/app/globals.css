@@ -1,0 +1,249 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #1e40af;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f59e0b;
+  --color-secondary-foreground: #1e293b;
+  --color-accent-green: #15803d;
+  --color-accent-red: #dc2626;
+  --shadow-card: 0 2px 12px -2px rgba(12, 22, 49, 0.06), 0 1px 4px -1px rgba(12, 22, 49, 0.04);
+  --shadow-elevated: 0 18px 36px -8px rgba(12, 22, 49, 0.12), 0 4px 12px -2px rgba(12, 22, 49, 0.06);
+}
+
+/* Base Smooth Scroll & Global Overflow Protection */
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  max-width: 100vw;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
+  max-width: 100vw;
+  width: 100%;
+  position: relative;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent horizontal scrolling and text overflow on narrow viewports without squishing fonts */
+@media (max-width: 640px) {
+  h1, h2, h3, h4, h5, h6, p, li, blockquote {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Prevent iOS Safari auto-zoom on form inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Hide scrollbars cleanly where requested */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ==========================================================================
+   INSTITUTIONAL COMPONENT CLASSES (NON-AI EDITORIAL DESIGN)
+   ========================================================================== */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-white bg-primary-900 hover:bg-primary-950 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.99];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg font-bold text-slate-950 bg-secondary-400 hover:bg-secondary-500 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.99];
+  }
+
+  .section-badge {
+    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary-800;
+  }
+}
+
+/* Editorial Card Surface & Tactile Hover/Touch Micro-Interaction */
+.editorial-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s ease;
+}
+
+.editorial-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-elevated);
+  border-color: #cbd5e1;
+}
+
+.editorial-card:active {
+  transform: translateY(-1px);
+}
+
+/* Editorial Navigation & Action Link Underline Effect */
+.editorial-link {
+  position: relative;
+}
+
+.editorial-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 100%;
+  height: 2px;
+  background-color: var(--color-secondary);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.editorial-link:hover::after,
+.editorial-link-active::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* Smooth Image Zoom Frame */
+.editorial-img-zoom {
+  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.group:hover .editorial-img-zoom {
+  transform: scale(1.045);
+}
+
+/* ==========================================================================
+   PAGE TRANSITION & SCROLL REVEAL ENGINE
+   ========================================================================== */
+
+/* Route Transition Wrapper */
+.page-transition-shell {
+  animation: pageEnter 0.48s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, transform;
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0.01;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Top Route Progress Bar */
+.route-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #eab308 0%, #facc15 60%, #1e40af 100%);
+  z-index: 9999;
+  pointer-events: none;
+  transition: width 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease;
+}
+
+/* Scroll-Triggered Entrance Animations */
+.reveal-init {
+  opacity: 0;
+  will-change: opacity, transform;
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal-fade-up {
+  transform: translateY(22px);
+}
+
+.reveal-fade-down {
+  transform: translateY(-18px);
+}
+
+.reveal-fade-left {
+  transform: translateX(-22px);
+}
+
+.reveal-fade-right {
+  transform: translateX(22px);
+}
+
+.reveal-zoom-in {
+  transform: scale(0.97);
+}
+
+/* Active state when element enters viewport */
+.reveal-init.reveal-visible {
+  opacity: 1 !important;
+  transform: translate(0, 0) scale(1) !important;
+}
+
+/* Staggered transition delays */
+.delay-75  { transition-delay: 60ms; }
+.delay-100 { transition-delay: 90ms; }
+.delay-150 { transition-delay: 135ms; }
+.delay-200 { transition-delay: 180ms; }
+.delay-250 { transition-delay: 220ms; }
+.delay-300 { transition-delay: 260ms; }
+.delay-350 { transition-delay: 300ms; }
+.delay-400 { transition-delay: 340ms; }
+.delay-450 { transition-delay: 380ms; }
+.delay-500 { transition-delay: 420ms; }
+.delay-550 { transition-delay: 460ms; }
+.delay-600 { transition-delay: 500ms; }
+
+/* Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-init,
+  .page-transition-shell,
+  .editorial-img-zoom,
+  .editorial-card {
+    transition: none !important;
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* Print Stylesheet for Single-Page A4 Report Card */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-sheet {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin: 0 !important;
+    padding: 4mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+}

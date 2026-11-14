@@ -1,0 +1,70 @@
+{
+  "id": "/cbt",
+  "name": "GFMS CBT Examination Terminal",
+  "short_name": "GFMS CBT",
+  "description": "Official Computer-Based Testing & Examination Portal for Great-Favour Montessori School",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "800x800",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/images/gfms-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.jpg",
+      "sizes": "800x800",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.jpg",
+      "sizes": "800x800",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Exam Dashboard",
+      "short_name": "Dashboard",
+      "description": "View active examinations and test schedule",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/assets/images/gfms-logo.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Student Sign In",
+      "short_name": "Sign In",
+      "description": "Sign in to CBT examination terminal",
+      "url": "/login",
+      "icons": [
+        {
+          "src": "/assets/images/gfms-logo.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
+}
