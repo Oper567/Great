@@ -99,7 +99,7 @@ const ACADEMIC_DIVISIONS = [
     id: "senior-secondary",
     levelBadge: "Ages 13 – 17 Years",
     title: "Senior Secondary School",
-    classes: "SSS 1 – SSS 3 • WASSCE & NECO",
+    classes: "SS 1 – SS 3 • WASSCE & NECO",
     image: "/assets/images/science-lab.jpg",
     description:
       "Specialized Science, Arts, and Commercial departments supported by equipped Physics, Chemistry, Biology, and ICT laboratories for WAEC, NECO, and UTME.",

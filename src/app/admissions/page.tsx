@@ -103,7 +103,7 @@ const PLACEMENT_DIVISIONS: PlacementDivision[] = [
     ageRange: "13 – 16+ Years",
     shortLabel: "13 – 16y (SS 1–3)",
     divisionTitle: "Senior Secondary College (WASSCE / NECO / UTME)",
-    targetClassValue: "SSS 1 (Senior Secondary)",
+    targetClassValue: "SS 1 (Senior Secondary)",
     classes: "SS 1 & SS 2 (Science, Art & Commercial Streams)",
     assessment: "Stream-specific Entrance Examination (Science / Arts / Commercial) + Head Teacher Interview.",
     curriculumFocus: "Physics, Chemistry, Biology, Literature, Government, Economics, and intensive WAEC/NECO/JAMB UTME clinics.",
@@ -577,8 +577,8 @@ export default function AdmissionsPage() {
                           <option value="Basic 1 - 5">Basic Primary (Basic 1 - 5)</option>
                           <option value="JSS 1 (Secondary)">JSS 1 (Junior Secondary)</option>
                           <option value="JSS 2 - 3 (Transfer)">JSS 2 - 3 (Transfer)</option>
-                          <option value="SSS 1 (Senior Secondary)">SSS 1 (Senior Secondary)</option>
-                          <option value="SSS 2 (Transfer)">SSS 2 (Transfer)</option>
+                          <option value="SS 1 (Senior Secondary)">SS 1 (Senior Secondary)</option>
+                          <option value="SS 2 (Transfer)">SS 2 (Transfer)</option>
                         </select>
                       </div>
                       <div>
