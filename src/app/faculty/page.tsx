@@ -148,20 +148,38 @@ export default function FacultyPage() {
 
   return (
     <>
-      {/* PAGE HERO BANNER */}
-      <section className="relative bg-gradient-to-r from-primary-950 via-primary-900 to-slate-950 text-white py-10 sm:py-20 overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* EDITORIAL PAGE HERO BANNER */}
+      <section className="relative bg-primary-950 text-white py-14 sm:py-20 overflow-hidden border-b border-primary-900">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/assets/images/graduation-1.jpg"
+            alt="Great-Favour Montessori School Academic Faculty"
+            fill
+            className="object-cover object-center opacity-20"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-4">
+            <Link href="/" className="hover:text-secondary-400 transition">
+              Home
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-secondary-400 font-semibold">Faculty &amp; Leadership</span>
+          </nav>
           <div className="max-w-3xl space-y-4 reveal-init reveal-fade-up delay-100">
-            <span className="inline-flex items-center gap-2 text-xs font-extrabold text-secondary-400 uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/20">
-              <GraduationCap className="w-3.5 h-3.5" />
-              Academic Faculty & Pedagogy
-            </span>
-            <h1 className="text-2xl sm:text-5xl font-black tracking-tight">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-[2px] bg-secondary-400" />
+              <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
+                Academic Faculty &amp; Pedagogy
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
               Meet Our Faculty &amp; Staff
             </h1>
             <p className="text-slate-200 text-sm sm:text-lg leading-relaxed max-w-2xl">
-              Behind every confident pupil at Great-Favour is a passionate team of TRCN-certified educators, experienced subject masters, and certified Montessori specialists committed to academic distinction.
+              Behind every confident pupil at Great-Favour is a dedicated team of TRCN-certified educators, experienced subject masters, and certified Montessori specialists committed to academic distinction.
             </p>
           </div>
         </div>
@@ -169,8 +187,6 @@ export default function FacultyPage() {
 
       {/* HEAD TEACHER SPOTLIGHT */}
       <section className="py-10 sm:py-16 lg:py-20 bg-white border-b border-slate-200 relative overflow-hidden">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-900/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-14 relative z-10">
           {/* Executive Leadership Heading */}

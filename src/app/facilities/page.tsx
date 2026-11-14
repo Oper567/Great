@@ -9,28 +9,48 @@ import {
   Sparkles,
   Activity,
   Trophy,
+  ChevronRight,
 } from "lucide-react";
 
 export default function FacilitiesPage() {
   return (
     <>
-      {/* PAGE HERO BANNER */}
-      <section className="relative bg-gradient-to-r from-primary-950 via-primary-900 to-slate-950 text-white py-10 sm:py-20 overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* EDITORIAL PAGE HERO BANNER */}
+      <section className="relative bg-primary-950 text-white py-14 sm:py-20 overflow-hidden border-b border-primary-900">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/assets/images/science-lab.jpg"
+            alt="Great-Favour Montessori School Science and ICT Facilities"
+            fill
+            className="object-cover object-center opacity-20"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-4">
+            <Link href="/" className="hover:text-secondary-400 transition">
+              Home
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-secondary-400 font-semibold">Campus &amp; Facilities</span>
+          </nav>
           <div className="max-w-3xl space-y-4 reveal-init reveal-fade-up delay-100">
-            <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/20">
-              Infrastructure & Campus Life
-            </span>
-            <h1 className="text-2xl sm:text-5xl font-black tracking-tight">
-              Modern Campus & Learning Facilities
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-[2px] bg-secondary-400" />
+              <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
+                Infrastructure &amp; Campus Life
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+              Modern Campus &amp; Learning Facilities
             </h1>
             <p className="text-slate-200 text-sm sm:text-lg leading-relaxed max-w-2xl">
               Engineered to inspire curiosity and provide a secure, conducive atmosphere where learners thrive intellectually, physically, and socially.
             </p>
             <Link
               href="/admissions#tour"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 bg-secondary-400 hover:bg-secondary-500 px-5 py-3 rounded-xl transition shadow-sm active:scale-95"
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-slate-950 bg-secondary-400 hover:bg-secondary-300 px-5 py-3 rounded-lg transition shadow-md"
             >
               <Calendar className="w-4 h-4" />
               <span>Book a Physical Campus Tour</span>

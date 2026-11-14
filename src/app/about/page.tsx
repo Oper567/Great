@@ -24,20 +24,38 @@ import {
 export default function AboutPage() {
   return (
     <>
-      {/* PAGE HERO BANNER */}
-      <section className="relative bg-gradient-to-r from-primary-950 via-primary-900 to-slate-950 text-white py-10 sm:py-20 overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-secondary-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary-700/20 rounded-full blur-3xl pointer-events-none" />
+      {/* EDITORIAL PAGE HERO BANNER */}
+      <section className="relative bg-primary-950 text-white py-14 sm:py-20 overflow-hidden border-b border-primary-900">
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/assets/images/school-building-front.jpg"
+            alt="Great-Favour Montessori School Campus"
+            fill
+            className="object-cover object-center opacity-20"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
+        </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-4">
+            <Link href="/" className="hover:text-secondary-400 transition">
+              Home
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+            <span className="text-secondary-400 font-semibold">About Us &amp; Governance</span>
+          </nav>
           <div className="max-w-3xl space-y-4 reveal-init reveal-fade-up delay-100">
-            <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/20">
-              Leadership & Governance
-            </span>
-            <h1 className="text-2xl sm:text-5xl font-black tracking-tight">
+            <div className="flex items-center gap-2.5">
+              <span className="w-8 h-[2px] bg-secondary-400" />
+              <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
+                Leadership &amp; Institutional Charter
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
               About Great-Favour Montessori School
             </h1>
             <p className="text-slate-200 text-sm sm:text-lg leading-relaxed max-w-2xl">
-              Founded with a loving mission to raise a generation of honest, confident leaders grounded in moral character and academic brilliance since September 2014.
+              Founded in September 2014 with a dedicated mission to raise a generation of honest, confident leaders grounded in moral character and academic distinction.
             </p>
           </div>
         </div>

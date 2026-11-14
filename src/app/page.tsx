@@ -10,6 +10,7 @@ import {
 import EventSlideshow from "@/components/EventSlideshow";
 import DigitalCampusGateway from "@/components/DigitalCampusGateway";
 import SchoolBuildingSlider from "@/components/SchoolBuildingSlider";
+import ScratchCardSection from "@/components/ScratchCardSection";
 import {
   GraduationCap,
   CheckCircle2,
@@ -672,6 +673,11 @@ export default function HomePage() {
           8. DIGITAL CAMPUS & PORTALS GATEWAY
           ===================================================================== */}
       <DigitalCampusGateway />
+
+      {/* =====================================================================
+          8B. INSTANT SCRATCH CARD RESULT VERIFICATION & DEMO TERMINAL
+          ===================================================================== */}
+      <ScratchCardSection />
 
       {/* =====================================================================
           9. VOICES OF OUR PARENTS & ADMISSIONS INVITATION
