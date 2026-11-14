@@ -86,17 +86,18 @@ export default function AboutPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
-            {/* Director Card — Prominent Portrait & Well-Arranged Executive Welcome */}
+            {/* Director Card — Full Box Width Portrait Maintaining Height */}
             <div className="lg:col-span-7 bg-primary-950 text-white rounded-2xl p-5 sm:p-7 shadow-xl border border-primary-900 flex flex-col justify-between reveal-init reveal-fade-left delay-200">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 items-center">
-                <div className="md:col-span-5 flex justify-center">
-                  <div className="relative w-full max-w-[260px] sm:max-w-[280px] md:max-w-none aspect-[4/5] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
+                <div className="md:col-span-5 w-full">
+                  <div className="relative w-full h-[320px] sm:h-[340px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
                     <Image
                       src={KEY_PERSONNEL.director.image}
                       alt={`${KEY_PERSONNEL.director.fullName} - ${KEY_PERSONNEL.director.title}`}
                       fill
-                      sizes="(max-width: 768px) 280px, 320px"
+                      sizes="(max-width: 768px) 100vw, 40vw"
                       className="object-cover object-top"
+                      style={{ objectPosition: "center 12%" }}
                       priority
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/85 to-transparent p-2.5 text-center">

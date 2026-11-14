@@ -190,7 +190,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "All",
     bio: "Guiding the entire teaching staff, ensuring lesson plans are hands-on, engaging, and faithful to true Montessori practice.",
     image: "/assets/images/head-teacher.jpg",
-    objectPosition: "object-top",
+    objectPosition: "object-[center_15%]",
     featured: true,
   },
   {
@@ -201,7 +201,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "All",
     bio: "Championing student psychological well-being, moral guidance, career path orientation, and proactive emotional support across all educational levels.",
     image: "/assets/images/mrs-chiedu-eno.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_18%]",
     featured: true,
   },
   {
@@ -212,7 +212,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "All",
     bio: "Ensures all tests, termly examinations, continuous assessments, and report cards are accurate, honest, and properly organized.",
     image: "/assets/images/gift.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_14%]",
     featured: true,
   },
   {
@@ -223,7 +223,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "Montessori",
     bio: "Leading our foundational Montessori early-learning sensory activities, numeracy basics, emotional nurturing, and early childhood developmental milestones.",
     image: "/assets/images/mrs-philo-mordi.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_8%]",
     featured: true,
   },
   {
@@ -234,7 +234,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "Primary",
     bio: "Managing primary pupil enrollment registers, official school records, daily correspondence, and welcoming parents with exemplary organizational care.",
     image: "/assets/images/miss-grace.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_5%]",
     featured: true,
   },
   {
@@ -245,7 +245,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "Bursary",
     bio: "Managing tuition billing, scratch card distribution, school accounts, and welcoming new families through the student admission process with transparency and integrity.",
     image: "/assets/images/Mr paul.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_22%]",
     featured: true,
   },
   {
@@ -256,7 +256,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "Operations",
     bio: "Directing comprehensive campus safety protocols, perimeter surveillance, pupil safeguarding, emergency response drills, and disciplined gate access control.",
     image: "/assets/images/insp-james-ukpere.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_4%]",
     featured: true,
   },
   {
@@ -267,7 +267,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "Operations",
     bio: "Supervising school transit routes, daily pupil pickup & dropoff logistics, bus fleet mechanical maintenance, and uncompromising road safety standards.",
     image: "/assets/images/mr-odogwu-victor.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-top",
     featured: true,
   },
   {
@@ -289,7 +289,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "STEM",
     bio: "Guiding students through science curriculum, laboratory apparatus calibration, safety management, and rigorous scientific inquiry.",
     image: "/assets/images/Abraham.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_14%]",
     featured: false,
   },
   {
@@ -300,7 +300,7 @@ export const ACADEMIC_FACULTY: readonly FacultyMember[] = [
     division: "STEM",
     bio: "Directing pure science curriculum, chemistry, physics, and biology practical investigations with dedicated laboratory management.",
     image: "/assets/images/Teacher Stanley.jpg",
-    objectPosition: "object-center",
+    objectPosition: "object-[center_18%]",
     featured: false,
   },
 ];

@@ -214,17 +214,18 @@ export default function FacultyPage() {
             </a>
           </div>
 
-          {/* HEAD TEACHER MASTER CARD — Well-Proportioned Portrait & Executive Layout */}
+          {/* HEAD TEACHER MASTER CARD — Full Box Width Portrait Maintaining Height */}
           <div className="bg-primary-950 text-white rounded-2xl p-5 sm:p-7 shadow-xl border border-primary-900 relative overflow-hidden reveal-init reveal-fade-up delay-200">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-7 items-center relative z-10">
-              <div className="lg:col-span-4 flex justify-center lg:justify-start">
-                <div className="relative w-full max-w-[240px] sm:max-w-[260px] lg:max-w-none aspect-[4/5] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
+              <div className="lg:col-span-5 w-full">
+                <div className="relative w-full h-[320px] sm:h-[340px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
                   <Image
                     src={KEY_PERSONNEL.headTeacher.image}
                     alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
                     fill
-                    sizes="(max-width: 1024px) 260px, 320px"
-                    className="object-cover object-[center_15%]"
+                    sizes="(max-width: 1024px) 100vw, 42vw"
+                    className="object-cover object-top"
+                    style={{ objectPosition: "center 14%" }}
                     priority
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/85 to-transparent p-2.5 text-center">
@@ -235,7 +236,7 @@ export default function FacultyPage() {
                 </div>
               </div>
 
-              <div className="lg:col-span-8 space-y-3 text-left">
+              <div className="lg:col-span-7 space-y-3 text-left">
                 <span className="px-2.5 py-1 rounded text-[10px] font-extrabold bg-secondary-400 text-slate-950 tracking-wider inline-flex items-center gap-1.5">
                   <Award className="w-3.5 h-3.5" />
                   FROM THE HEAD TEACHER&apos;S DESK
@@ -385,13 +386,14 @@ export default function FacultyPage() {
                     style={{ transitionDelay: `${(idx % 3) * 80}ms` }}
                   >
                     <div className="space-y-3.5">
-                      <div className="relative w-full aspect-[5/4] sm:aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-secondary-400 transition-colors shadow-xs">
+                      <div className="relative w-full h-[330px] sm:h-auto sm:aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-secondary-400 transition-colors shadow-xs">
                         <Image
                           src={member.image}
                           alt={`${member.name} - ${member.role}`}
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          className={`object-cover ${member.objectPosition || "object-center"} group-hover:scale-105 transition-transform duration-500`}
+                          className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                          style={{ objectPosition: "center top" }}
                         />
                         <div className="absolute top-2.5 left-2.5 z-10">
                           <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary-950/85 text-white backdrop-blur-md shadow-xs border border-white/20 block">
