@@ -66,6 +66,8 @@ interface Props {
   teacherEmail?: string;
   defaultClass?: string;
   defaultSubject?: string;
+  defaultSession?: string;
+  defaultTerm?: string;
   initialStudents?: any[];
   uploadedCourses?: TeacherUploadedCourse[];
   onNavigateToQuestionDesk?: () => void;
@@ -101,6 +103,8 @@ export default function DelegatedSubjectScoreUploader({
   teacherEmail,
   defaultClass = "JSS 1 Diamond",
   defaultSubject = "Mathematics",
+  defaultSession = "2025/2026",
+  defaultTerm = "Third Term",
   initialStudents = [],
   uploadedCourses: initialUploadedCourses,
   onNavigateToQuestionDesk,
@@ -127,8 +131,16 @@ export default function DelegatedSubjectScoreUploader({
       : defaultSubject
   );
   const [customSubject, setCustomSubject] = useState<string>("");
-  const [session, setSession] = useState<string>("2025/2026");
-  const [term, setTerm] = useState<string>("Third Term");
+  const [session, setSession] = useState<string>(defaultSession);
+  const [term, setTerm] = useState<string>(defaultTerm);
+
+  useEffect(() => {
+    if (defaultSession) setSession(defaultSession);
+  }, [defaultSession]);
+
+  useEffect(() => {
+    if (defaultTerm) setTerm(defaultTerm);
+  }, [defaultTerm]);
 
   // CA Entry Mode: "split" (1st CA 15 + 2nd CA 15 - default) vs "total" (Single CA Total out of 30 Marks)
   const [caEntryMode, setCaEntryMode] = useState<"total" | "split">("split");
@@ -1209,6 +1221,40 @@ export default function DelegatedSubjectScoreUploader({
 
       {/* Course Selection & Term Configuration Controls */}
       <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 space-y-4">
+        {/* Prominent Term Category Selector Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-blue-950/5 border border-blue-900/15">
+          <div className="space-y-0.5">
+            <div className="text-[11px] font-black uppercase tracking-wider text-blue-950 flex items-center gap-1.5">
+              <span>Academic Term Category</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Active: {term} ({session})
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600">
+              Scores uploaded under <strong>{term}</strong> are stored in their own term category and will never delete or overwrite other terms in the session.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-2xs shrink-0">
+            {(["First Term", "Second Term", "Third Term"] as const).map((tItem) => {
+              const active = term === tItem;
+              return (
+                <button
+                  key={tItem}
+                  type="button"
+                  onClick={() => setTerm(tItem)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${
+                    active
+                      ? "bg-blue-900 text-yellow-300 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  }`}
+                >
+                  {tItem}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {isTeacher ? (
           /* TEACHER VIEW: Strict Uploaded Courses Selector Only (Not Random / All) */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

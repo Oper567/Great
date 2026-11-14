@@ -41,6 +41,7 @@ import {
   saveTerminalResultAction,
   deleteTerminalResultAction,
   purgeAllTerminalResultsAction,
+  purgeTermTerminalResultsAction,
   getAllTerminalResultsAction,
   saveBatchTerminalResultsAction,
   autoRankCohortPositionsAction,
@@ -432,6 +433,8 @@ export default function TerminalResultPreparationTab({
   }, [initialResults]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClassFilter, setSelectedClassFilter] = useState("ALL");
+  const [selectedTermFilter, setSelectedTermFilter] = useState<"ALL" | "First Term" | "Second Term" | "Third Term">("ALL");
+  const [selectedSessionFilter, setSelectedSessionFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DRAFT" | "PUBLISHED">("ALL");
   const [teacherCourseDrafts, setTeacherCourseDrafts] = useState<any[]>([]);
   const [isFinalizingDrafts, setIsFinalizingDrafts] = useState(false);
@@ -467,6 +470,8 @@ export default function TerminalResultPreparationTab({
     try {
       const res = await finalizeAndPublishClassDraftResultsAction({
         className: targetClassName && targetClassName !== "ALL" ? targetClassName : undefined,
+        session: selectedSessionFilter !== "ALL" ? selectedSessionFilter : undefined,
+        term: selectedTermFilter !== "ALL" ? selectedTermFilter : undefined,
         admNos: targetAdmNos,
       });
       if (res.success) {
@@ -1405,17 +1410,21 @@ export default function TerminalResultPreparationTab({
   };
 
   const openNewResultModal = () => {
+    const activeTerm = selectedTermFilter !== "ALL" ? selectedTermFilter : term;
+    const activeSession = selectedSessionFilter !== "ALL" ? selectedSessionFilter : session;
     setEditingId(null);
     setAdmNo(`GFMS/${new Date().getFullYear()}/${Math.floor(100 + Math.random() * 900)}`);
     setStudentName("");
-    setClassName("JSS 2 Diamond");
+    setClassName(selectedClassFilter !== "ALL" ? selectedClassFilter : "JSS 2 Diamond");
+    setSession(activeSession);
+    setTerm(activeTerm);
     setPosition(1);
     setIsPositionManual(false);
     setNumberInClass(35);
     setDaysOpened(115);
     setDaysPresent(112);
-    setDecision(term === "Third Term" ? "PROMOTED" : "");
-    setNextClass(term === "Third Term" ? "JSS 3 Platinum" : "");
+    setDecision(activeTerm === "Third Term" ? "PROMOTED" : "");
+    setNextClass(activeTerm === "Third Term" ? "JSS 3 Platinum" : "");
     setNextTermBegins("Monday, 14th September 2026");
     setTeacherRemark("An exceptionally diligent scholar with commendable character.");
     setPrincipalRemark("Distinguished academic performance. Keep soaring higher!");
@@ -1593,7 +1602,7 @@ export default function TerminalResultPreparationTab({
 
   const handlePurgeAllResults = () => {
     if (isPurging) return;
-    if (!confirm("⚠️ PURGE ALL TERMINAL RESULTS?\n\nThis will remove ALL student terminal results from the system and restore the results portal to a clean empty state until you officially prepare and upload new results.\n\nAre you sure you want to proceed?")) return;
+    if (!confirm("⚠️ PURGE ALL TERMINAL RESULTS?\n\nThis will remove ALL student terminal results across all terms from the system and restore the results portal to a clean empty state.\n\nTip: If you only want to upload or clear a single term without touching other terms, select the Term Category tab (First Term, Second Term, or Third Term) instead!\n\nAre you sure you want to proceed?")) return;
     setIsPurging(true);
     startTransition(async () => {
       const res = await purgeAllTerminalResultsAction();
@@ -1602,6 +1611,32 @@ export default function TerminalResultPreparationTab({
         alert("✓ Results Purged: The portal is now in a clean empty state for all students.");
       } else {
         alert(res.message || "Failed to purge results.");
+      }
+      setIsPurging(false);
+    });
+  };
+
+  const handlePurgeSelectedTermResults = (targetTerm: "First Term" | "Second Term" | "Third Term") => {
+    if (isPurging) return;
+    const sessLabel = selectedSessionFilter !== "ALL" ? ` (${selectedSessionFilter})` : "";
+    if (
+      !confirm(
+        `⚠️ CLEAR ONLY ${targetTerm.toUpperCase()}${sessLabel} RESULTS?\n\nThis will remove ONLY ${targetTerm}${sessLabel} results while keeping all other terms in the session 100% intact and untouched.\n\nProceed?`
+      )
+    ) {
+      return;
+    }
+    setIsPurging(true);
+    startTransition(async () => {
+      const res = await purgeTermTerminalResultsAction(
+        targetTerm,
+        selectedSessionFilter !== "ALL" ? selectedSessionFilter : undefined
+      );
+      if (res.success) {
+        await refreshResultsAndDrafts();
+        alert(`✓ ${res.message}`);
+      } else {
+        alert(res.message || `Failed to clear ${targetTerm} results.`);
       }
       setIsPurging(false);
     });
@@ -1777,13 +1812,42 @@ export default function TerminalResultPreparationTab({
 
   const handleSaveResult = (e: React.FormEvent) => handleSaveResultWithOption(e, false, true);
 
-  const draftDossiersCount = results.filter(
+  const normalizeTermLabel = (raw?: string) => {
+    const t = (raw || "").trim().toLowerCase();
+    if (t.includes("first") || t.includes("1st")) return "First Term";
+    if (t.includes("second") || t.includes("2nd")) return "Second Term";
+    return "Third Term";
+  };
+
+  const sessionScopedResults = results.filter((r) => {
+    if (selectedSessionFilter === "ALL") return true;
+    return (r.session || "2025/2026").trim() === selectedSessionFilter;
+  });
+
+  const firstTermCount = sessionScopedResults.filter((r) => normalizeTermLabel(r.term) === "First Term").length;
+  const secondTermCount = sessionScopedResults.filter((r) => normalizeTermLabel(r.term) === "Second Term").length;
+  const thirdTermCount = sessionScopedResults.filter((r) => normalizeTermLabel(r.term) === "Third Term").length;
+
+  const termAndSessionScopedResults = sessionScopedResults.filter((r) => {
+    if (selectedTermFilter === "ALL") return true;
+    return normalizeTermLabel(r.term) === selectedTermFilter;
+  });
+
+  const filteredTeacherDrafts = teacherCourseDrafts.filter((d) => {
+    const matchSession =
+      selectedSessionFilter === "ALL" || (d.session || "2025/2026").trim() === selectedSessionFilter;
+    const matchTerm =
+      selectedTermFilter === "ALL" || normalizeTermLabel(d.term) === selectedTermFilter;
+    return matchSession && matchTerm;
+  });
+
+  const draftDossiersCount = termAndSessionScopedResults.filter(
     (r) => r.isPublished === false || r.is_published === false
   ).length;
-  const publishedDossiersCount = results.length - draftDossiersCount;
+  const publishedDossiersCount = termAndSessionScopedResults.length - draftDossiersCount;
 
   // Filtered List
-  const filteredResults = results.filter((r) => {
+  const filteredResults = termAndSessionScopedResults.filter((r) => {
     const sName = (r.studentName || r.student_name || "").toLowerCase();
     const aNo = (r.admNo || r.adm_no || "").toLowerCase();
     const cName = r.className || r.class_name || "";
@@ -1815,6 +1879,19 @@ export default function TerminalResultPreparationTab({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          {selectedTermFilter !== "ALL" && (
+            <button
+              type="button"
+              onClick={() => handlePurgeSelectedTermResults(selectedTermFilter)}
+              disabled={isPurging}
+              className="px-2.5 sm:px-3.5 py-2 sm:py-2.5 bg-amber-950/50 border border-amber-700/80 hover:border-amber-500 text-amber-300 font-bold text-xs rounded-xl shadow flex items-center justify-center gap-1.5 transition disabled:opacity-50"
+              title={`Clear ONLY ${selectedTermFilter} results while keeping other terms in the session untouched`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-amber-400" />
+              <span>{isPurging ? "Clearing..." : `Clear ${selectedTermFilter} Only`}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handlePurgeAllResults}
@@ -1845,6 +1922,9 @@ export default function TerminalResultPreparationTab({
           <button
             type="button"
             onClick={() => {
+              if (selectedTermFilter !== "ALL") setBatchTerm(selectedTermFilter);
+              if (selectedSessionFilter !== "ALL") setBatchSession(selectedSessionFilter);
+              if (selectedClassFilter !== "ALL") setBatchClass(selectedClassFilter);
               setBatchFeedback(null);
               setIsSmallSmallOpen(true);
             }}
@@ -1853,7 +1933,9 @@ export default function TerminalResultPreparationTab({
           >
             <Sparkles className="w-3.5 h-3.5 text-slate-950" />
             <span className="sm:hidden">⚡ Bulk Upload</span>
-            <span className="hidden sm:inline">⚡ Bulk Upload (1,000+ Students CSV / Excel)</span>
+            <span className="hidden sm:inline">
+              ⚡ Bulk Upload {selectedTermFilter !== "ALL" ? `(${selectedTermFilter})` : "(1,000+ Students CSV / Excel)"}
+            </span>
           </button>
 
           <button
@@ -1864,7 +1946,9 @@ export default function TerminalResultPreparationTab({
           >
             <FileSpreadsheet className="w-3.5 h-3.5 text-yellow-300" />
             <span className="sm:hidden">Subject CA &amp; Exam</span>
-            <span className="hidden sm:inline">Subject CA &amp; Exam Upload</span>
+            <span className="hidden sm:inline">
+              Subject CA &amp; Exam Upload {selectedTermFilter !== "ALL" ? `(${selectedTermFilter})` : ""}
+            </span>
           </button>
 
           <button
@@ -1873,8 +1957,118 @@ export default function TerminalResultPreparationTab({
           >
             <PlusCircle className="w-3.5 h-3.5 text-yellow-400" />
             <span className="sm:hidden">+ New Result</span>
-            <span className="hidden sm:inline">Prepare New Student Result</span>
+            <span className="hidden sm:inline">
+              Prepare New Student Result {selectedTermFilter !== "ALL" ? `(${selectedTermFilter})` : ""}
+            </span>
           </button>
+        </div>
+      </div>
+
+      {/* Academic Term Category & Session Selector Bar (Prevents Overwriting Other Terms in the Session) */}
+      <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-md space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Calendar className="w-4 h-4 text-yellow-400" />
+              <span className="text-xs font-black uppercase tracking-wider text-white">
+                Academic Term Categories (Session Multi-Term Archive)
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/90 text-emerald-300 border border-emerald-700/70">
+                ✓ Independent Term Storage — No Term Overwrites Another
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Select a Term Category below to view or upload results for <strong className="text-slate-200">First Term</strong>, <strong className="text-slate-200">Second Term</strong>, or <strong className="text-slate-200">Third Term</strong> separately without deleting any other term&apos;s results for the session.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <label className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Session:</label>
+            <select
+              value={selectedSessionFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedSessionFilter(val);
+                if (val !== "ALL") {
+                  setSession(val);
+                  setBatchSession(val);
+                }
+              }}
+              className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-yellow-400 focus:outline-none focus:border-yellow-500"
+            >
+              <option value="ALL">All Academic Sessions</option>
+              <option value="2025/2026">2025/2026 Session</option>
+              <option value="2024/2025">2024/2025 Session</option>
+              <option value="2026/2027">2026/2027 Session</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 4 Term Category Pills */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            {
+              id: "ALL" as const,
+              label: "All Terms Combined",
+              sub: "Full Session Archive",
+              count: sessionScopedResults.length,
+            },
+            {
+              id: "First Term" as const,
+              label: "1st Term Category",
+              sub: "First Term Dossiers",
+              count: firstTermCount,
+            },
+            {
+              id: "Second Term" as const,
+              label: "2nd Term Category",
+              sub: "Second Term Dossiers",
+              count: secondTermCount,
+            },
+            {
+              id: "Third Term" as const,
+              label: "3rd Term Category",
+              sub: "Promotional Term",
+              count: thirdTermCount,
+            },
+          ].map((cat) => {
+            const isActive = selectedTermFilter === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  setSelectedTermFilter(cat.id);
+                  if (cat.id !== "ALL") {
+                    setTerm(cat.id);
+                    setBatchTerm(cat.id);
+                  }
+                }}
+                className={`p-3 rounded-xl border text-left transition flex items-center justify-between gap-2 ${
+                  isActive
+                    ? "bg-gradient-to-r from-blue-900/90 to-indigo-900/90 border-yellow-400 text-white shadow-lg shadow-blue-950/50"
+                    : "bg-slate-900/80 border-slate-800 hover:border-slate-700 text-slate-300"
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="text-xs font-black truncate flex items-center gap-1.5">
+                    {isActive && <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" />}
+                    <span className={isActive ? "text-yellow-300" : "text-white"}>{cat.label}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 truncate mt-0.5">{cat.sub}</div>
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono shrink-0 ${
+                    isActive
+                      ? "bg-yellow-400 text-slate-950"
+                      : "bg-slate-950 text-slate-300 border border-slate-800"
+                  }`}
+                >
+                  {cat.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -1885,8 +2079,12 @@ export default function TerminalResultPreparationTab({
             <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="text-[10px] sm:text-xs text-slate-400 font-medium truncate">Total Dossiers</div>
-            <div className="text-base sm:text-lg font-black text-white truncate">{results.length}</div>
+            <div className="text-[10px] sm:text-xs text-slate-400 font-medium truncate">
+              {selectedTermFilter === "ALL" ? "Total Dossiers" : `${selectedTermFilter} Dossiers`}
+            </div>
+            <div className="text-base sm:text-lg font-black text-white truncate">
+              {termAndSessionScopedResults.length}
+            </div>
           </div>
         </div>
 
@@ -1897,7 +2095,7 @@ export default function TerminalResultPreparationTab({
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="text-[10px] sm:text-xs text-amber-300/80 font-medium truncate">Pending Finalizing</div>
             <div className="text-xs sm:text-lg font-black text-amber-400 truncate">
-              {draftDossiersCount} Draft{draftDossiersCount === 1 ? "" : "s"} ({teacherCourseDrafts.length} Courses)
+              {draftDossiersCount} Draft{draftDossiersCount === 1 ? "" : "s"} ({filteredTeacherDrafts.length} Courses)
             </div>
           </div>
         </div>
@@ -1924,7 +2122,7 @@ export default function TerminalResultPreparationTab({
       </div>
 
       {/* Teacher Uploaded Course Drafts & 1-Click Admin Final Finishing Command Bar */}
-      {(draftDossiersCount > 0 || teacherCourseDrafts.length > 0 || finalizeFeedback) && (
+      {(draftDossiersCount > 0 || filteredTeacherDrafts.length > 0 || finalizeFeedback) && (
         <div className="bg-gradient-to-r from-indigo-950/90 via-slate-950 to-amber-950/40 border border-indigo-500/40 rounded-2xl p-4 sm:p-5 space-y-3 shadow-lg">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div className="space-y-1">
@@ -1937,7 +2135,7 @@ export default function TerminalResultPreparationTab({
                 </h3>
               </div>
               <p className="text-xs text-slate-300 max-w-3xl">
-                Teachers have uploaded scores for <strong className="text-amber-300">{teacherCourseDrafts.length} course(s)</strong>, automatically compiling{" "}
+                Teachers have uploaded scores for <strong className="text-amber-300">{filteredTeacherDrafts.length} course(s)</strong>, automatically compiling{" "}
                 <strong className="text-amber-300">{draftDossiersCount} student report card dossier(s)</strong> in Draft mode. You can review/edit any student below or click{" "}
                 <strong className="text-emerald-300">Finalize &amp; Publish</strong> to auto-rank positions and publish to the student portal in one click.
               </p>
@@ -1955,7 +2153,7 @@ export default function TerminalResultPreparationTab({
 
               <button
                 type="button"
-                disabled={isFinalizingDrafts || (draftDossiersCount === 0 && teacherCourseDrafts.length === 0)}
+                disabled={isFinalizingDrafts || (draftDossiersCount === 0 && filteredTeacherDrafts.length === 0)}
                 onClick={() => handleFinalizeDrafts(selectedClassFilter)}
                 className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition active:scale-95 disabled:opacity-50"
               >
@@ -1970,7 +2168,7 @@ export default function TerminalResultPreparationTab({
                     <span>
                       {selectedClassFilter !== "ALL"
                         ? `🚀 Finalize & Publish ${selectedClassFilter} Drafts`
-                        : `🚀 1-Click Finalize & Publish All Drafts (${draftDossiersCount || teacherCourseDrafts.length})`}
+                        : `🚀 1-Click Finalize & Publish All Drafts (${draftDossiersCount || filteredTeacherDrafts.length})`}
                     </span>
                   </>
                 )}
@@ -1979,13 +2177,13 @@ export default function TerminalResultPreparationTab({
           </div>
 
           {/* Teacher Course Draft Pills */}
-          {teacherCourseDrafts.length > 0 && (
+          {filteredTeacherDrafts.length > 0 && (
             <div className="pt-2 border-t border-slate-800/80">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Uploaded Course Drafts by Subject Teachers ({teacherCourseDrafts.length}):
+                Uploaded Course Drafts by Subject Teachers ({filteredTeacherDrafts.length}):
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {teacherCourseDrafts.slice(0, 9).map((d) => (
+                {filteredTeacherDrafts.slice(0, 9).map((d) => (
                   <div
                     key={d.id}
                     className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 text-xs"
@@ -2058,7 +2256,7 @@ export default function TerminalResultPreparationTab({
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            All ({results.length})
+            All ({termAndSessionScopedResults.length})
           </button>
           <button
             type="button"
@@ -2424,10 +2622,38 @@ export default function TerminalResultPreparationTab({
 
               {/* Section 1: Student Demographics */}
               <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-4">
-                <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4" />
-                  <span>1. Student Biodata & Academic Session</span>
-                </h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                  <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4" />
+                    <span>1. Student Biodata &amp; Academic Term Category</span>
+                  </h4>
+
+                  <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                    {(["First Term", "Second Term", "Third Term"] as const).map((tOption) => (
+                      <button
+                        key={tOption}
+                        type="button"
+                        onClick={() => {
+                          setTerm(tOption);
+                          if (tOption === "Third Term") {
+                            if (!decision) setDecision("PROMOTED");
+                            if (!nextClass) setNextClass("JSS 3 Platinum");
+                          } else {
+                            setDecision("");
+                            setNextClass("");
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition ${
+                          term === tOption
+                            ? "bg-blue-700 text-yellow-300 shadow"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {tOption}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
@@ -3769,6 +3995,9 @@ export default function TerminalResultPreparationTab({
               <DelegatedSubjectScoreUploader
                 userRole="SUPER_ADMIN"
                 teacherName="Super Administrator"
+                defaultClass={selectedClassFilter !== "ALL" ? selectedClassFilter : "JSS 1 Diamond"}
+                defaultSession={selectedSessionFilter !== "ALL" ? selectedSessionFilter : session}
+                defaultTerm={selectedTermFilter !== "ALL" ? selectedTermFilter : term}
                 initialStudents={initialStudents}
                 onSyncComplete={async () => {
                   await refreshResultsAndDrafts();
@@ -3886,18 +4115,25 @@ export default function TerminalResultPreparationTab({
                     <option value="2026/2027">2026/2027 Session</option>
                   </select>
 
-                  <select
-                    value={batchTerm}
-                    onChange={(e) => {
-                      setBatchTerm(e.target.value);
-                      setSelectedRosterAdmNos(new Set());
-                    }}
-                    className="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-amber-500 focus:outline-none"
-                  >
-                    <option value="Third Term">Third Term</option>
-                    <option value="Second Term">Second Term</option>
-                    <option value="First Term">First Term</option>
-                  </select>
+                  <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-700">
+                    {(["First Term", "Second Term", "Third Term"] as const).map((tOpt) => (
+                      <button
+                        key={tOpt}
+                        type="button"
+                        onClick={() => {
+                          setBatchTerm(tOpt);
+                          setSelectedRosterAdmNos(new Set());
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-black transition ${
+                          batchTerm === tOpt
+                            ? "bg-amber-500 text-slate-950 shadow"
+                            : "text-slate-300 hover:text-white"
+                        }`}
+                      >
+                        {tOpt}
+                      </button>
+                    ))}
+                  </div>
 
                   <button
                     type="button"

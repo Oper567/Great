@@ -128,21 +128,27 @@ body {
    PAGE TRANSITION & SCROLL REVEAL ENGINE (DESKTOP & MOBILE)
    ========================================================================== */
 
-/* Route Transition Wrapper */
+/* Route Transition Wrapper — opacity-only so position:fixed modals & navbars remain pinned to the browser viewport */
 .page-transition-shell {
-  animation: pageEnter 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-  will-change: opacity, transform;
+  animation: pageEnter 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes pageEnter {
   0% {
     opacity: 0.01;
-    transform: translate3d(0, 14px, 0);
   }
   100% {
     opacity: 1;
-    transform: translate3d(0, 0, 0);
   }
+}
+
+/* Ensure all admin/portal modal overlays are strictly pinned to the active viewport */
+.sheet-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  z-index: 9990 !important;
 }
 
 /* Top Route Progress Bar */

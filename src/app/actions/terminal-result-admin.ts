@@ -1102,6 +1102,57 @@ export async function getStudentAvailableTermsAction(
 }
 
 /**
+ * Super Admin: Purge only a specific term's terminal results (optional session filter)
+ * so other terms in the academic session remain 100% intact.
+ */
+export async function purgeTermTerminalResultsAction(
+  term: string,
+  session?: string
+): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    const targetTerm = normalizeTerm(term);
+    const targetSession = session && session !== "ALL" ? session.trim() : null;
+
+    // 1. Filter local store to keep all OTHER terms/sessions untouched
+    const existingLocal = getLocalTerminalResultsStore();
+    const keptLocal = existingLocal.filter((r) => {
+      const sameTerm = normalizeTerm(r.term) === targetTerm;
+      const sameSession = !targetSession || (r.session || "").trim() === targetSession;
+      return !(sameTerm && sameSession);
+    });
+    saveAllToLocalTerminalResultsStore(keptLocal);
+
+    // 2. Delete matching term records from database if reachable
+    try {
+      await prisma.terminalResult.deleteMany({
+        where: {
+          term: targetTerm,
+          ...(targetSession ? { session: targetSession } : {}),
+        },
+      });
+    } catch (e) {
+      console.warn("Could not delete term results from prisma terminalResult:", e);
+    }
+
+    revalidatePath("/admin/cbt");
+    revalidatePath("/result");
+    return {
+      success: true,
+      message: `Cleared ${targetTerm}${targetSession ? ` (${targetSession})` : ""} results. All other terms in the session remain safely preserved.`,
+    };
+  } catch (err: any) {
+    console.error("Purge term results error:", err);
+    return {
+      success: false,
+      message: `Failed to clear ${term} results: ${err?.message || "Unknown error"}`,
+    };
+  }
+}
+
+/**
  * Super Admin: Purge all terminal results from database and local storage to restore empty state
  */
 export async function purgeAllTerminalResultsAction(): Promise<{

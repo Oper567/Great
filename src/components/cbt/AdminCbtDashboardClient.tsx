@@ -186,7 +186,7 @@ export default function AdminCbtDashboardClient({
       gender: student.gender,
       token: Date.now(),
     });
-    setActiveTab("results");
+    selectTab("results");
   };
 
   // Transitions
@@ -1248,7 +1248,7 @@ export default function AdminCbtDashboardClient({
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => selectTab(tab.id)}
                     aria-current={isActive ? "page" : undefined}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
                       isActive
@@ -1724,7 +1724,7 @@ export default function AdminCbtDashboardClient({
                                   <button
                                     onClick={() => {
                                       setSelectedExamIdForGrading(ex.id);
-                                      setActiveTab("grading");
+                                      selectTab("grading");
                                     }}
                                     className="flex-1 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 rounded-xl text-xs font-bold transition text-center active:scale-95 flex items-center justify-center gap-1"
                                   >
@@ -1767,7 +1767,7 @@ export default function AdminCbtDashboardClient({
                                   <button
                                     onClick={() => {
                                       setSelectedExamIdForQuestions(ex.id);
-                                      setActiveTab("questions");
+                                      selectTab("questions");
                                     }}
                                     className="flex-1 py-2 bg-blue-900/60 hover:bg-blue-800 text-blue-200 rounded-xl text-xs font-bold transition text-center active:scale-95"
                                   >
@@ -1776,7 +1776,7 @@ export default function AdminCbtDashboardClient({
                                   <button
                                     onClick={() => {
                                       setSelectedExamIdForGrading(ex.id);
-                                      setActiveTab("grading");
+                                      selectTab("grading");
                                     }}
                                     className="flex-1 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 rounded-xl text-xs font-bold transition text-center active:scale-95"
                                   >
@@ -1885,7 +1885,7 @@ export default function AdminCbtDashboardClient({
                                       <button
                                         onClick={() => {
                                           setSelectedExamIdForGrading(ex.id);
-                                          setActiveTab("grading");
+                                          selectTab("grading");
                                         }}
                                         className="px-2.5 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1"
                                       >
@@ -1928,7 +1928,7 @@ export default function AdminCbtDashboardClient({
                                       <button
                                         onClick={() => {
                                           setSelectedExamIdForQuestions(ex.id);
-                                          setActiveTab("questions");
+                                          selectTab("questions");
                                         }}
                                         className="px-2.5 py-1.5 bg-blue-900/60 hover:bg-blue-800 text-blue-200 rounded-lg text-xs font-semibold transition"
                                       >
@@ -1937,7 +1937,7 @@ export default function AdminCbtDashboardClient({
                                       <button
                                         onClick={() => {
                                           setSelectedExamIdForGrading(ex.id);
-                                          setActiveTab("grading");
+                                          selectTab("grading");
                                         }}
                                         className="px-2.5 py-1.5 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 border border-yellow-500/40 rounded-lg text-xs font-semibold transition"
                                       >
