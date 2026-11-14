@@ -144,23 +144,23 @@ export default function SchoolBuildingSlider() {
   return (
     <section
       id="school-building-showcase"
-      className="py-12 sm:py-16 lg:py-24 bg-slate-900 text-white border-b border-slate-800"
+      className="py-8 sm:py-16 lg:py-24 bg-slate-900 text-white border-b border-slate-800"
       aria-label="Campus Architecture and Grounds"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-8">
         {/* SECTION HEADER */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up">
-          <div className="space-y-2.5 max-w-3xl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up">
+          <div className="space-y-1.5 sm:space-y-2.5 max-w-3xl">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-0.5 bg-secondary-400" />
-              <span className="text-xs font-bold uppercase tracking-[0.14em] text-secondary-400">
+              <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.14em] text-secondary-400">
                 Campus Infrastructure
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
+            <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
               Our Purpose-Built Campus in Issele-Azagba
             </h2>
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
+            <p className="text-slate-300 text-xs sm:text-base leading-relaxed">
               Explore the permanent campus of Great-Favour Montessori School, featuring naturally ventilated classroom blocks, covered walkways, and expansive athletics grounds.
             </p>
           </div>
@@ -190,7 +190,7 @@ export default function SchoolBuildingSlider() {
           onTouchEnd={handleTouchEnd}
         >
           {/* Visual Image Stage */}
-          <div className="relative w-full h-64 sm:h-96 md:h-[460px] lg:h-[520px] overflow-hidden bg-slate-950">
+          <div className="relative w-full h-52 sm:h-96 md:h-[460px] lg:h-[520px] overflow-hidden bg-slate-950">
             {BUILDING_SLIDES.map((slide, idx) => (
               <div
                 key={slide.id}
@@ -295,27 +295,27 @@ export default function SchoolBuildingSlider() {
             </div>
           </div>
 
-          {/* Mobile & Tablet Dedicated Editorial Caption Card (Unobstructed Image + Full Readable Text) */}
-          <div className="md:hidden p-5 bg-slate-950 border-t border-slate-800 space-y-3">
-            <div className="flex items-center justify-between text-xs text-secondary-400 font-bold">
+          {/* Mobile & Tablet Dedicated Editorial Caption Card (Compact on Mobile) */}
+          <div className="md:hidden p-3.5 bg-slate-950 border-t border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-secondary-400 font-bold">
               <span>{activeSlide.badge}</span>
               <span className="tabular-nums text-slate-400">
                 {String(currentIndex + 1).padStart(2, "0")} / {String(BUILDING_SLIDES.length).padStart(2, "0")}
               </span>
             </div>
-            <h3 className="text-lg font-extrabold text-white leading-snug">
+            <h3 className="text-base font-extrabold text-white leading-snug">
               {activeSlide.title}
             </h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
+            <p className="text-slate-300 text-xs leading-relaxed line-clamp-2">
               {activeSlide.caption}
             </p>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
               {activeSlide.highlights.map((h) => (
                 <span
                   key={h}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-200 bg-slate-900 px-2.5 py-1 rounded border border-slate-800"
+                  className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-800"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-secondary-400 shrink-0" />
+                  <CheckCircle2 className="w-3 h-3 text-secondary-400 shrink-0" />
                   {h}
                 </span>
               ))}

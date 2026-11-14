@@ -211,13 +211,34 @@ export default function AboutPage() {
                     &quot;{INSTITUTIONAL_ACCREDITATION.coreGoalAndObjective}&quot;
                   </p>
                 </div>
-                <div className="border-t border-secondary-200/60 pt-2">
+                <div className="border-t border-secondary-200/60 pt-2.5 space-y-2.5">
                   <span className="text-[10px] font-extrabold text-secondary-800 uppercase tracking-wider block">
                     Licences &amp; External Examination Approvals
                   </span>
-                  <p className="text-xs text-slate-700 mt-0.5">
-                    Licensed Nursery, Primary &amp; Secondary &bull; Approved to write FLSC, BECE, WASSCE &amp; NECO examinations.
+                  <p className="text-xs text-slate-700">
+                    Licensed Nursery, Primary &amp; Secondary &bull; Approved to write FLSC, BECE, WASSCE, NECO &amp; JAMB preparation.
                   </p>
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    {INSTITUTIONAL_ACCREDITATION.approvedExaminations.map((exam) => (
+                      <div
+                        key={exam.code}
+                        className="bg-white rounded-lg border border-secondary-200 p-1.5 flex flex-col items-center justify-center gap-1 shadow-xs"
+                      >
+                        <div className="w-8 h-8 relative flex items-center justify-center">
+                          <Image
+                            src={exam.logo}
+                            alt={exam.code}
+                            width={32}
+                            height={32}
+                            className="object-contain w-full h-full"
+                          />
+                        </div>
+                        <span className="text-[9px] font-extrabold text-primary-950 uppercase tracking-wider">
+                          {exam.code}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

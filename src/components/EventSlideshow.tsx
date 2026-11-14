@@ -95,33 +95,33 @@ export default function EventSlideshow() {
   const active = EVENT_SLIDES[currentSlide];
 
   return (
-    <section className="py-12 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-10">
+    <section className="py-8 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-10">
         {/* Editorial Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up">
-          <div className="space-y-2 max-w-2xl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up">
+          <div className="space-y-1.5 sm:space-y-2 max-w-2xl">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-0.5 bg-secondary-500" />
               <span className="section-badge">Campus Life &amp; Tradition</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary-950 tracking-tight">
+            <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-primary-950 tracking-tight">
               Life Inside Great-Favour Montessori
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+            <p className="text-slate-600 text-xs sm:text-base leading-relaxed">
               Beyond classroom instruction, our pupils participate in structured athletics, leadership assemblies, and collaborative study clinics throughout the academic year.
             </p>
           </div>
 
           {/* Navigation Controls */}
           <div className="flex items-center gap-2 self-start md:self-end shrink-0">
-            <span className="text-xs font-semibold text-slate-500 mr-2 tabular-nums">
+            <span className="text-xs font-semibold text-slate-500 mr-1 sm:mr-2 tabular-nums">
               {String(currentSlide + 1).padStart(2, "0")} / {String(EVENT_SLIDES.length).padStart(2, "0")}
             </span>
             <button
               type="button"
               onClick={prevSlide}
               aria-label="Previous campus highlight"
-              className="w-10 h-10 rounded-lg bg-white border border-slate-200 hover:border-primary-800 text-slate-800 flex items-center justify-center transition shadow-2xs active:scale-95"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white border border-slate-200 hover:border-primary-800 text-slate-800 flex items-center justify-center transition shadow-2xs active:scale-95"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -129,7 +129,7 @@ export default function EventSlideshow() {
               type="button"
               onClick={nextSlide}
               aria-label="Next campus highlight"
-              className="w-10 h-10 rounded-lg bg-primary-900 hover:bg-primary-950 text-white flex items-center justify-center transition shadow-2xs active:scale-95"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-900 hover:bg-primary-950 text-white flex items-center justify-center transition shadow-2xs active:scale-95"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -138,13 +138,13 @@ export default function EventSlideshow() {
 
         {/* Editorial Split Showcase: Featured Image + Interactive Event Selector Cards */}
         <div
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
           {/* Featured Stage (Left 8 cols) */}
           <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden flex flex-col justify-between reveal-init reveal-fade-left delay-100">
-            <div className="relative h-64 sm:h-96 lg:h-[420px] w-full bg-slate-900 overflow-hidden">
+            <div className="relative h-48 sm:h-96 lg:h-[420px] w-full bg-slate-900 overflow-hidden">
               {EVENT_SLIDES.map((slide, index) => (
                 <div
                   key={slide.id}
@@ -166,32 +166,32 @@ export default function EventSlideshow() {
                 </div>
               ))}
 
-              <div className="absolute top-4 left-4 z-20">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-primary-950/90 text-secondary-400 text-xs font-bold uppercase tracking-wider border border-white/15">
+              <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-20">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded bg-primary-950/90 text-secondary-400 text-[10px] sm:text-xs font-bold uppercase tracking-wider border border-white/15">
                   {active.tag}
                 </span>
               </div>
             </div>
 
-            {/* Readable Editorial Caption Panel (Full clarity on Mobile & Desktop) */}
-            <div className="p-5 sm:p-6 lg:p-7 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1.5 max-w-2xl">
-                <div className="flex items-center gap-2 text-xs font-semibold text-primary-800">
+            {/* Readable Editorial Caption Panel (Compact on Mobile) */}
+            <div className="p-3.5 sm:p-6 lg:p-7 bg-white border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+              <div className="space-y-1 max-w-2xl">
+                <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-primary-800">
                   <Calendar className="w-3.5 h-3.5 text-secondary-600 shrink-0" />
                   <span>{active.date}</span>
                 </div>
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-extrabold text-primary-950 leading-snug">
+                <h3 className="text-base sm:text-xl lg:text-2xl font-extrabold text-primary-950 leading-snug">
                   {active.title}
                 </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
+                <p className="text-slate-600 text-xs sm:text-sm leading-relaxed line-clamp-2 sm:line-clamp-none">
                   {active.description}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Interactive Event List Cards (4 cols on desktop, clean 1-col/2-col on mobile) */}
-          <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 content-between reveal-init reveal-fade-right delay-200">
+          {/* Right Column: Interactive Event List Cards (Compact 2-col on mobile, 1-col on desktop) */}
+          <div className="lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-2 sm:gap-2.5 content-between reveal-init reveal-fade-right delay-200">
             {EVENT_SLIDES.map((slide, idx) => {
               const isSelected = idx === currentSlide;
               return (
@@ -199,14 +199,14 @@ export default function EventSlideshow() {
                   key={slide.id}
                   type="button"
                   onClick={() => goToSlide(idx)}
-                  className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 flex items-start gap-3.5 ${
+                  className={`w-full text-left p-2.5 sm:p-3.5 rounded-xl border transition-all duration-200 flex items-start gap-2.5 sm:gap-3.5 ${
                     isSelected
                       ? "bg-primary-950 text-white border-primary-900 shadow-sm"
                       : "bg-white hover:bg-slate-100/80 text-slate-800 border-slate-200"
                   }`}
                 >
                   <span
-                    className={`text-xs font-extrabold px-2 py-1 rounded shrink-0 tabular-nums mt-0.5 ${
+                    className={`text-[10px] sm:text-xs font-extrabold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded shrink-0 tabular-nums mt-0.5 ${
                       isSelected
                         ? "bg-secondary-400 text-slate-950"
                         : "bg-slate-100 text-slate-600"
@@ -216,14 +216,14 @@ export default function EventSlideshow() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p
-                      className={`text-[11px] font-semibold uppercase tracking-wider truncate ${
+                      className={`text-[9px] sm:text-[11px] font-semibold uppercase tracking-wider truncate ${
                         isSelected ? "text-secondary-400" : "text-slate-500"
                       }`}
                     >
                       {slide.tag}
                     </p>
                     <h4
-                      className={`text-sm font-bold leading-snug line-clamp-1 mt-0.5 ${
+                      className={`text-xs sm:text-sm font-bold leading-snug line-clamp-1 mt-0.5 ${
                         isSelected ? "text-white" : "text-primary-950"
                       }`}
                     >

@@ -421,52 +421,52 @@ export default function FacultyPage() {
               </div>
             )}
 
-            {/* FACULTY CARDS GRID */}
+            {/* FACULTY CARDS GRID — Compact 2-Column on Mobile, 3-Column on Desktop */}
             {filteredStaff.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-6">
                 {filteredStaff.map((member, idx) => (
                   <div
                     key={member.id}
-                    className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-card hover:shadow-xl transition-all duration-300 flex flex-col justify-between group reveal-init reveal-fade-up"
+                    className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-slate-200 shadow-card hover:shadow-xl transition-all duration-300 flex flex-col justify-between group reveal-init reveal-fade-up"
                     style={{ animationDelay: `${(idx + 1) * 80}ms` }}
                   >
-                    <div className="space-y-3">
-                      <div className="relative w-full aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-secondary-400 transition-colors shadow-sm">
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="relative w-full aspect-square sm:aspect-[4/5] rounded-lg sm:rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-secondary-400 transition-colors shadow-sm">
                         <Image
                           src={member.image}
                           alt={`${member.name} - ${member.role}`}
                           fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 33vw"
                           className={`object-cover ${member.objectPosition || "object-center"} group-hover:scale-105 transition-transform duration-500`}
                         />
-                        <div className="absolute top-2.5 left-2.5 z-10">
-                          <span className="px-2.5 py-1 rounded-full text-[9px] sm:text-[10px] font-extrabold bg-primary-950/85 text-white backdrop-blur-md shadow-sm border border-white/20">
+                        <div className="absolute top-1.5 left-1.5 sm:top-2.5 sm:left-2.5 z-10">
+                          <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-extrabold bg-primary-950/85 text-white backdrop-blur-md shadow-sm border border-white/20 truncate max-w-[110px] sm:max-w-none block">
                             {member.department}
                           </span>
                         </div>
-                        <div className="absolute bottom-2.5 right-2.5 z-10">
-                          <span className="px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold bg-secondary-400 text-slate-950 shadow-sm flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Certified
+                        <div className="absolute bottom-1.5 right-1.5 sm:bottom-2.5 sm:right-2.5 z-10">
+                          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold bg-secondary-400 text-slate-950 shadow-sm flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                            <span>Certified</span>
                           </span>
                         </div>
                       </div>
 
                       <div>
-                        <h4 className="text-sm sm:text-base font-bold text-primary-950 group-hover:text-primary-800 transition leading-snug">
+                        <h4 className="text-xs sm:text-base font-bold text-primary-950 group-hover:text-primary-800 transition leading-snug line-clamp-1 sm:line-clamp-none">
                           {member.name}
                         </h4>
-                        <p className="text-primary-800 font-semibold text-xs mt-0.5">{member.role}</p>
-                        <p className="text-slate-600 text-xs leading-relaxed mt-1.5 line-clamp-3 sm:line-clamp-none">{member.bio}</p>
+                        <p className="text-primary-800 font-semibold text-[10px] sm:text-xs mt-0.5 line-clamp-1">{member.role}</p>
+                        <p className="text-slate-600 text-[10px] sm:text-xs leading-relaxed mt-1 line-clamp-2 sm:line-clamp-none">{member.bio}</p>
                       </div>
                     </div>
 
-                    <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="flex items-center gap-1 text-secondary-700 font-semibold">
-                        <Star className="w-3.5 h-3.5 fill-secondary-400 text-secondary-500" />
-                        Dedicated Mentor
+                    <div className="pt-2 mt-2 sm:pt-3 sm:mt-3 border-t border-slate-100 flex items-center justify-between text-[9px] sm:text-[11px] text-slate-500">
+                      <span className="flex items-center gap-1 text-secondary-700 font-semibold truncate">
+                        <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-secondary-400 text-secondary-500 shrink-0" />
+                        <span className="truncate">Dedicated Mentor</span>
                       </span>
-                      <span className="font-mono text-slate-400 text-[10px]">TRCN / GFMS</span>
+                      <span className="hidden sm:inline font-mono text-slate-400 text-[10px]">TRCN / GFMS</span>
                     </div>
                   </div>
                 ))}
