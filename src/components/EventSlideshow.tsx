@@ -143,7 +143,7 @@ export default function EventSlideshow() {
           onMouseLeave={() => setIsPaused(false)}
         >
           {/* Featured Stage (Left 8 cols) */}
-          <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden flex flex-col justify-between">
+          <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden flex flex-col justify-between reveal-init reveal-fade-left delay-100">
             <div className="relative h-64 sm:h-96 lg:h-[420px] w-full bg-slate-900 overflow-hidden">
               {EVENT_SLIDES.map((slide, index) => (
                 <div
@@ -191,7 +191,7 @@ export default function EventSlideshow() {
           </div>
 
           {/* Right Column: Interactive Event List Cards (4 cols on desktop, clean 1-col/2-col on mobile) */}
-          <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 content-between">
+          <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 content-between reveal-init reveal-fade-right delay-200">
             {EVENT_SLIDES.map((slide, idx) => {
               const isSelected = idx === currentSlide;
               return (

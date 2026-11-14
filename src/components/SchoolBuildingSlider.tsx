@@ -182,7 +182,7 @@ export default function SchoolBuildingSlider() {
 
         {/* SLIDER MAIN CONTAINER */}
         <div
-          className="bg-slate-950 rounded-xl border border-slate-800 shadow-xl overflow-hidden select-none"
+          className="bg-slate-950 rounded-xl border border-slate-800 shadow-xl overflow-hidden select-none reveal-init reveal-zoom-in delay-150"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           onTouchStart={handleTouchStart}

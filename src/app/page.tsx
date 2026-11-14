@@ -23,6 +23,7 @@ import {
   Calendar,
   Award,
   Quote,
+  ShieldCheck,
 } from "lucide-react";
 
 const HERO_SLIDES = [
@@ -69,6 +70,7 @@ const ACADEMIC_DIVISIONS = [
       "Guided by Maria Montessori principles, young learners develop early literacy with Jolly Phonics, sensorial numeracy, practical life grace, and curiosity.",
     highlights: ["Sensorial & Tactile Apparatus", "Jolly Phonics & Early Numeracy"],
     href: "/academics",
+    delay: "delay-100",
   },
   {
     id: "primary",
@@ -80,6 +82,7 @@ const ACADEMIC_DIVISIONS = [
       "Blends the Nigerian National Curriculum with global elementary standards in quantitative reasoning, verbal aptitude, basic science, and computer literacy.",
     highlights: ["Quantitative & Verbal Mastery", "Weekly ICT & Practical Science"],
     href: "/academics",
+    delay: "delay-200",
   },
   {
     id: "junior-secondary",
@@ -91,6 +94,7 @@ const ACADEMIC_DIVISIONS = [
       "Bridges elementary foundations with intermediate sciences, technology, humanities, business studies, and computer-based assessment readiness for BECE.",
     highlights: ["Comprehensive JSS Subject Track", "BECE & CBT Exam Preparation"],
     href: "/academics",
+    delay: "delay-300",
   },
   {
     id: "senior-secondary",
@@ -102,6 +106,7 @@ const ACADEMIC_DIVISIONS = [
       "Specialized Science, Arts, and Commercial departments supported by equipped Physics, Chemistry, Biology, and ICT laboratories for WAEC, NECO, and UTME.",
     highlights: ["Science, Arts & Commercial Streams", "WAEC, NECO & UTME Clinics"],
     href: "/academics",
+    delay: "delay-400",
   },
 ];
 
@@ -113,6 +118,7 @@ const CORE_PILLARS = [
       "Certified Montessori apparatus and child-centered discovery that build strong literacy, numeracy, and independent thinking from the earliest years.",
     footer: "Creche to Nursery 3",
     icon: BookOpen,
+    delay: "delay-100",
   },
   {
     title: "Practical STEM & Digital Labs",
@@ -121,6 +127,7 @@ const CORE_PILLARS = [
       "Dedicated Physics, Chemistry, and Biology laboratories alongside a modern ICT and CBT testing center for hands-on experimentation.",
     footer: "Primary & Secondary Arms",
     icon: FlaskConical,
+    delay: "delay-200",
   },
   {
     title: "Moral Character & Leadership",
@@ -129,6 +136,7 @@ const CORE_PILLARS = [
       "Intentional mentorship in honesty, public speaking, civic responsibility, and personal discipline so every graduate leads with integrity.",
     footer: "Daily Devotion & Mentoring",
     icon: HeartHandshake,
+    delay: "delay-300",
   },
   {
     title: "Accredited Examination Success",
@@ -137,6 +145,7 @@ const CORE_PILLARS = [
       "Structured continuous assessment (15 CA1 + 15 CA2 + 70 Exam) and intensive coaching for FLSC, BECE, WASSCE, and NECO examinations.",
     footer: "Proven Academic Track Record",
     icon: GraduationCap,
+    delay: "delay-400",
   },
 ];
 
@@ -147,6 +156,7 @@ const PARENT_TESTIMONIALS = [
     name: "Engr. & Mrs. Chukwuma Nwosu",
     ward: "Parents of 3 Scholars (Nursery 2, Basic 4 & SS 2)",
     tenure: "GFMS Family Since 2021",
+    delay: "delay-150",
   },
   {
     quote:
@@ -154,6 +164,7 @@ const PARENT_TESTIMONIALS = [
     name: "Dr. (Mrs.) Adesuwa Obaseki",
     ward: "Parent of JSS 3 Scholar",
     tenure: "BECE Distinction Parent",
+    delay: "delay-300",
   },
 ];
 
@@ -188,7 +199,7 @@ export default function HomePage() {
         onMouseLeave={() => setHeroPaused(false)}
       >
         {/* Background Slides */}
-        <div className="relative min-h-[520px] sm:min-h-[600px] lg:min-h-[660px] flex items-center">
+        <div className="relative min-h-[540px] sm:min-h-[600px] lg:min-h-[660px] flex items-center">
           {HERO_SLIDES.map((slide, idx) => (
             <div
               key={slide.id}
@@ -214,7 +225,7 @@ export default function HomePage() {
 
           {/* Hero Foreground Copy */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24 relative z-20 w-full">
-            <div className="max-w-3xl space-y-5 sm:space-y-6">
+            <div className="max-w-3xl space-y-5 sm:space-y-6 reveal-init reveal-fade-up delay-100">
               {/* Institutional Eyebrow */}
               <div className="inline-flex items-center gap-2.5 bg-primary-900/90 border border-white/15 px-3.5 py-1.5 rounded text-xs font-bold uppercase tracking-wider text-secondary-400">
                 <span className="w-2 h-2 rounded-full bg-secondary-400 shrink-0" />
@@ -237,8 +248,8 @@ export default function HomePage() {
                 {activeHero.description}
               </p>
 
-              {/* Primary Institutional CTAs */}
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+              {/* Primary Institutional CTAs (Admission, Result Checker & Staff Login) */}
+              <div className="pt-2 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-3.5">
                 <Link
                   href="/admissions"
                   className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-lg text-sm font-bold text-slate-950 bg-secondary-400 hover:bg-secondary-300 transition-colors shadow-sm"
@@ -250,18 +261,18 @@ export default function HomePage() {
 
                 <Link
                   href="/result"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg text-sm font-bold text-white bg-primary-900/90 hover:bg-primary-800 border border-white/20 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg text-sm font-bold text-white bg-primary-900/90 hover:bg-primary-800 border border-white/25 transition-colors"
                 >
                   <KeyRound className="w-4 h-4 text-secondary-400 shrink-0" />
                   <span>Check Termly Result</span>
                 </Link>
 
                 <Link
-                  href="/academics"
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-lg text-sm font-semibold text-slate-200 hover:text-white transition-colors"
+                  href="/staff/login"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-lg text-sm font-bold text-slate-100 bg-slate-900/90 hover:bg-slate-800 border border-white/20 transition-colors"
                 >
-                  <span>Explore Our Schools</span>
-                  <ChevronRight className="w-4 h-4 text-secondary-400" />
+                  <ShieldCheck className="w-4 h-4 text-secondary-400 shrink-0" />
+                  <span>Staff / Teacher Login</span>
                 </Link>
               </div>
             </div>
@@ -342,24 +353,31 @@ export default function HomePage() {
                 stat: "Sept. 2014",
                 label: "Year Established",
                 detail: "Over a decade of impact",
+                delay: "delay-100",
               },
               {
                 stat: "700+",
                 label: "Active Scholars",
                 detail: "Creche to Senior Secondary",
+                delay: "delay-200",
               },
               {
                 stat: "15 : 1",
                 label: "Class Mentorship Ratio",
                 detail: "Personalized pupil attention",
+                delay: "delay-300",
               },
               {
                 stat: "100%",
                 label: "Government Accredited",
                 detail: "FLSC, BECE, WASSCE & NECO",
+                delay: "delay-400",
               },
             ].map((item) => (
-              <div key={item.label} className="p-4 sm:p-6 lg:p-7 bg-white">
+              <div
+                key={item.label}
+                className={`p-4 sm:p-6 lg:p-7 bg-white reveal-init reveal-fade-up ${item.delay}`}
+              >
                 <span className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-primary-950 block tracking-tight">
                   {item.stat}
                 </span>
@@ -382,14 +400,14 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Column: Editorial Campus Visual Composition */}
-            <div className="lg:col-span-5 space-y-4 reveal-init reveal-fade-right">
-              <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-card aspect-[4/3] bg-slate-100">
+            <div className="lg:col-span-5 space-y-4 reveal-init reveal-fade-left delay-100">
+              <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-card aspect-[4/3] bg-slate-100 group">
                 <Image
                   src="/assets/images/campus-courtyard.jpg"
                   alt="Great-Favour Montessori School Courtyard and Scholars"
                   fill
                   sizes="(max-width: 1024px) 100vw, 42vw"
-                  className="object-cover"
+                  className="object-cover editorial-img-zoom"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary-950/75 via-transparent to-transparent" />
                 <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -403,7 +421,7 @@ export default function HomePage() {
               </div>
 
               {/* Official Charter Highlight Card */}
-              <div className="bg-primary-950 text-white p-5 sm:p-6 rounded-xl border border-primary-900 flex items-start gap-4">
+              <div className="bg-primary-950 text-white p-5 sm:p-6 rounded-xl border border-primary-900 flex items-start gap-4 reveal-init reveal-zoom-in delay-200">
                 <div className="w-11 h-11 rounded-lg bg-secondary-400 text-slate-950 flex items-center justify-center shrink-0 mt-0.5">
                   <Award className="w-5 h-5" />
                 </div>
@@ -422,7 +440,7 @@ export default function HomePage() {
             </div>
 
             {/* Right Column: Institutional Story & Accreditations */}
-            <div className="lg:col-span-7 space-y-6 reveal-init reveal-fade-left">
+            <div className="lg:col-span-7 space-y-6 reveal-init reveal-fade-right delay-150">
               <div className="space-y-3">
                 <div className="flex items-center gap-2.5">
                   <span className="w-8 h-0.5 bg-secondary-500" />
@@ -442,10 +460,10 @@ export default function HomePage() {
                   Approved &amp; Accredited Examination Bodies
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {INSTITUTIONAL_ACCREDITATION.approvedExaminations.map((exam) => (
+                  {INSTITUTIONAL_ACCREDITATION.approvedExaminations.map((exam, idx) => (
                     <div
                       key={exam.code}
-                      className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3.5"
+                      className={`p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3.5 reveal-init reveal-fade-up delay-${(idx + 1) * 100}`}
                     >
                       <span className="px-2.5 py-1 rounded bg-primary-900 text-secondary-400 font-extrabold text-xs shrink-0 mt-0.5">
                         {exam.code}
@@ -490,7 +508,7 @@ export default function HomePage() {
       <section className="py-12 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12">
           {/* Editorial Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-2.5 max-w-2xl">
               <div className="flex items-center gap-2.5">
                 <span className="w-8 h-0.5 bg-secondary-500" />
@@ -515,11 +533,10 @@ export default function HomePage() {
 
           {/* 4 Division Cards — Clean Full-Width Cards on Mobile, 2x2 on Tablet, 4-Col on Desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-            {ACADEMIC_DIVISIONS.map((div, index) => (
+            {ACADEMIC_DIVISIONS.map((div) => (
               <article
                 key={div.id}
-                className="editorial-card rounded-xl overflow-hidden flex flex-col justify-between group reveal-init reveal-fade-up"
-                style={{ transitionDelay: `${(index + 1) * 75}ms` }}
+                className={`editorial-card rounded-xl overflow-hidden flex flex-col justify-between group reveal-init reveal-fade-up ${div.delay}`}
               >
                 <div>
                   {/* Card Image Frame */}
@@ -589,7 +606,7 @@ export default function HomePage() {
           ===================================================================== */}
       <section className="py-12 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12">
-          <div className="max-w-3xl space-y-2.5 reveal-init reveal-fade-up">
+          <div className="max-w-3xl space-y-2.5 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-0.5 bg-secondary-500" />
               <span className="section-badge">The Great-Favour Standard</span>
@@ -609,8 +626,7 @@ export default function HomePage() {
               return (
                 <div
                   key={pillar.title}
-                  className="editorial-card rounded-xl p-5 sm:p-6 border-t-4 border-t-primary-900 flex flex-col justify-between reveal-init reveal-fade-up"
-                  style={{ transitionDelay: `${(idx + 1) * 75}ms` }}
+                  className={`editorial-card rounded-xl p-5 sm:p-6 border-t-4 border-t-primary-900 flex flex-col justify-between reveal-init reveal-fade-up ${pillar.delay}`}
                 >
                   <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
@@ -662,7 +678,7 @@ export default function HomePage() {
           ===================================================================== */}
       <section className="py-12 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 sm:space-y-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-2.5 max-w-2xl">
               <div className="flex items-center gap-2.5">
                 <span className="w-8 h-0.5 bg-secondary-500" />
@@ -687,11 +703,10 @@ export default function HomePage() {
 
           {/* Testimonials Grid — Full-Width Readable Cards on Mobile */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {PARENT_TESTIMONIALS.map((t, index) => (
+            {PARENT_TESTIMONIALS.map((t) => (
               <div
                 key={t.name}
-                className="editorial-card rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-5 reveal-init reveal-fade-up"
-                style={{ transitionDelay: `${(index + 1) * 100}ms` }}
+                className={`editorial-card rounded-xl p-6 sm:p-8 flex flex-col justify-between space-y-5 reveal-init reveal-fade-up ${t.delay}`}
               >
                 <div className="space-y-4">
                   <div className="w-10 h-10 rounded-lg bg-secondary-50 border border-secondary-200 text-secondary-700 flex items-center justify-center">

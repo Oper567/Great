@@ -8,7 +8,7 @@ export function ScrollRevealProvider({ children }: { children: React.ReactNode }
   const [progress, setProgress] = useState(0);
   const [showBar, setShowBar] = useState(false);
 
-  // Trigger top route progress bar and scroll-to-top on route change
+  // Trigger top route progress bar on route navigation
   useEffect(() => {
     setShowBar(true);
     setProgress(35);
@@ -33,32 +33,46 @@ export function ScrollRevealProvider({ children }: { children: React.ReactNode }
     };
   }, [pathname]);
 
-  // Observe all `.reveal-init` elements on initial load, route change, and DOM mutations (tab switches)
+  // Scroll-triggered animation engine for both Desktop and Mobile touch scrolling
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const observedElements = new WeakSet<Element>();
+
     const io = new IntersectionObserver(
       (entries) => {
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             entry.target.classList.add("reveal-visible");
-            io.unobserve(entry.target);
+          } else if (entry.boundingClientRect.top > viewportHeight * 0.98) {
+            // Reset element when it is scrolled back below the bottom of the viewport
+            // so scrolling down again smoothly replays the entrance animation
+            entry.target.classList.remove("reveal-visible");
           }
         });
       },
       {
         threshold: 0.08,
-        rootMargin: "0px 0px -32px 0px",
+        rootMargin: "0px 0px -40px 0px",
       }
     );
 
     const scanElements = () => {
-      const elements = document.querySelectorAll(".reveal-init:not(.reveal-visible)");
-      elements.forEach((el) => io.observe(el));
+      const elements = document.querySelectorAll(".reveal-init");
+      elements.forEach((el) => {
+        if (!observedElements.has(el)) {
+          observedElements.add(el);
+          io.observe(el);
+        }
+      });
     };
 
-    const timer = setTimeout(scanElements, 40);
+    // Initial scan and delayed scan after hydration
+    scanElements();
+    const timer = setTimeout(scanElements, 60);
 
+    // Watch for dynamically rendered tabs/cards (e.g., Faculty filter, Academics tabs, Portals)
     const mo = new MutationObserver(() => {
       scanElements();
     });
@@ -68,16 +82,8 @@ export function ScrollRevealProvider({ children }: { children: React.ReactNode }
       subtree: true,
     });
 
-    // Safety fallback so no element remains hidden if observer doesn't fire
-    const fallbackTimer = setTimeout(() => {
-      document.querySelectorAll(".reveal-init:not(.reveal-visible)").forEach((el) => {
-        el.classList.add("reveal-visible");
-      });
-    }, 1800);
-
     return () => {
       clearTimeout(timer);
-      clearTimeout(fallbackTimer);
       io.disconnect();
       mo.disconnect();
     };

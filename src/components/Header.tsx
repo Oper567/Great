@@ -107,10 +107,10 @@ export default function Header() {
               <span className="text-primary-800">|</span>
               <Link
                 href="/staff/login"
-                className="inline-flex items-center gap-1.5 text-slate-300 hover:text-white font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 text-white hover:text-secondary-400 font-semibold transition-colors"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-secondary-400 shrink-0" />
-                <span>Staff Portal</span>
+                <span>Staff Login</span>
               </Link>
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Editorial Navigation */}
-          <nav className="hidden lg:flex items-center gap-6 xl:gap-7" aria-label="Main Navigation">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-6" aria-label="Main Navigation">
             {NAV_LINKS.map((link) => {
               const active = isActive(link.href);
               return (
@@ -168,14 +168,21 @@ export default function Header() {
             })}
           </nav>
 
-          {/* Desktop Action Buttons */}
-          <div className="hidden lg:flex items-center gap-3 shrink-0">
+          {/* Desktop Action Buttons (Result, Staff Login & Admissions) */}
+          <div className="hidden lg:flex items-center gap-2.5 shrink-0">
             <Link
               href="/result"
-              className="inline-flex items-center gap-2 text-xs font-bold text-primary-950 bg-slate-100 hover:bg-slate-200/80 border border-slate-300/80 px-4 py-2.5 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary-950 bg-slate-100 hover:bg-slate-200/80 border border-slate-300/80 px-3.5 py-2.5 rounded-lg transition-colors"
             >
               <KeyRound className="w-3.5 h-3.5 text-primary-800" />
-              <span>Check Result</span>
+              <span>Results</span>
+            </Link>
+            <Link
+              href="/staff/login"
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 px-3.5 py-2.5 rounded-lg transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-primary-800" />
+              <span>Staff Login</span>
             </Link>
             <Link
               href="/admissions"
@@ -240,20 +247,20 @@ export default function Header() {
                 <span>Check Termly Result</span>
               </Link>
               <Link
+                href="/staff/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-3 px-4 font-bold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg text-xs flex items-center justify-center gap-2 transition"
+              >
+                <ShieldCheck className="w-4 h-4 text-secondary-400 shrink-0" />
+                <span>Staff / Teacher Login</span>
+              </Link>
+              <Link
                 href="/admissions"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-3 px-4 font-bold text-white bg-primary-900 hover:bg-primary-950 rounded-lg text-xs flex items-center justify-center gap-2 transition"
+                className="sm:col-span-2 w-full py-3 px-4 font-bold text-white bg-primary-900 hover:bg-primary-950 rounded-lg text-xs flex items-center justify-center gap-2 transition"
               >
                 <span>Apply for Admission</span>
                 <ArrowUpRight className="w-4 h-4 text-secondary-400 shrink-0" />
-              </Link>
-              <Link
-                href="/staff/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="sm:col-span-2 w-full py-2.5 px-4 font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs flex items-center justify-center gap-2 transition"
-              >
-                <ShieldCheck className="w-4 h-4 text-primary-800 shrink-0" />
-                <span>Staff &amp; Faculty Portal Login</span>
               </Link>
             </div>
           </div>

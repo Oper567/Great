@@ -40,7 +40,7 @@ export default function Footer() {
 
   return (
     <footer id="contact" className="bg-primary-950 text-white pt-12 sm:pt-16 pb-8 border-t-4 border-secondary-500 overflow-hidden w-full">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 sm:space-y-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 sm:space-y-12 reveal-init reveal-fade-up delay-100">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
           {/* Column 1: School Identity (4 cols) */}
           <div className="lg:col-span-4 space-y-4 min-w-0">
