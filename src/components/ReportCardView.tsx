@@ -283,23 +283,23 @@ export default function ReportCardView({ data, scratchCardCheckInfo }: ReportCar
             <div className="flex items-center gap-2">
               {/* Student Passport Photo Container */}
               <div className="shrink-0 flex flex-col items-center">
-                <div className="w-[44px] h-[54px] rounded border border-blue-900 bg-white shadow-xs overflow-hidden flex items-center justify-center relative">
+                <div className="w-[50px] h-[60px] sm:w-[54px] sm:h-[64px] rounded border-2 border-blue-900 bg-white shadow-xs overflow-hidden flex items-center justify-center relative">
                   {data.student.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={data.student.avatarUrl}
                       alt={data.student.fullName}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover object-top"
                     />
                   ) : (
-                    <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center p-0.5 text-center">
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span className="text-[5.5px] font-bold text-slate-400 uppercase mt-0.5 leading-none">
+                    <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center p-0.5 text-center pb-2">
+                      <User className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
+                      <span className="text-[6px] font-bold text-slate-500 uppercase mt-0.5 leading-none">
                         PASSPORT
                       </span>
                     </div>
                   )}
-                  <div className="absolute bottom-0 inset-x-0 bg-blue-950/90 text-[5px] text-white text-center font-bold uppercase py-0.5">
+                  <div className="absolute bottom-0 inset-x-0 bg-blue-950/95 text-[5.5px] text-yellow-300 text-center font-extrabold uppercase py-0.5 tracking-wider">
                     CERTIFIED
                   </div>
                 </div>

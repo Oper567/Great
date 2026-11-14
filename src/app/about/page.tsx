@@ -87,10 +87,10 @@ export default function AboutPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
             {/* Director Card — Full Box Width Portrait Maintaining Height */}
-            <div className="lg:col-span-7 bg-primary-950 text-white rounded-2xl p-5 sm:p-7 shadow-xl border border-primary-900 flex flex-col justify-between reveal-init reveal-fade-left delay-200">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-6 items-center">
+            <div className="lg:col-span-7 bg-primary-950 text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-primary-900 flex flex-col justify-between reveal-init reveal-fade-left delay-200">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-5 items-center">
                 <div className="md:col-span-5 w-full">
-                  <div className="relative w-full h-[320px] sm:h-[340px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
+                  <div className="relative w-full h-[230px] sm:h-[250px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
                     <Image
                       src={KEY_PERSONNEL.director.image}
                       alt={`${KEY_PERSONNEL.director.fullName} - ${KEY_PERSONNEL.director.title}`}
@@ -132,7 +132,7 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              <div className="pt-3.5 mt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
+              <div className="pt-3 mt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4 text-secondary-400 shrink-0" />
                   <span>Over 700 scholars across Nursery, Primary &amp; Secondary</span>

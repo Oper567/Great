@@ -27,6 +27,23 @@ import {
   doesStudentMatchClassFilter,
 } from "@/lib/cbt-utils";
 
+function findExistingStudentPhotoInStore(targetAdmNo: string): string | undefined {
+  if (!targetAdmNo) return undefined;
+  const clean = targetAdmNo.trim().toUpperCase();
+  try {
+    const items = getLocalTerminalResultsStore();
+    for (const item of items) {
+      if (item.admNo?.trim().toUpperCase() === clean && item.resultPayload) {
+        try {
+          const parsed = JSON.parse(item.resultPayload);
+          if (parsed?.studentPhotoUrl) return parsed.studentPhotoUrl;
+        } catch {}
+      }
+    }
+  } catch {}
+  return undefined;
+}
+
 /**
  * Super Admin: Save or Update a Student's Terminal Result Dossier
  */
@@ -66,7 +83,10 @@ export async function saveTerminalResultAction(formData: FormData): Promise<{
   const gender = ((formData.get("gender") as string)?.trim() || "FEMALE") as "MALE" | "FEMALE";
   const division = (className.toUpperCase().startsWith("SS") || className.toUpperCase().startsWith("JSS")) ? "SECONDARY" : "PRIMARY";
   const classAvgInput = parseFloat((formData.get("classAverage") as string) || "0");
-  const studentPhotoUrl = (formData.get("studentPhotoUrl") as string)?.trim() || undefined;
+  let studentPhotoUrl = (formData.get("studentPhotoUrl") as string)?.trim() || undefined;
+  if (!studentPhotoUrl && admNo) {
+    studentPhotoUrl = findExistingStudentPhotoInStore(admNo);
+  }
   const isPublished = (formData.get("isPublished") as string) !== "false";
 
   const rawSubjectsJson = formData.get("subjectsJson") as string;
@@ -904,6 +924,7 @@ export async function getStudentPreparedResultAction(
 
     // 2. Query DB
     let record: any = null;
+    let fallbackDbPhotoUrl: string | undefined;
     try {
       const allDbRecords = await prisma.terminalResult.findMany({
         where: {
@@ -915,6 +936,12 @@ export async function getStudentPreparedResultAction(
 
       for (const rec of allDbRecords) {
         if (rec.term) availableTermsSet.add(rec.term);
+        if (!fallbackDbPhotoUrl && rec.resultPayload) {
+          try {
+            const p = JSON.parse(rec.resultPayload);
+            if (p?.studentPhotoUrl) fallbackDbPhotoUrl = p.studentPhotoUrl;
+          } catch {}
+        }
       }
 
       if (targetNormTerm) {
@@ -971,6 +998,13 @@ export async function getStudentPreparedResultAction(
         }
         payload.skills = payload.skills || DEFAULT_PREPARED_SKILLS;
         payload.behaviour = payload.behaviour || DEFAULT_PREPARED_BEHAVIOUR;
+        if (!payload.studentPhotoUrl) {
+          payload.studentPhotoUrl =
+            localMatch?.studentPhotoUrl ||
+            findExistingStudentPhotoInStore(cleanAdmNo) ||
+            fallbackDbPhotoUrl ||
+            undefined;
+        }
 
         return { success: true, result: payload, availableTerms, source: "DATABASE" };
       } catch (err) {
@@ -982,6 +1016,12 @@ export async function getStudentPreparedResultAction(
     if (localMatch) {
       if (localMatch.feeInfo && localMatch.feeInfo.accountNumber === "1014529088") {
         localMatch.feeInfo.accountNumber = "";
+      }
+      if (!localMatch.studentPhotoUrl) {
+        const fallbackPhoto = findExistingStudentPhotoInStore(cleanAdmNo) || fallbackDbPhotoUrl;
+        if (fallbackPhoto) {
+          localMatch.studentPhotoUrl = fallbackPhoto;
+        }
       }
       return { success: true, result: localMatch, availableTerms, source: "DATABASE" };
     }

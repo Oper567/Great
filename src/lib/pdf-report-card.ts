@@ -95,7 +95,21 @@ function wrapTextLines(
   return lines.length > 0 ? lines : [""];
 }
 
-export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8Array {
+export interface EmbeddedPdfImage {
+  bytes: Uint8Array;
+  width: number;
+  height: number;
+}
+
+export interface ReportCardPdfImages {
+  studentPhoto?: EmbeddedPdfImage | null;
+  schoolLogo?: EmbeddedPdfImage | null;
+}
+
+export function generateTerminalReportCardPdfBytes(
+  data: ReportCardData,
+  embeddedImages?: ReportCardPdfImages
+): Uint8Array {
   const PAGE_W = 595.28; // Standard A4 Width (210mm)
   const PAGE_H = 841.89; // Standard A4 Height (297mm)
   const MARGIN = 18;     // Crisp 18pt (~6.3mm) margin around all 4 sides
@@ -104,6 +118,22 @@ export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8A
 
   const yPt = (topY: number) => Number((PAGE_H - topY).toFixed(2));
   const cmds: string[] = [];
+
+  const drawImageXObject = (
+    name: "ImLogo" | "ImStudent",
+    x: number,
+    topY: number,
+    w: number,
+    h: number
+  ) => {
+    const bottomY = PAGE_H - topY - h;
+    cmds.push(
+      "q",
+      `${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${x.toFixed(2)} ${bottomY.toFixed(2)} cm`,
+      `/${name} Do`,
+      "Q"
+    );
+  };
 
   const fillRect = (
     x: number,
@@ -214,12 +244,18 @@ export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8A
 
   // Left Crest Seal Box inside Header
   const crestX = CONTENT_X + 8;
-  const crestY = curY + 7;
-  fillRect(crestX, crestY, 68, 48, 0.09, 0.17, 0.36);
-  strokeRect(crestX, crestY, 68, 48, 0.92, 0.7, 0.03, 0.8);
-  drawCenteredText("GFMS", crestX, 68, crestY + 19, "F2", 12, 0.98, 0.82, 0.15);
-  drawCenteredText("EST. SEPT 2014", crestX, 68, crestY + 31, "F2", 6.5, 1, 1, 1);
-  drawCenteredText("APPROVED", crestX, 68, crestY + 41, "F1", 6, 0.8, 0.86, 0.95);
+  const crestY = curY + 6;
+  fillRect(crestX, crestY, 68, 50, 0.09, 0.17, 0.36);
+  strokeRect(crestX, crestY, 68, 50, 0.92, 0.7, 0.03, 0.8);
+  if (embeddedImages?.schoolLogo) {
+    fillRect(crestX + 15, crestY + 2, 38, 36, 1, 1, 1);
+    drawImageXObject("ImLogo", crestX + 15, crestY + 2, 38, 36);
+    drawCenteredText("EST. SEPT 2014", crestX, 68, crestY + 46, "F2", 5.8, 0.98, 0.82, 0.15);
+  } else {
+    drawCenteredText("GFMS", crestX, 68, crestY + 19, "F2", 12, 0.98, 0.82, 0.15);
+    drawCenteredText("EST. SEPT 2014", crestX, 68, crestY + 31, "F2", 6.5, 1, 1, 1);
+    drawCenteredText("APPROVED", crestX, 68, crestY + 41, "F1", 6, 0.8, 0.86, 0.95);
+  }
 
   // Center School Title & Accreditation
   const centerX = CONTENT_X + 82;
@@ -323,45 +359,74 @@ export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8A
   curY += HEADER_H + 8;
 
   // =========================================================================
-  // 2. STUDENT BIODATA & ATTENDANCE GRID (Height: 54pt)
+  // 2. STUDENT BIODATA, PASSPORT PHOTO & ATTENDANCE GRID (Height: 56pt)
   // =========================================================================
-  const BIO_H = 54;
+  const BIO_H = 56;
+  const PHOTO_COL_W = 52;
+  const BIO_DATA_X = CONTENT_X + PHOTO_COL_W;
+  const BIO_DATA_W = CONTENT_W - PHOTO_COL_W; // 495.28pt
+
   fillRect(CONTENT_X, curY, CONTENT_W, BIO_H, 0.973, 0.98, 0.992);
   strokeRect(CONTENT_X, curY, CONTENT_W, BIO_H, 0.72, 0.78, 0.86, 0.8);
 
-  // Horizontal divider splitting Row 1 (28pt) and Row 2 (26pt)
-  const bioMidY = curY + 28;
-  drawLine(CONTENT_X, bioMidY, CONTENT_X + CONTENT_W, bioMidY, 0.78, 0.82, 0.88, 0.6);
+  // Student Passport Photo Frame on Left (44pt x 50pt)
+  const photoX = CONTENT_X + 4;
+  const photoY = curY + 3;
+  const photoW = 44;
+  const photoH = 50;
+  fillRect(photoX, photoY, photoW, photoH, 1, 1, 1);
 
-  // Row 1 Columns: Student Full Name (185pt) | Class/Stream (95pt) | Adm No (105pt) | Sex (52pt) | Session & Term (110.28pt)
+  if (embeddedImages?.studentPhoto) {
+    drawImageXObject("ImStudent", photoX + 1, photoY + 1, photoW - 2, photoH - 9);
+  } else {
+    fillRect(photoX + 1, photoY + 1, photoW - 2, photoH - 9, 0.93, 0.95, 0.98);
+    // Clean user silhouette icon inside passport placeholder
+    fillRect(photoX + 16, photoY + 7, 12, 11, 0.68, 0.74, 0.82);
+    fillRect(photoX + 10, photoY + 20, 24, 10, 0.68, 0.74, 0.82);
+    drawCenteredText("PASSPORT", photoX, photoW, photoY + 38, "F2", 5.5, 0.38, 0.44, 0.54);
+  }
+
+  // Bottom "CERTIFIED" badge strip inside Passport box
+  fillRect(photoX, photoY + photoH - 8, photoW, 8, 0.06, 0.11, 0.25);
+  drawCenteredText("CERTIFIED", photoX, photoW, photoY + photoH - 2.2, "F2", 5.2, 0.98, 0.82, 0.15);
+  strokeRect(photoX, photoY, photoW, photoH, 0.09, 0.17, 0.36, 0.9);
+
+  // Vertical divider between Passport Photo and Biodata columns
+  drawLine(BIO_DATA_X, curY, BIO_DATA_X, curY + BIO_H, 0.72, 0.78, 0.86, 0.6);
+
+  // Horizontal divider splitting Row 1 (28pt) and Row 2 (28pt)
+  const bioMidY = curY + 28;
+  drawLine(BIO_DATA_X, bioMidY, CONTENT_X + CONTENT_W, bioMidY, 0.78, 0.82, 0.88, 0.6);
+
+  // Row 1 Columns: Student Full Name (168pt) | Class/Arm (84pt) | Adm No (92pt) | Gender (48pt) | Term & Session (103.28pt)
   const r1Cols = [
-    { label: "STUDENT FULL NAME", val: (data.student.fullName || "STUDENT").toUpperCase(), w: 185, bold: true },
+    { label: "STUDENT FULL NAME", val: (data.student.fullName || "STUDENT").toUpperCase(), w: 168, bold: true },
     {
       label: "CLASS / ARM",
       val: data.student.arm && !data.student.className?.toLowerCase().includes(data.student.arm.toLowerCase())
         ? `${data.student.className} (${data.student.arm})`
         : data.student.className || "-",
-      w: 92,
+      w: 84,
       bold: true,
     },
-    { label: "ADMISSION NO.", val: data.student.admissionNumber || "-", w: 102, bold: true },
-    { label: "GENDER", val: (data.student.gender || "-").toUpperCase(), w: 54, bold: false },
-    { label: "TERM & SESSION", val: `${data.termLabel || data.term} | ${data.session}`, w: CONTENT_W - 433, bold: true },
+    { label: "ADMISSION NO.", val: data.student.admissionNumber || "-", w: 92, bold: true },
+    { label: "GENDER", val: (data.student.gender || "-").toUpperCase(), w: 48, bold: false },
+    { label: "TERM & SESSION", val: `${data.termLabel || data.term} | ${data.session}`, w: BIO_DATA_W - 392, bold: true },
   ];
 
-  let colX = CONTENT_X;
+  let colX = BIO_DATA_X;
   for (let i = 0; i < r1Cols.length; i++) {
     const c = r1Cols[i];
     if (i > 0) {
       drawLine(colX, curY, colX, bioMidY, 0.78, 0.82, 0.88, 0.5);
     }
-    drawText(c.label, colX + 6, curY + 10, "F2", 6.2, 0.38, 0.44, 0.52);
+    drawText(c.label, colX + 5, curY + 10, "F2", 6.0, 0.38, 0.44, 0.52);
     drawText(
-      fitTextToWidth(c.val, c.w - 10, 8.5, c.bold),
-      colX + 6,
+      fitTextToWidth(c.val, c.w - 9, 8.2, c.bold),
+      colX + 5,
       curY + 22,
       c.bold ? "F2" : "F1",
-      8.5,
+      8.2,
       0.06,
       0.11,
       0.25
@@ -373,15 +438,15 @@ export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8A
   const posNum = data.positionInClass || 1;
   const posStr = `${posNum}${getOrdinalSuffix(posNum)} of ${data.numberInClass || 35}`;
   const r2Cols = [
-    { label: "POSITION IN CLASS", val: posStr, w: 105, highlight: true },
-    { label: "NO. IN CLASS", val: String(data.numberInClass || 35), w: 72, highlight: false },
-    { label: "DAYS OPENED", val: String(data.daysOpened ?? 115), w: 72, highlight: false },
-    { label: "DAYS PRESENT", val: String(data.daysPresent ?? 112), w: 72, highlight: false },
-    { label: "DAYS ABSENT", val: String(data.daysAbsent ?? 3), w: 68, highlight: false },
-    { label: "NEXT TERM RESUMES", val: data.nextTermBegins || "To Be Announced", w: CONTENT_W - 389, highlight: false },
+    { label: "POSITION IN CLASS", val: posStr, w: 95, highlight: true },
+    { label: "NO. IN CLASS", val: String(data.numberInClass || 35), w: 64, highlight: false },
+    { label: "DAYS OPENED", val: String(data.daysOpened ?? 115), w: 64, highlight: false },
+    { label: "DAYS PRESENT", val: String(data.daysPresent ?? 112), w: 64, highlight: false },
+    { label: "DAYS ABSENT", val: String(data.daysAbsent ?? 3), w: 62, highlight: false },
+    { label: "NEXT TERM RESUMES", val: data.nextTermBegins || "To Be Announced", w: BIO_DATA_W - 349, highlight: false },
   ];
 
-  colX = CONTENT_X;
+  colX = BIO_DATA_X;
   for (let i = 0; i < r2Cols.length; i++) {
     const c = r2Cols[i];
     if (i > 0) {
@@ -390,13 +455,13 @@ export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8A
     if (c.highlight) {
       fillRect(colX + 1, bioMidY + 1, c.w - 2, BIO_H - 29, 0.99, 0.96, 0.82);
     }
-    drawText(c.label, colX + 6, bioMidY + 9.5, "F2", 6.0, 0.38, 0.44, 0.52);
+    drawText(c.label, colX + 5, bioMidY + 9.5, "F2", 5.8, 0.38, 0.44, 0.52);
     drawText(
-      fitTextToWidth(c.val, c.w - 10, 8.2, true),
-      colX + 6,
-      bioMidY + 20.5,
+      fitTextToWidth(c.val, c.w - 9, 8.0, true),
+      colX + 5,
+      bioMidY + 21,
       "F2",
-      8.2,
+      8.0,
       c.highlight ? 0.09 : 0.12,
       c.highlight ? 0.22 : 0.18,
       c.highlight ? 0.55 : 0.28
@@ -993,66 +1058,210 @@ export function generateTerminalReportCardPdfBytes(data: ReportCardData): Uint8A
   );
 
   // =========================================================================
-  // ASSEMBLE SINGLE-PAGE A4 PDF BINARY
+  // ASSEMBLE SINGLE-PAGE A4 PDF BINARY (WITH OPTIONAL EMBEDDED JPEG XOBJECTS)
   // =========================================================================
-  const streamContent = cmds.join("\n");
-  const objects: string[] = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [6 0 R] /Count 1 >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>",
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 7 0 R >>`,
-    `<< /Length ${streamContent.length} >>\nstream\n${streamContent}\nendstream`,
+  const asciiToBytes = (str: string): Uint8Array => {
+    const out = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      out[i] = str.charCodeAt(i) & 0xff;
+    }
+    return out;
+  };
+
+  const concatBytes = (arrays: Uint8Array[]): Uint8Array => {
+    const totalLen = arrays.reduce((acc, a) => acc + a.length, 0);
+    const result = new Uint8Array(totalLen);
+    let offset = 0;
+    for (const arr of arrays) {
+      result.set(arr, offset);
+      offset += arr.length;
+    }
+    return result;
+  };
+
+  const streamContentBytes = asciiToBytes(cmds.join("\n"));
+
+  const xObjectEntries: string[] = [];
+  const extraObjectBodies: Uint8Array[] = [];
+  let nextObjId = 8;
+
+  if (embeddedImages?.schoolLogo) {
+    const logoObjId = nextObjId++;
+    xObjectEntries.push(`/ImLogo ${logoObjId} 0 R`);
+    const logoHeader = asciiToBytes(
+      `<< /Type /XObject /Subtype /Image /Width ${embeddedImages.schoolLogo.width} /Height ${embeddedImages.schoolLogo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${embeddedImages.schoolLogo.bytes.length} >>\nstream\n`
+    );
+    const logoFooter = asciiToBytes("\nendstream");
+    extraObjectBodies.push(concatBytes([logoHeader, embeddedImages.schoolLogo.bytes, logoFooter]));
+  }
+
+  if (embeddedImages?.studentPhoto) {
+    const studentObjId = nextObjId++;
+    xObjectEntries.push(`/ImStudent ${studentObjId} 0 R`);
+    const stuHeader = asciiToBytes(
+      `<< /Type /XObject /Subtype /Image /Width ${embeddedImages.studentPhoto.width} /Height ${embeddedImages.studentPhoto.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${embeddedImages.studentPhoto.bytes.length} >>\nstream\n`
+    );
+    const stuFooter = asciiToBytes("\nendstream");
+    extraObjectBodies.push(concatBytes([stuHeader, embeddedImages.studentPhoto.bytes, stuFooter]));
+  }
+
+  const xObjectDict =
+    xObjectEntries.length > 0 ? ` /XObject << ${xObjectEntries.join(" ")} >>` : "";
+
+  const baseObjects: Uint8Array[] = [
+    asciiToBytes("<< /Type /Catalog /Pages 2 0 R >>"),
+    asciiToBytes("<< /Type /Pages /Kids [6 0 R] /Count 1 >>"),
+    asciiToBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>"),
+    asciiToBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"),
+    asciiToBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>"),
+    asciiToBytes(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_W} ${PAGE_H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>${xObjectDict} >> /Contents 7 0 R >>`
+    ),
+    concatBytes([
+      asciiToBytes(`<< /Length ${streamContentBytes.length} >>\nstream\n`),
+      streamContentBytes,
+      asciiToBytes("\nendstream"),
+    ]),
+    ...extraObjectBodies,
   ];
 
-  const chunks: string[] = ["%PDF-1.4\n"];
+  const fileParts: Uint8Array[] = [asciiToBytes("%PDF-1.4\n")];
   const offsets: number[] = [0];
-  let byteOffset = chunks[0].length;
+  let byteOffset = fileParts[0].length;
 
-  for (let i = 0; i < objects.length; i++) {
+  for (let i = 0; i < baseObjects.length; i++) {
     offsets.push(byteOffset);
-    const objStr = `${i + 1} 0 obj\n${objects[i]}\nendobj\n`;
-    chunks.push(objStr);
-    byteOffset += objStr.length;
+    const prefix = asciiToBytes(`${i + 1} 0 obj\n`);
+    const suffix = asciiToBytes("\nendobj\n");
+    const fullObj = concatBytes([prefix, baseObjects[i], suffix]);
+    fileParts.push(fullObj);
+    byteOffset += fullObj.length;
   }
 
   const xrefOffset = byteOffset;
   const xrefLines: string[] = [
     "xref",
-    `0 ${objects.length + 1}`,
+    `0 ${baseObjects.length + 1}`,
     "0000000000 65535 f ",
   ];
-  for (let i = 1; i <= objects.length; i++) {
+  for (let i = 1; i <= baseObjects.length; i++) {
     xrefLines.push(`${String(offsets[i]).padStart(10, "0")} 00000 n `);
   }
 
   const trailer = [
     ...xrefLines,
     "trailer",
-    `<< /Size ${objects.length + 1} /Root 1 0 R >>`,
+    `<< /Size ${baseObjects.length + 1} /Root 1 0 R >>`,
     "startxref",
     String(xrefOffset),
     "%%EOF",
   ].join("\n");
 
-  chunks.push(trailer);
+  fileParts.push(asciiToBytes(trailer));
 
-  const fullPdf = chunks.join("");
-  const bytes = new Uint8Array(fullPdf.length);
-  for (let i = 0; i < fullPdf.length; i++) {
-    bytes[i] = fullPdf.charCodeAt(i) & 0xff;
-  }
-  return bytes;
+  return concatBytes(fileParts);
+}
+
+/**
+ * Helper to load and rasterize an image URL or Data URI into raw JPEG bytes for PDF embedding
+ */
+async function rasterizeImageToJpeg(
+  src: string,
+  targetW: number,
+  targetH: number,
+  mode: "cover-top" | "contain" = "cover-top"
+): Promise<EmbeddedPdfImage | null> {
+  if (typeof window === "undefined" || !src) return null;
+
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+
+    const timeout = setTimeout(() => {
+      resolve(null);
+    }, 2500);
+
+    img.onload = () => {
+      clearTimeout(timeout);
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(null);
+          return;
+        }
+
+        // Fill crisp white background
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, targetW, targetH);
+
+        const iw = img.naturalWidth || img.width || targetW;
+        const ih = img.naturalHeight || img.height || targetH;
+
+        if (mode === "contain") {
+          const scale = Math.min(targetW / iw, targetH / ih);
+          const dw = iw * scale;
+          const dh = ih * scale;
+          const dx = (targetW - dw) / 2;
+          const dy = (targetH - dh) / 2;
+          ctx.drawImage(img, dx, dy, dw, dh);
+        } else {
+          // cover-top: fill box and anchor near top (10%) so head is never cropped
+          const scale = Math.max(targetW / iw, targetH / ih);
+          const sw = targetW / scale;
+          const sh = targetH / scale;
+          const sx = Math.max(0, (iw - sw) / 2);
+          const sy = Math.max(0, (ih - sh) * 0.1);
+          ctx.drawImage(img, sx, sy, iw - sx * 2, sh, 0, 0, targetW, targetH);
+        }
+
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        const base64Idx = dataUrl.indexOf(";base64,");
+        if (base64Idx === -1) {
+          resolve(null);
+          return;
+        }
+        const rawBase64 = dataUrl.slice(base64Idx + 8);
+        const binaryStr = window.atob(rawBase64);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i) & 0xff;
+        }
+        resolve({ bytes, width: targetW, height: targetH });
+      } catch {
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => {
+      clearTimeout(timeout);
+      resolve(null);
+    };
+
+    img.src = src;
+  });
 }
 
 /**
  * Triggers an immediate download of the single-page A4 Report Card PDF
+ * with embedded Student Passport Picture and School Crest.
  */
-export function downloadTerminalReportCardPdf(data: ReportCardData): void {
+export async function downloadTerminalReportCardPdf(data: ReportCardData): Promise<void> {
   if (typeof window === "undefined") return;
 
-  const pdfBytes = generateTerminalReportCardPdfBytes(data);
+  const [schoolLogo, studentPhoto] = await Promise.all([
+    rasterizeImageToJpeg("/assets/images/school-logo.jpg", 160, 160, "contain"),
+    data.student?.avatarUrl
+      ? rasterizeImageToJpeg(data.student.avatarUrl, 176, 200, "cover-top")
+      : Promise.resolve(null),
+  ]);
+
+  const pdfBytes = generateTerminalReportCardPdfBytes(data, {
+    schoolLogo,
+    studentPhoto,
+  });
   const blob = new Blob([pdfBytes as unknown as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
 
