@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { getAdminSession } from "@/lib/session";
 
 /**
  * Super Admin: Create a new teacher or staff account
@@ -12,6 +13,14 @@ export async function createTeacherAccountAction(formData: FormData): Promise<{
   error?: string;
   teacher?: any;
 }> {
+  const session = await getAdminSession().catch(() => null);
+  if (!session || session.role === "TEACHER") {
+    return {
+      success: false,
+      error: "Unauthorized: Super Admin privileges are required to create staff accounts.",
+    };
+  }
+
   const fullName = (formData.get("fullName") as string)?.trim();
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const rawPassword = (formData.get("password") as string)?.trim();
@@ -132,6 +141,13 @@ export async function deleteTeacherAccountAction(teacherId: number): Promise<{
   success: boolean;
   error?: string;
 }> {
+  const session = await getAdminSession().catch(() => null);
+  if (!session || session.role === "TEACHER") {
+    return {
+      success: false,
+      error: "Unauthorized: Super Admin privileges are required to delete staff accounts.",
+    };
+  }
   try {
     await prisma.adminUser.delete({
       where: { id: teacherId },

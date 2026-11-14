@@ -1,7 +1,9 @@
 "use server";
 
+import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getAdminSession } from "@/lib/session";
 import {
   saveToLocalScratchCardsStore,
   getLocalScratchCardsStore,
@@ -10,7 +12,7 @@ import {
 } from "@/lib/scratch-card-store";
 
 /**
- * Super Admin: Generate bulk scratch cards with strict 2-check usage limit
+ * Super Admin: Generate bulk scratch cards with strict 3-check usage limit
  */
 export async function generateScratchCardsAction(formData: FormData): Promise<{
   success: boolean;
@@ -18,6 +20,11 @@ export async function generateScratchCardsAction(formData: FormData): Promise<{
   count?: number;
   cards?: any[];
 }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Administrator or Bursary login required." };
+  }
+
   const quantity = Math.min(Math.max(parseInt((formData.get("quantity") as string) || "5", 10), 1), 100);
   const session = (formData.get("session") as string)?.trim() || "2025/2026";
   const term = (formData.get("term") as string)?.trim() || "Third Term";
@@ -27,15 +34,15 @@ export async function generateScratchCardsAction(formData: FormData): Promise<{
     const yearPrefix = new Date().getFullYear();
 
     for (let i = 0; i < quantity; i++) {
-      // Cryptographically pseudo-random PIN: GFMS-XXXX-XXXX
-      const part1 = Math.floor(1000 + Math.random() * 9000);
-      const part2 = Math.floor(1000 + Math.random() * 9000);
+      // Cryptographically secure random PIN: GFMS-XXXX-XXXX
+      const part1 = crypto.randomInt(1000, 10000);
+      const part2 = crypto.randomInt(1000, 10000);
       const pin = `GFMS-${part1}-${part2}`;
 
       // Serial Number: SN-GFMS-YYYY-XXXXX
-      const serialSuffix = Math.floor(10000 + Math.random() * 90000);
+      const serialSuffix = crypto.randomInt(10000, 100000);
       const serialNumber = `SN-GFMS-${yearPrefix}-${serialSuffix}`;
-      const cardId = `sc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${i}`;
+      const cardId = `sc_${Date.now()}_${crypto.randomBytes(3).toString("hex")}_${i}`;
 
       const cardPayload = {
         id: cardId,
@@ -171,6 +178,10 @@ export async function getAllScratchCardsAction(): Promise<{
  * Super Admin: Delete a Scratch Card
  */
 export async function deleteScratchCardAction(cardId: string): Promise<{ success: boolean; error?: string }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Administrator login required." };
+  }
   try {
     deleteFromLocalScratchCardsStore(cardId);
     await prisma.scratchCard.delete({
@@ -189,6 +200,10 @@ export async function deleteScratchCardAction(cardId: string): Promise<{ success
  * Super Admin: Reset a Scratch Card (clears lock & usageCount back to 0)
  */
 export async function resetScratchCardAction(cardId: string): Promise<{ success: boolean; error?: string }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Administrator login required." };
+  }
   try {
     updateInLocalScratchCardsStore(cardId, {
       usageCount: 0,

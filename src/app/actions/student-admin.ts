@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { parseClassAndArm } from "@/lib/cbt-utils";
+import { getAdminSession } from "@/lib/session";
 
 /**
  * Super Admin: Create a single student with generated or custom RegNo
@@ -12,6 +13,11 @@ export async function createStudentAction(formData: FormData): Promise<{
   error?: string;
   student?: any;
 }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  }
+
   const customAdmNo = (formData.get("admNo") as string)?.trim().toUpperCase();
   const surname = (formData.get("surname") as string)?.trim();
   const fullName = (formData.get("fullName") as string)?.trim();
@@ -91,6 +97,11 @@ export async function generateBatchStudentsAction(formData: FormData): Promise<{
   count?: number;
   students?: any[];
 }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  }
+
   const rawCurrentClass = (formData.get("currentClass") as string)?.trim();
   const rawArm = (formData.get("arm") as string)?.trim() || "";
   const parsed = parseClassAndArm(rawCurrentClass, rawArm);
@@ -191,6 +202,11 @@ export async function updateStudentAction(formData: FormData): Promise<{
   success: boolean;
   error?: string;
 }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  }
+
   const studentId = parseInt((formData.get("studentId") as string) || "0", 10);
   const surname = (formData.get("surname") as string)?.trim();
   const fullName = (formData.get("fullName") as string)?.trim();
@@ -235,6 +251,10 @@ export async function deleteStudentAction(studentId: number): Promise<{
   success: boolean;
   error?: string;
 }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  }
   try {
     await prisma.student.delete({
       where: { id: studentId },

@@ -219,31 +219,78 @@ body {
   }
 }
 
-/* Print Stylesheet for Single-Page A4 Report Card */
+/* Print Stylesheet for Full-Page Single-Sheet A4 Report Card */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 6mm;
+    margin: 5mm;
   }
 
+  html,
   body {
+    width: 210mm !important;
+    height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+    overflow: hidden !important;
   }
 
   .no-print {
     display: none !important;
   }
 
-  .print-sheet {
-    box-shadow: none !important;
-    border: 1px solid #cbd5e1 !important;
-    margin: 0 !important;
-    padding: 4mm !important;
+  .page-transition-shell {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+
+  .report-card-container {
     width: 100% !important;
     max-width: 100% !important;
-    page-break-inside: avoid;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .report-card-sheet,
+  .print-sheet {
+    box-shadow: none !important;
+    border: 2px solid #1e3a8a !important;
+    margin: 0 !important;
+    padding: 3.5mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 286mm !important;
+    max-height: 287mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+
+  /* Ensure multi-column A4 grids never stack vertically when printing from a mobile browser */
+  .report-bio-row {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+  }
+  .report-bio-row > :first-child {
+    grid-column: span 3 / span 3 !important;
+  }
+  .report-main-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  }
+  .report-col-left {
+    grid-column: span 7 / span 7 !important;
+  }
+  .report-col-right {
+    grid-column: span 5 / span 5 !important;
+  }
+  .report-sig-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }

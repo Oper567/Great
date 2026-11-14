@@ -11,6 +11,7 @@ import {
   ADMIN_COOKIE_NAME,
   getStudentSession,
   getAdminSession,
+  serializeSignedSession,
 } from "@/lib/session";
 
 export { getStudentSession, getAdminSession };
@@ -79,7 +80,7 @@ export async function studentLoginAction(formData: FormData): Promise<{
       arm: (student as any).arm || "",
     };
 
-    const sessionStr = JSON.stringify(sessionData);
+    const sessionStr = serializeSignedSession(sessionData);
     const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
     // Set primary session cookie (with domain coverage if configured)
@@ -326,7 +327,9 @@ export async function adminLoginAction(formData: FormData): Promise<{
       assignedSubject: (admin as any).assignedSubject || null,
     };
 
-    cookies().set(ADMIN_COOKIE_NAME, JSON.stringify(sessionData), {
+    const signedAdminCookie = serializeSignedSession(sessionData);
+
+    cookies().set(ADMIN_COOKIE_NAME, signedAdminCookie, {
       httpOnly: true,
       secure: false, // cPanel/Passenger proxies internally over HTTP; secure:true blocks cookie transmission
       sameSite: "lax",

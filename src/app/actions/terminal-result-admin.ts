@@ -35,6 +35,11 @@ export async function saveTerminalResultAction(formData: FormData): Promise<{
   error?: string;
   resultId?: number;
 }> {
+  const sessionInfo = await getAdminSession().catch(() => null);
+  if (!sessionInfo) {
+    return { success: false, error: "Unauthorized: Staff or Administrator login required to save terminal results." };
+  }
+
   const admNo = (formData.get("admNo") as string)?.trim().toUpperCase();
   const studentName = (formData.get("studentName") as string)?.trim();
   const rawClassName = (formData.get("className") as string)?.trim();
@@ -76,7 +81,24 @@ export async function saveTerminalResultAction(formData: FormData): Promise<{
   let subjects: PreparedSubjectScore[] = [];
   try {
     if (rawSubjectsJson) {
-      subjects = JSON.parse(rawSubjectsJson);
+      const parsed = JSON.parse(rawSubjectsJson);
+      if (Array.isArray(parsed)) {
+        subjects = parsed.map((s: any, idx: number) => {
+          const ca1 = Math.min(Math.max(Number(s.ca1) || 0, 0), 15);
+          const ca2 = Math.min(Math.max(Number(s.ca2) || 0, 0), 15);
+          const exam = Math.min(Math.max(Number(s.exam) || 0, 0), 70);
+          const totalScore = Math.min(Math.max(Math.round((ca1 + ca2 + exam) * 10) / 10, 0), 100);
+          return {
+            ...s,
+            id: s.id || `subj-${idx + 1}`,
+            subjectName: String(s.subjectName || "Subject").trim(),
+            ca1,
+            ca2,
+            exam,
+            totalScore,
+          };
+        });
+      }
     }
   } catch {
     return { success: false, error: "Invalid subject score data payload." };

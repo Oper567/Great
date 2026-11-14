@@ -37,7 +37,12 @@ function testTcpPort(host: string, port: number, timeoutMs = 3000): Promise<{ op
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const secret = searchParams.get("secret");
+  const validSecret = process.env.SETUP_SECRET || "gfms2025";
+  const isAuthorizedDiagnostic = secret === validSecret;
+
   let targetHost = "localhost";
   let targetPort = 5432;
 
@@ -74,6 +79,13 @@ export async function GET() {
   const maskedUrl = process.env.DATABASE_URL
     ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ":***@")
     : "NOT_SET";
+
+  if (!isAuthorizedDiagnostic) {
+    return NextResponse.json({
+      status: dbSuccess ? "healthy" : "degraded",
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   return NextResponse.json({
     status: dbSuccess ? "healthy" : "unhealthy",

@@ -129,6 +129,9 @@ export function middleware(request: NextRequest) {
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, X-Requested-With"
     );
+    res.headers.set("X-Content-Type-Options", "nosniff");
+    res.headers.set("X-Frame-Options", "SAMEORIGIN");
+    res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
     return res;
   }
 
@@ -146,6 +149,9 @@ export function middleware(request: NextRequest) {
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Url, X-Requested-With"
   );
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   return response;
 }
 

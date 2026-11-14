@@ -212,6 +212,10 @@ export function generateExamScoresPdfBytes(options: ExamScorePdfOptions): Uint8A
 
     let currentTopY = 30;
 
+    // Full-page A4 Institutional Border Frame
+    strokeRect(20, 20, PAGE_W - 40, PAGE_H - 40, 0.09, 0.145, 0.33, 1.2);
+    strokeRect(23, 23, PAGE_W - 46, PAGE_H - 46, 0.85, 0.65, 0.05, 0.5);
+
     if (pageIndex === 0) {
       // 1. Main Institutional Header Banner (Page 1)
       fillRect(MARGIN_X, currentTopY, CONTENT_W, 58, 0.059, 0.09, 0.165); // Slate-900 / Navy
@@ -376,7 +380,8 @@ export function generateExamScoresPdfBytes(options: ExamScorePdfOptions): Uint8A
     fillRect(MARGIN_X, currentTopY, CONTENT_W, HEADER_H, 0.118, 0.161, 0.231); // #1e293b
     for (let c = 0; c < columns.length; c++) {
       const col = columns[c];
-      drawText(col.label, col.x + 6, currentTopY + 14.5, "F2", 8, 1, 1, 1);
+      const maxLabelChars = Math.max(3, Math.floor((col.w - 10) / 4.6));
+      drawText(truncateText(col.label, maxLabelChars), col.x + 6, currentTopY + 14.5, "F2", 8, 1, 1, 1);
       if (c > 0) {
         drawLine(col.x, currentTopY, col.x, currentTopY + HEADER_H, 0.278, 0.333, 0.412, 0.5);
       }
