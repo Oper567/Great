@@ -27,7 +27,7 @@ export default function DigitalCampusGateway() {
       icon: <KeyRound className="w-5 h-5 text-secondary-400" />,
       features: [
         "Official Single-Page A4 Report Sheet",
-        "1st CA (15) + 2nd CA (15) + Exam (70)",
+        "Termly Continuous Assessment & Exam Totals",
         "Cognitive, Affective & Psychomotor Ratings",
       ],
     },
@@ -43,7 +43,7 @@ export default function DigitalCampusGateway() {
       ctaText: "Staff Portal Sign In",
       icon: <Users className="w-5 h-5 text-secondary-400" />,
       features: [
-        "Continuous Assessment (15 + 15 + 70)",
+        "Delegated Subject Score Upload",
         "CBT Question Bank & Theory Grading Desk",
         "Class Master Broadsheet & Attendance",
       ],
@@ -73,8 +73,8 @@ export default function DigitalCampusGateway() {
       : portals.filter((p) => p.category === activeTab);
 
   return (
-    <section className="py-8 sm:py-16 lg:py-24 bg-primary-950 text-white border-b border-primary-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-12">
+    <section className="py-10 sm:py-16 lg:py-24 bg-primary-950 text-white border-b border-primary-900">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-10">
         {/* Top Editorial Header */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 sm:gap-6 reveal-init reveal-fade-up">
           <div className="space-y-1.5 sm:space-y-3 max-w-2xl">
@@ -176,41 +176,6 @@ export default function DigitalCampusGateway() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Institutional Accreditation & Academic Session Strip — 2x2 Grid on Mobile */}
-        <div className="bg-primary-900/40 border border-primary-800 rounded-xl p-3.5 sm:p-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 text-xs reveal-init reveal-fade-up">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-400 shrink-0" />
-            <div className="min-w-0">
-              <strong className="block text-white font-bold text-xs sm:text-sm truncate">Academic Session</strong>
-              <span className="text-[11px] sm:text-xs text-slate-300 block truncate">2026/2027 Active</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-secondary-400 shrink-0" />
-            <div className="min-w-0">
-              <strong className="block text-white font-bold text-xs sm:text-sm truncate">Approved Exams</strong>
-              <span className="text-[11px] sm:text-xs text-slate-300 block truncate">WAEC, NECO, JAMB, BECE</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-secondary-400 shrink-0" />
-            <div className="min-w-0">
-              <strong className="block text-white font-bold text-xs sm:text-sm truncate">Grading Standard</strong>
-              <span className="text-[11px] sm:text-xs text-slate-300 block truncate">15 CA1 &bull; 15 CA2 &bull; 70 Exam</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-400 shrink-0" />
-            <div className="min-w-0">
-              <strong className="block text-white font-bold text-xs sm:text-sm truncate">CBT Exam Center</strong>
-              <span className="text-[11px] sm:text-xs text-slate-300 block truncate">LAN &amp; Cloud Synced</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>

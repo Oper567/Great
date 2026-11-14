@@ -20,36 +20,37 @@ export default function AcademicsPage() {
   return (
     <>
       {/* EDITORIAL PAGE HERO BANNER */}
-      <section className="relative bg-primary-950 text-white py-14 sm:py-20 overflow-hidden border-b border-primary-900">
+      <section className="relative bg-primary-950 text-white py-10 sm:py-16 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
             src="/assets/images/classroom.jpg"
-            alt="Great-Favour Montessori School Academic Divisions"
+            alt=""
+            aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-4">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-3">
             <Link href="/" className="hover:text-secondary-400 transition">
               Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-secondary-400 font-semibold">Academic Divisions &amp; Calendar</span>
           </nav>
-          <div className="max-w-3xl space-y-4 reveal-init reveal-fade-up delay-100">
+          <div className="max-w-3xl space-y-3 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />
-              <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
+              <span className="text-[11px] sm:text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
                 Structured Learning Pathways
               </span>
             </div>
-            <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
               Academic Divisions &amp; Calendar
             </h1>
-            <p className="text-slate-200 text-sm sm:text-lg leading-relaxed max-w-2xl">
+            <p className="text-slate-200 text-xs sm:text-base leading-relaxed max-w-2xl">
               Providing unbroken continuity from early childhood Montessori discovery through to Senior Secondary graduation and university preparation.
             </p>
           </div>
@@ -57,24 +58,24 @@ export default function AcademicsPage() {
       </section>
 
       {/* ACADEMIC DIVISIONS EXPLORER */}
-      <section className="py-10 sm:py-16 lg:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center max-w-3xl mx-auto space-y-3 reveal-init reveal-fade-up delay-100">
-            <span className="text-xs font-extrabold text-secondary-600 uppercase tracking-widest bg-secondary-100 px-3 py-1 rounded-full">
+      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2 reveal-init reveal-fade-up delay-100">
+            <span className="text-[11px] font-extrabold text-secondary-700 uppercase tracking-widest bg-secondary-100 px-3 py-1 rounded-full">
               Structured Learning Pathways
             </span>
-            <h2 className="text-xl sm:text-4xl font-extrabold text-primary-950">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950">
               Explore Our Academic Divisions
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base">
-              Providing unbroken continuity from early childhood Montessori discovery through to Senior Secondary graduation and university preparation.
+            <p className="text-slate-600 text-xs sm:text-sm">
+              Select a division below to inspect class arms, age ranges, and core curriculum focus.
             </p>
           </div>
 
           {/* Division Selector */}
-          <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl max-w-4xl mx-auto border border-slate-200 overflow-x-auto no-scrollbar reveal-init reveal-fade-down delay-200">
+          <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-100 rounded-xl max-w-4xl mx-auto border border-slate-200 overflow-x-auto no-scrollbar reveal-init reveal-fade-down delay-200">
             {[
-              { value: "creche" as const, label: "Creche & Toddler (3m - 2y)" },
+              { value: "creche" as const, label: "Creche (3m - 2y)" },
               { value: "nursery" as const, label: "Montessori Nursery (2 - 5y)" },
               { value: "primary" as const, label: "Basic Primary (Basic 1 - 5)" },
               { value: "jss" as const, label: "Junior Secondary (JSS 1 - 3)" },
@@ -83,9 +84,9 @@ export default function AcademicsPage() {
               <button
                 key={tab.value}
                 onClick={() => setActiveDivisionTab(tab.value)}
-                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                   activeDivisionTab === tab.value
-                    ? "bg-primary-800 text-white shadow-md"
+                    ? "bg-primary-900 text-white shadow-xs"
                     : "text-slate-700 hover:text-primary-800"
                 }`}
               >
@@ -94,8 +95,8 @@ export default function AcademicsPage() {
             ))}
           </div>
 
-          {/* Tab Content */}
-          <div className="bg-slate-50 rounded-2xl sm:rounded-3xl p-3 sm:p-10 border border-slate-200 reveal-init reveal-fade-up delay-300">
+          {/* Tab Content — Compact */}
+          <div className="bg-slate-50 rounded-2xl p-4 sm:p-6 lg:p-8 border border-slate-200 reveal-init reveal-fade-up delay-300">
             {activeDivisionTab === "creche" && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
                 <div className="lg:col-span-7 space-y-4">
@@ -313,92 +314,94 @@ export default function AcademicsPage() {
         </div>
       </section>
 
-      {/* ACADEMIC CALENDAR */}
-      <section id="calendar" className="py-10 sm:py-16 lg:py-20 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center max-w-3xl mx-auto space-y-3 reveal-init reveal-fade-up delay-100">
-            <span className="text-xs font-extrabold text-primary-800 uppercase tracking-widest bg-primary-100 px-3 py-1 rounded-full">
-              Calendar & Daily Operations
+      {/* ACADEMIC CALENDAR — Compact Cards */}
+      <section id="calendar" className="py-10 sm:py-14 lg:py-20 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-8">
+          <div className="text-center max-w-2xl mx-auto space-y-2 reveal-init reveal-fade-up delay-100">
+            <span className="text-[11px] font-extrabold text-primary-800 uppercase tracking-widest bg-primary-100 px-3 py-1 rounded-full">
+              Calendar &amp; Daily Operations
             </span>
-            <h2 className="text-xl sm:text-4xl font-extrabold text-primary-950">
-              School Hours & Key Academic Milestones
+            <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950">
+              School Hours &amp; Key Academic Milestones
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base">
-              Carefully structured daily schedules designed to balance academic focus, sports, cultural activities, and personal growth.
+            <p className="text-slate-600 text-xs sm:text-sm">
+              Structured daily schedules balancing academic focus, sports, cultural activities, and personal growth.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
             {/* Daily Schedule */}
-            <div className="lg:col-span-5 bg-white rounded-3xl p-4 sm:p-8 border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 space-y-6 reveal-init reveal-fade-left delay-200">
+            <div className="lg:col-span-5 bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4 reveal-init reveal-fade-left delay-200">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary-800 text-secondary-400 flex items-center justify-center shadow-md">
-                  <Clock className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-lg bg-primary-900 text-secondary-400 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-primary-950">Daily School Hours</h3>
-                  <p className="text-xs text-slate-500">Punctuality and routine mastery</p>
+                  <h3 className="font-bold text-base text-primary-950">Daily School Hours</h3>
+                  <p className="text-[11px] text-slate-500">Punctuality and routine mastery</p>
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {[
                   { day: "Monday – Thursday", type: "Full Academic Instruction", time: "7:30 AM – 3:30 PM", timeColor: "text-primary-800" },
                   { day: "Friday", type: "Sports & Leadership Clubs", time: "7:30 AM – 1:30 PM", timeColor: "text-secondary-700" },
                   { day: "Creche Extended Care", type: "Working Parents Support", time: "7:00 AM – 5:30 PM", timeColor: "text-accent-green-700" },
                 ].map((s) => (
-                  <div key={s.day} className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
+                  <div key={s.day} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between text-xs">
                     <div>
                       <strong className="text-primary-950 block">{s.day}</strong>
-                      <span className="text-slate-500">{s.type}</span>
+                      <span className="text-[11px] text-slate-500">{s.type}</span>
                     </div>
-                    <span className={`font-mono font-bold ${s.timeColor} bg-white px-2.5 py-1 rounded-lg border border-slate-200`}>
+                    <span className={`font-mono font-bold text-[11px] ${s.timeColor} bg-white px-2 py-1 rounded-md border border-slate-200`}>
                       {s.time}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="p-4 bg-primary-50 rounded-xl border border-primary-100 text-xs text-primary-900 space-y-1">
+              <div className="p-3 bg-primary-50 rounded-xl border border-primary-100 text-xs text-primary-900 space-y-0.5">
                 <strong className="block font-bold">Assembly Policy:</strong>
-                <p className="text-slate-600">
-                  Morning devotions and national anthem commence promptly at <strong>7:45 AM</strong>. Gates close to late arrivals at 8:00 AM.
+                <p className="text-slate-600 text-[11px]">
+                  Morning devotions commence promptly at <strong>7:45 AM</strong>. Gates close to late arrivals at 8:00 AM.
                 </p>
               </div>
             </div>
 
             {/* Events */}
-            <div className="lg:col-span-7 bg-white rounded-3xl p-4 sm:p-8 border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300 space-y-6 reveal-init reveal-fade-right delay-350">
-              <div className="flex items-center justify-between">
+            <div className="lg:col-span-7 bg-white rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-xs space-y-4 reveal-init reveal-fade-right delay-350">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-secondary-500 text-slate-950 flex items-center justify-center shadow-md">
-                    <Calendar className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-secondary-400 text-slate-950 flex items-center justify-center shrink-0">
+                    <Calendar className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg text-primary-950">Term Dates & Milestones (2026/2027)</h3>
-                    <p className="text-xs text-slate-500">Official academic calendar highlights</p>
+                    <h3 className="font-bold text-base text-primary-950">Term Dates &amp; Milestones</h3>
+                    <p className="text-[11px] text-slate-500">Official academic calendar highlights</p>
                   </div>
                 </div>
-                <span className="text-xs bg-slate-100 px-3 py-1 rounded-full font-bold text-slate-700">Session 2026/2027</span>
+                <span className="text-[11px] bg-slate-100 px-2.5 py-1 rounded-full font-bold text-slate-700 shrink-0">
+                  2026/2027
+                </span>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {[
-                  { tag: "Resumption", tagColor: "bg-primary-100 text-primary-800", borderColor: "border-l-primary-800", title: "First Term Resumption for 2026/2027 Session", desc: "All boarders and day students return for commencement of lectures.", date: "Mon, Sept 14, 2026", sub: "Next Academic Term" },
-                  { tag: "Academics", tagColor: "bg-secondary-100 text-secondary-800", borderColor: "border-l-secondary-500", title: "Mid-Term Continuous Assessment & Open Day", desc: "Parent-teacher consultations and student continuous assessment progress reviews.", date: "Fri, Oct 23, 2026", sub: "Campus Classrooms" },
-                  { tag: "Sports & Gala", tagColor: "bg-accent-green-100 text-accent-green-800", borderColor: "border-l-accent-green-600", title: "Annual Inter-House Athletics & Cultural Gala", desc: "Track and field events, cultural presentations, and medal ceremonies.", date: "Fri, Nov 27, 2026", sub: "School Sports Field" },
+                  { tag: "Resumption", tagColor: "bg-primary-100 text-primary-800", borderColor: "border-l-primary-800", title: "First Term Resumption for 2026/2027 Session", desc: "All students return for commencement of lectures.", date: "Mon, Sept 14, 2026", sub: "Next Academic Term" },
+                  { tag: "Academics", tagColor: "bg-secondary-100 text-secondary-800", borderColor: "border-l-secondary-500", title: "Mid-Term Continuous Assessment & Open Day", desc: "Parent-teacher consultations and CA progress reviews.", date: "Fri, Oct 23, 2026", sub: "Campus Classrooms" },
+                  { tag: "Sports & Gala", tagColor: "bg-accent-green-100 text-accent-green-800", borderColor: "border-l-accent-green-600", title: "Annual Inter-House Athletics & Cultural Gala", desc: "Track and field events, cultural presentations, and medals.", date: "Fri, Nov 27, 2026", sub: "School Sports Field" },
                 ].map((evt) => (
-                  <div key={evt.title} className={`p-4 bg-slate-50 rounded-xl border-l-4 ${evt.borderColor} border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-primary-50/30 transition`}>
+                  <div key={evt.title} className={`p-3 bg-slate-50 rounded-xl border-l-4 ${evt.borderColor} border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2`}>
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-extrabold uppercase ${evt.tagColor} px-2 py-0.5 rounded`}>{evt.tag}</span>
-                        <h4 className="font-bold text-sm text-primary-950">{evt.title}</h4>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`text-[9px] font-extrabold uppercase ${evt.tagColor} px-1.5 py-0.5 rounded`}>{evt.tag}</span>
+                        <h4 className="font-bold text-xs sm:text-sm text-primary-950">{evt.title}</h4>
                       </div>
-                      <p className="text-xs text-slate-500">{evt.desc}</p>
+                      <p className="text-[11px] text-slate-500">{evt.desc}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-bold text-sm text-primary-900 block">{evt.date}</span>
-                      <span className="text-[11px] text-slate-500">{evt.sub}</span>
+                    <div className="sm:text-right shrink-0">
+                      <span className="font-bold text-xs text-primary-900 block">{evt.date}</span>
+                      <span className="text-[10px] text-slate-500">{evt.sub}</span>
                     </div>
                   </div>
                 ))}

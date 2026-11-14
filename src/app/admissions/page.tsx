@@ -167,11 +167,12 @@ export default function AdmissionsPage() {
   return (
     <>
       {/* EDITORIAL PAGE HERO BANNER */}
-      <section className="relative bg-primary-950 text-white py-14 sm:py-20 overflow-hidden border-b border-primary-900">
+      <section className="relative bg-primary-950 text-white py-10 sm:py-16 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
             src="/assets/images/school-building-front.jpg"
-            alt="Great-Favour Montessori School Admissions"
+            alt=""
+            aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
@@ -179,8 +180,8 @@ export default function AdmissionsPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-4">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-3">
             <Link href="/" className="hover:text-secondary-400 transition">
               Home
             </Link>
@@ -188,40 +189,40 @@ export default function AdmissionsPage() {
             <span className="text-secondary-400 font-semibold">Admissions &amp; Enrollment</span>
           </nav>
 
-          <div className="max-w-3xl space-y-4 reveal-init reveal-fade-up delay-100">
+          <div className="max-w-3xl space-y-3 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />
-              <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
+              <span className="text-[11px] sm:text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
                 2026/2027 Academic Session Open
               </span>
             </div>
-            <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
               Admissions &amp; Enrollment Guide
             </h1>
-            <p className="text-slate-200 text-sm sm:text-lg leading-relaxed max-w-2xl">
-              Admission into Great-Favour Montessori School is transparent, merit-oriented, and structured to place every child in the class arm where they will flourish academically and morally.
+            <p className="text-slate-200 text-xs sm:text-base leading-relaxed max-w-2xl">
+              Admission into Great-Favour Montessori School is transparent, merit-oriented, and structured to place every child in the class arm where they will flourish.
             </p>
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <a
                 href="#tour"
-                className="inline-flex items-center gap-2 text-xs sm:text-sm font-extrabold text-slate-950 bg-secondary-400 hover:bg-secondary-300 px-5 py-3 rounded-lg shadow-md transition"
+                className="inline-flex items-center gap-2 text-xs font-extrabold text-slate-950 bg-secondary-400 hover:bg-secondary-300 px-4 py-2.5 rounded-lg shadow-sm transition"
               >
                 <span>Schedule a Campus Tour</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a
                 href="#class-finder"
-                className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 px-5 py-3 rounded-lg transition"
+                className="inline-flex items-center gap-2 text-xs font-bold text-white bg-white/10 hover:bg-white/20 border border-white/25 px-4 py-2.5 rounded-lg transition"
               >
-                <Sparkles className="w-4 h-4 text-secondary-400" />
+                <Sparkles className="w-3.5 h-3.5 text-secondary-400" />
                 <span>Age &amp; Class Finder</span>
               </a>
               <Link
                 href="/prospectus"
-                className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-slate-200 hover:text-secondary-400 px-3 py-2.5 transition"
+                className="inline-flex items-center gap-2 text-xs font-bold text-slate-200 hover:text-secondary-400 px-3 py-2 transition"
               >
-                <Download className="w-4 h-4 text-secondary-400" />
-                <span>View School Prospectus</span>
+                <Download className="w-3.5 h-3.5 text-secondary-400" />
+                <span>School Prospectus</span>
               </Link>
             </div>
           </div>
@@ -229,27 +230,27 @@ export default function AdmissionsPage() {
       </section>
 
       {/* INTERACTIVE AGE & CLASS PLACEMENT FINDER */}
-      <section id="class-finder" className="py-14 sm:py-20 bg-slate-50 border-b border-slate-200 scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up">
+      <section id="class-finder" className="py-10 sm:py-14 lg:py-20 bg-slate-50 border-b border-slate-200 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 reveal-init reveal-fade-up">
             <div>
-              <div className="flex items-center gap-2.5 mb-2">
+              <div className="flex items-center gap-2.5 mb-1.5">
                 <span className="w-8 h-[2px] bg-primary-800" />
-                <span className="text-xs font-extrabold uppercase tracking-widest text-primary-800">
+                <span className="text-[11px] font-extrabold uppercase tracking-widest text-primary-800">
                   Interactive Placement Guide
                 </span>
               </div>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-primary-950 tracking-tight">
+              <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950 tracking-tight">
                 Find the Right Class &amp; Requirements by Age
               </h2>
             </div>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-md">
-              Select your child&apos;s age group below to view the recommended academic division, assessment format, and required documents.
+            <p className="text-xs text-slate-600 max-w-md">
+              Select your child&apos;s age group below to view the recommended academic division and required documents.
             </p>
           </div>
 
           {/* Age Bracket Selector Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 reveal-init reveal-fade-up delay-100">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 reveal-init reveal-fade-up delay-100">
             {PLACEMENT_DIVISIONS.map((div) => {
               const isSelected = div.id === selectedDivisionId;
               return (
@@ -257,20 +258,20 @@ export default function AdmissionsPage() {
                   key={div.id}
                   type="button"
                   onClick={() => setSelectedDivisionId(div.id)}
-                  className={`p-3.5 rounded-xl border text-left transition-all ${
+                  className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all ${
                     isSelected
-                      ? "bg-primary-950 text-white border-primary-950 shadow-lg"
+                      ? "bg-primary-950 text-white border-primary-950 shadow-sm"
                       : "bg-white text-slate-800 border-slate-200 hover:border-primary-300"
                   }`}
                 >
                   <span
-                    className={`text-[10px] font-extrabold uppercase tracking-wider block ${
+                    className={`text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider block ${
                       isSelected ? "text-secondary-400" : "text-primary-800"
                     }`}
                   >
                     Age Bracket
                   </span>
-                  <strong className="text-xs sm:text-sm font-extrabold block mt-0.5">
+                  <strong className="text-xs font-extrabold block mt-0.5 truncate">
                     {div.shortLabel}
                   </strong>
                 </button>
@@ -278,25 +279,25 @@ export default function AdmissionsPage() {
             })}
           </div>
 
-          {/* Selected Division Detail Card */}
-          <div className="editorial-card p-5 sm:p-8 bg-white grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start reveal-init reveal-fade-up delay-150">
-            <div className="lg:col-span-7 space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-secondary-50 border border-secondary-200 text-secondary-900 text-xs font-extrabold">
-                <GraduationCap className="w-4 h-4 text-primary-900" />
+          {/* Selected Division Detail Card — Compact */}
+          <div className="editorial-card p-4 sm:p-6 bg-white grid grid-cols-1 lg:grid-cols-12 gap-5 items-start reveal-init reveal-fade-up delay-150">
+            <div className="lg:col-span-7 space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-secondary-50 border border-secondary-200 text-secondary-900 text-[11px] font-extrabold">
+                <GraduationCap className="w-3.5 h-3.5 text-primary-900" />
                 <span>Recommended for Ages {activePlacement.ageRange}</span>
               </div>
 
               <div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-primary-950">
+                <h3 className="text-lg sm:text-xl font-extrabold text-primary-950">
                   {activePlacement.divisionTitle}
                 </h3>
-                <p className="text-xs sm:text-sm font-semibold text-primary-800 mt-1">
+                <p className="text-xs font-semibold text-primary-800 mt-0.5">
                   Available Classes: {activePlacement.classes}
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary-800 block">
                     Entrance Assessment Format
                   </span>
@@ -304,7 +305,7 @@ export default function AdmissionsPage() {
                     {activePlacement.assessment}
                   </p>
                 </div>
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary-800 block">
                     Core Curriculum Focus
                   </span>
@@ -314,18 +315,18 @@ export default function AdmissionsPage() {
                 </div>
               </div>
 
-              <div className="pt-2 flex flex-wrap items-center gap-3">
+              <div className="pt-1 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() => handleSelectAndApply(activePlacement.targetClassValue)}
-                  className="inline-flex items-center gap-2 bg-primary-950 hover:bg-primary-900 text-white font-extrabold text-xs sm:text-sm px-5 py-3 rounded-lg transition shadow-sm"
+                  className="inline-flex items-center gap-2 bg-primary-950 hover:bg-primary-900 text-white font-extrabold text-xs px-4 py-2.5 rounded-lg transition shadow-2xs"
                 >
                   <span>Apply for {activePlacement.divisionTitle}</span>
-                  <ArrowRight className="w-4 h-4 text-secondary-400" />
+                  <ArrowRight className="w-3.5 h-3.5 text-secondary-400" />
                 </button>
                 <Link
                   href="/academics"
-                  className="editorial-link text-xs font-bold text-primary-900 py-2"
+                  className="editorial-link text-xs font-bold text-primary-900 py-1.5"
                 >
                   <span>Explore Division Curriculum</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -333,91 +334,87 @@ export default function AdmissionsPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-5 bg-slate-50 rounded-xl p-4 sm:p-5 border border-slate-200 space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2.5">
+            <div className="lg:col-span-5 bg-slate-50 rounded-xl p-3.5 sm:p-4 border border-slate-200 space-y-2.5">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                 <FileCheck2 className="w-4 h-4 text-primary-800" />
-                <h4 className="text-xs font-extrabold uppercase tracking-wider text-primary-950">
+                <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-primary-950">
                   Required Registration Documents
                 </h4>
               </div>
-              <ul className="space-y-2.5 text-xs text-slate-700">
+              <ul className="space-y-1.5 text-xs text-slate-700">
                 {activePlacement.documents.map((doc) => (
-                  <li key={doc} className="flex items-start gap-2.5">
+                  <li key={doc} className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
-                      <Check className="w-3 h-3" />
+                      <Check className="w-2.5 h-2.5" />
                     </span>
                     <span className="font-medium">{doc}</span>
                   </li>
                 ))}
               </ul>
-              <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200">
-                Documents can be submitted physically at the school administrative office during your campus tour or assessment appointment.
-              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* 4-STEP PROCESS & ENROLLMENT FORM */}
-      <section className="py-14 sm:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="max-w-3xl space-y-2 reveal-init reveal-fade-up">
+      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-8 sm:space-y-10">
+          <div className="max-w-2xl space-y-1.5 reveal-init reveal-fade-up">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-primary-800" />
-              <span className="text-xs font-extrabold text-primary-800 uppercase tracking-widest">
+              <span className="text-[11px] font-extrabold text-primary-800 uppercase tracking-widest">
                 Step-by-Step Enrollment
               </span>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-primary-950 tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950 tracking-tight">
               Four-Step Admissions Process
             </h2>
-            <p className="text-slate-600 text-sm sm:text-base">
-              Our admissions workflow is designed to be welcoming, clear, and efficient for families.
-            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {[
               {
                 num: "01",
                 title: "Submit Application",
-                desc: "Complete the official GFMS Admission Form online or at the school administrative registry.",
+                desc: "Complete the official GFMS Admission Form online or at the school registry.",
                 sub: "Available Year-Round",
               },
               {
                 num: "02",
-                title: "Diagnostic Assessment",
-                desc: "Pupils sit for an age-appropriate assessment in English, Mathematics, and Aptitude.",
+                title: "Diagnostic Test",
+                desc: "Pupils sit for an age-appropriate assessment in English, Maths, and Aptitude.",
                 sub: "Scheduled Mon – Sat",
               },
               {
                 num: "03",
                 title: "Parent & Pupil Chat",
-                desc: "Warm interaction with the Head Teacher to align on character values, health records, and goals.",
+                desc: "Warm interaction with the Head Teacher to align on character values and goals.",
                 sub: "In-person or Virtual",
               },
               {
                 num: "04",
                 title: "Offer of Admission",
-                desc: "Successful candidates receive their official Letter of Admission, booklist, and uniform pack.",
+                desc: "Successful candidates receive their Letter of Admission, booklist, and uniform pack.",
                 sub: "Welcome to GFMS!",
               },
             ].map((step, idx) => (
               <div
                 key={step.num}
-                className="editorial-card p-5 flex flex-col justify-between space-y-4 reveal-init reveal-fade-up"
+                className="editorial-card p-3.5 sm:p-4 flex flex-col justify-between space-y-2.5 reveal-init reveal-fade-up"
                 style={{ transitionDelay: `${idx * 90}ms` }}
               >
-                <div className="space-y-2.5">
-                  <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-primary-950 text-secondary-400 font-mono text-xs font-extrabold">
+                <div className="space-y-1.5">
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-primary-950 text-secondary-400 font-mono text-[10px] font-extrabold">
                     STEP {step.num}
                   </span>
-                  <h3 className="font-extrabold text-base text-primary-950 leading-snug">
+                  <h3 className="font-extrabold text-xs sm:text-sm text-primary-950 leading-snug">
                     {step.title}
                   </h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">{step.desc}</p>
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed line-clamp-3 sm:line-clamp-none">
+                    {step.desc}
+                  </p>
                 </div>
-                <div className="pt-2.5 border-t border-slate-100 text-[11px] text-primary-800 font-bold">
+                <div className="pt-2 border-t border-slate-100 text-[10px] sm:text-[11px] text-primary-800 font-bold truncate">
                   {step.sub}
                 </div>
               </div>

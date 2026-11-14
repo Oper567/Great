@@ -144,10 +144,10 @@ export default function SchoolBuildingSlider() {
   return (
     <section
       id="school-building-showcase"
-      className="py-8 sm:py-16 lg:py-24 bg-slate-900 text-white border-b border-slate-800"
+      className="py-10 sm:py-16 lg:py-24 bg-slate-900 text-white border-b border-slate-800"
       aria-label="Campus Architecture and Grounds"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-8">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-8">
         {/* SECTION HEADER */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up">
           <div className="space-y-1.5 sm:space-y-2.5 max-w-3xl">
@@ -202,7 +202,8 @@ export default function SchoolBuildingSlider() {
               >
                 <Image
                   src={slide.image}
-                  alt={`${slide.title} - Great-Favour Montessori School Compound`}
+                  alt=""
+                  aria-hidden="true"
                   fill
                   priority={idx === 0}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
@@ -236,32 +237,6 @@ export default function SchoolBuildingSlider() {
                   <Maximize2 className="w-4 h-4" />
                 </button>
               </div>
-            </div>
-
-            {/* Prev / Next Arrows */}
-            <div className="absolute inset-y-0 inset-x-2 sm:inset-x-4 z-20 flex items-center justify-between pointer-events-none">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  prevSlide();
-                }}
-                aria-label="Previous building photo"
-                className="pointer-events-auto w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-slate-950/80 hover:bg-primary-900 text-white border border-white/20 flex items-center justify-center transition"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  nextSlide();
-                }}
-                aria-label="Next building photo"
-                className="pointer-events-auto w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-slate-950/80 hover:bg-primary-900 text-white border border-white/20 flex items-center justify-center transition"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Desktop Overlay Caption */}

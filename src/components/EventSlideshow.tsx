@@ -95,8 +95,8 @@ export default function EventSlideshow() {
   const active = EVENT_SLIDES[currentSlide];
 
   return (
-    <section className="py-8 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-10">
+    <section className="py-10 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-10">
         {/* Editorial Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up">
           <div className="space-y-1.5 sm:space-y-2 max-w-2xl">
@@ -112,27 +112,11 @@ export default function EventSlideshow() {
             </p>
           </div>
 
-          {/* Navigation Controls */}
+          {/* Slide Counter Indicator (Automatic Rotation) */}
           <div className="flex items-center gap-2 self-start md:self-end shrink-0">
-            <span className="text-xs font-semibold text-slate-500 mr-1 sm:mr-2 tabular-nums">
+            <span className="text-xs font-semibold text-slate-500 tabular-nums bg-white border border-slate-200 px-3 py-1.5 rounded-lg">
               {String(currentSlide + 1).padStart(2, "0")} / {String(EVENT_SLIDES.length).padStart(2, "0")}
             </span>
-            <button
-              type="button"
-              onClick={prevSlide}
-              aria-label="Previous campus highlight"
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-white border border-slate-200 hover:border-primary-800 text-slate-800 flex items-center justify-center transition shadow-2xs active:scale-95"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={nextSlide}
-              aria-label="Next campus highlight"
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-900 hover:bg-primary-950 text-white flex items-center justify-center transition shadow-2xs active:scale-95"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -156,7 +140,8 @@ export default function EventSlideshow() {
                 >
                   <Image
                     src={slide.image}
-                    alt={slide.title}
+                    alt=""
+                    aria-hidden="true"
                     fill
                     sizes="(max-width: 1024px) 100vw, 66vw"
                     className="object-cover"

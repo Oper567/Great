@@ -149,132 +149,120 @@ export default function FacultyPage() {
   return (
     <>
       {/* EDITORIAL PAGE HERO BANNER */}
-      <section className="relative bg-primary-950 text-white py-14 sm:py-20 overflow-hidden border-b border-primary-900">
+      <section className="relative bg-primary-950 text-white py-10 sm:py-16 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
             src="/assets/images/graduation-1.jpg"
-            alt="Great-Favour Montessori School Academic Faculty"
+            alt=""
+            aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-4">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-3">
             <Link href="/" className="hover:text-secondary-400 transition">
               Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-secondary-400 font-semibold">Faculty &amp; Leadership</span>
           </nav>
-          <div className="max-w-3xl space-y-4 reveal-init reveal-fade-up delay-100">
+          <div className="max-w-3xl space-y-3 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />
-              <span className="text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
+              <span className="text-[11px] sm:text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
                 Academic Faculty &amp; Pedagogy
               </span>
             </div>
-            <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight">
               Meet Our Faculty &amp; Staff
             </h1>
-            <p className="text-slate-200 text-sm sm:text-lg leading-relaxed max-w-2xl">
-              Behind every confident pupil at Great-Favour is a dedicated team of TRCN-certified educators, experienced subject masters, and certified Montessori specialists committed to academic distinction.
+            <p className="text-slate-200 text-xs sm:text-base leading-relaxed max-w-2xl">
+              Behind every confident pupil at Great-Favour is a dedicated team of TRCN-certified educators, experienced subject masters, and certified Montessori specialists.
             </p>
           </div>
         </div>
       </section>
 
       {/* HEAD TEACHER SPOTLIGHT */}
-      <section className="py-10 sm:py-16 lg:py-20 bg-white border-b border-slate-200 relative overflow-hidden">
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 sm:space-y-14 relative z-10">
+      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-8 sm:space-y-10 relative z-10">
           {/* Executive Leadership Heading */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 reveal-init reveal-fade-up delay-100">
-            <div className="space-y-2 max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary-800 bg-secondary-100 px-3 py-1 rounded-full w-fit">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
+            <div className="space-y-1.5 max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-secondary-800 bg-secondary-100 px-3 py-1 rounded-full w-fit">
                 <Award className="w-3.5 h-3.5 text-secondary-700" />
                 <span>Executive Leadership</span>
               </span>
-              <h2 className="text-xl sm:text-4xl font-extrabold text-primary-950 tracking-tight">
+              <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950 tracking-tight">
                 Head Teacher &amp; Academic Leadership
               </h2>
-              <p className="text-slate-600 text-sm sm:text-base">
+              <p className="text-slate-600 text-xs sm:text-sm">
                 Directing classroom excellence, continuous teacher mentoring, and certified Montessori pedagogy across all levels.
               </p>
             </div>
 
             <a
               href="#faculty-directory"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-50 hover:bg-primary-100 border border-primary-200 text-primary-900 text-xs sm:text-sm font-bold transition shadow-xs self-start md:self-end shrink-0 group"
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-primary-50 hover:bg-primary-100 border border-primary-200 text-primary-900 text-xs font-bold transition shadow-2xs self-start md:self-end shrink-0 group"
             >
-              <Users className="w-4 h-4 text-primary-700" />
+              <Users className="w-3.5 h-3.5 text-primary-700" />
               <span>Explore Faculty Directory ({ACADEMIC_FACULTY.length} Staff)</span>
-              <ChevronDown className="w-4 h-4 text-primary-700 group-hover:translate-y-0.5 transition-transform" />
+              <ChevronDown className="w-3.5 h-3.5 text-primary-700 group-hover:translate-y-0.5 transition-transform" />
             </a>
           </div>
 
-          {/* HEAD TEACHER MASTER CARD */}
-          <div className="bg-gradient-to-br from-primary-950 via-primary-900 to-slate-950 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl border border-primary-800/60 relative overflow-hidden reveal-init reveal-fade-up delay-200">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-secondary-500/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-primary-700/20 rounded-full blur-2xl pointer-events-none" />
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center relative z-10">
-              <div className="lg:col-span-4 flex flex-col items-center">
-                <div className="relative w-full max-w-[220px] sm:max-w-[260px] h-[260px] sm:h-[320px] md:h-[380px] rounded-2xl overflow-hidden bg-slate-900 shadow-2xl border-2 sm:border-4 border-secondary-400/80 group">
-                  <Image
-                    src={KEY_PERSONNEL.headTeacher.image}
-                    alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
-                    fill
-                    className="object-cover object-[center_15%] group-hover:scale-105 transition-transform duration-700"
-                    priority
-                  />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/80 to-transparent p-2 sm:p-3 pt-8 text-center">
-                    <span className="text-[11px] sm:text-xs font-extrabold text-secondary-400 block uppercase tracking-wider">
-                      {KEY_PERSONNEL.headTeacher.title}
-                    </span>
-                    <span className="text-[10px] sm:text-[11px] text-slate-200 font-medium">
-                      Academic Leadership &bull; TRCN Certified
-                    </span>
-                  </div>
+          {/* HEAD TEACHER MASTER CARD — Compact & Proportional */}
+          <div className="bg-primary-950 text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-primary-900 relative overflow-hidden reveal-init reveal-fade-up delay-200">
+            <div className="flex flex-col lg:flex-row gap-5 sm:gap-6 items-start lg:items-center relative z-10">
+              <div className="relative w-28 h-36 sm:w-44 sm:h-56 rounded-xl overflow-hidden bg-slate-900 border-2 border-secondary-400/70 shrink-0 mx-auto lg:mx-0">
+                <Image
+                  src={KEY_PERSONNEL.headTeacher.image}
+                  alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
+                  fill
+                  className="object-cover object-[center_15%]"
+                  priority
+                />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/80 to-transparent p-1.5 text-center">
+                  <span className="text-[10px] font-extrabold text-secondary-400 block uppercase tracking-wider">
+                    {KEY_PERSONNEL.headTeacher.title}
+                  </span>
                 </div>
               </div>
 
-              <div className="lg:col-span-8 space-y-3 sm:space-y-4 text-left">
-                <span className="px-3 py-0.5 rounded-full text-[10px] sm:text-xs font-extrabold bg-secondary-500 text-slate-950 tracking-wider inline-flex items-center gap-1.5 shadow-sm">
-                  <Award className="w-3.5 h-3.5" />
+              <div className="flex-1 space-y-2.5 text-left">
+                <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-secondary-400 text-slate-950 tracking-wider inline-flex items-center gap-1">
+                  <Award className="w-3 h-3" />
                   FROM THE HEAD TEACHER&apos;S DESK
                 </span>
 
                 <div>
-                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-tight">
+                  <h3 className="text-lg sm:text-2xl font-extrabold text-white leading-tight">
                     {KEY_PERSONNEL.headTeacher.fullName}
                   </h3>
-                  <p className="text-secondary-400 font-semibold text-xs sm:text-sm mt-0.5">
+                  <p className="text-secondary-400 font-semibold text-xs mt-0.5">
                     {KEY_PERSONNEL.headTeacher.title} &bull; {KEY_PERSONNEL.headTeacher.portfolio}
                   </p>
                 </div>
 
-                <blockquote className="text-slate-200 text-xs sm:text-sm leading-relaxed italic border-l-3 sm:border-l-4 border-secondary-400 pl-3 bg-white/5 py-2 rounded-r-xl">
+                <blockquote className="text-slate-200 text-xs leading-relaxed italic border-l-2 border-secondary-400 pl-3 bg-white/5 py-1.5 rounded-r-lg">
                   &quot;{KEY_PERSONNEL.headTeacher.deskMessage}&quot;
                 </blockquote>
 
-                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                  Working closely with our teachers and parents, Mr. Okafor oversees classroom quality, teacher continuous training, and pupil welfare. Under his guidance, every child is encouraged to discover their talents, ask big questions, and build lasting self-discipline.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 pt-1">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   {[
-                    { title: "Hands-on Montessori Discovery", desc: "Children touch, build, and explore with certified apparatus." },
-                    { title: "100% Certified, Caring Teachers", desc: "Degreed instructors registered with TRCN." },
-                    { title: "Real Laboratory Science & ICT", desc: "Weekly hands-on lab experiments and computer typing." },
-                    { title: "Honest Character & Poise", desc: "Instilling truthfulness, public speaking, and good manners." },
+                    { title: "Montessori Discovery", desc: "Certified tactile apparatus." },
+                    { title: "TRCN Certified Staff", desc: "100% degreed instructors." },
+                    { title: "Science & ICT Labs", desc: "Weekly practical sessions." },
+                    { title: "Character & Poise", desc: "Truthfulness & leadership." },
                   ].map((p) => (
-                    <div key={p.title} className="flex items-start gap-2 bg-white/5 border border-white/10 p-2 sm:p-2.5 rounded-xl">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-secondary-400 shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="text-xs font-bold text-white">{p.title}</h4>
-                        <p className="text-[10px] sm:text-[11px] text-slate-300">{p.desc}</p>
+                    <div key={p.title} className="flex items-start gap-1.5 bg-white/5 border border-white/10 p-2 rounded-lg">
+                      <CheckCircle2 className="w-3 h-3 text-secondary-400 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <h4 className="text-[11px] font-bold text-white truncate">{p.title}</h4>
+                        <p className="text-[10px] text-slate-300 truncate">{p.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -283,40 +271,40 @@ export default function FacultyPage() {
             </div>
 
             {/* Stats */}
-            <div className="pt-4 mt-6 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+            <div className="pt-3 mt-4 border-t border-white/10 grid grid-cols-4 gap-2 text-center">
               {[
-                { val: "100%", label: "BECE & WAEC Success" },
-                { val: "1:15", label: "Teacher-Pupil Ratio" },
-                { val: "100%", label: "TRCN Certified Staff" },
-                { val: "12+", label: "Workshops Yearly" },
+                { val: "100%", label: "Exam Success" },
+                { val: "1:15", label: "Class Ratio" },
+                { val: "100%", label: "TRCN Certified" },
+                { val: "12+", label: "CPD Workshops" },
               ].map((s) => (
                 <div key={s.label}>
-                  <span className="text-xl sm:text-2xl font-extrabold text-secondary-400 block">{s.val}</span>
-                  <span className="text-[10px] sm:text-[11px] text-slate-300 uppercase tracking-wider">{s.label}</span>
+                  <span className="text-sm sm:text-xl font-extrabold text-secondary-400 block">{s.val}</span>
+                  <span className="text-[9px] sm:text-[11px] text-slate-300 uppercase tracking-wider block truncate">{s.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* FACULTY DIRECTORY & FILTER SLIDER */}
-          <div id="faculty-directory" className="space-y-6 pt-4 scroll-mt-24">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* FACULTY DIRECTORY & FILTER SLIDER (No Manual Arrows) */}
+          <div id="faculty-directory" className="space-y-4 sm:space-y-6 pt-2 scroll-mt-24">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div>
-                <span className="text-[11px] font-extrabold uppercase tracking-widest text-secondary-700 block mb-1">
+                <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-secondary-700 block mb-0.5">
                   Departmental Directory
                 </span>
-                <h3 className="text-xl sm:text-3xl font-extrabold text-primary-950">
+                <h3 className="text-lg sm:text-2xl font-extrabold text-primary-950">
                   Our Dedicated Faculty &amp; Departmental Leaders
                 </h3>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs font-bold text-primary-900 bg-primary-50 px-3.5 py-1.5 rounded-full border border-primary-200 shadow-xs">
-                  Showing <strong className="text-primary-800">{filteredStaff.length}</strong> of {ACADEMIC_FACULTY.length} Staff Members
+                <span className="text-xs font-bold text-primary-900 bg-primary-50 px-3 py-1 rounded-full border border-primary-200">
+                  Showing <strong className="text-primary-800">{filteredStaff.length}</strong> of {ACADEMIC_FACULTY.length}
                 </span>
                 {activeFacultyFilter !== "All" && (
                   <button
                     onClick={() => setActiveFacultyFilter("All")}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-primary-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-full transition"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-primary-800 bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded-full transition"
                     title="Reset to all staff"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -326,31 +314,12 @@ export default function FacultyPage() {
               </div>
             </div>
 
-            {/* INTERACTIVE DEPARTMENT SLIDER */}
+            {/* Scrollable Track (Touch/Scroll Without Visible Arrows) */}
             <div className="relative w-full max-w-full min-w-0">
-              {/* Left Arrow Button */}
-              <button
-                type="button"
-                onClick={() => handleScroll("left")}
-                disabled={!canScrollLeft}
-                aria-label="Previous departments"
-                className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 text-slate-700 shadow-md hover:bg-primary-50 hover:text-primary-900 hover:scale-105 active:scale-95 transition-all flex items-center justify-center -ml-1 sm:-ml-3 disabled:opacity-0 disabled:pointer-events-none`}
-              >
-                <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-primary-900" />
-              </button>
-
-              {/* Left Gradient Mask */}
-              <div
-                className={`pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-r from-white via-white/80 to-transparent z-10 transition-opacity duration-300 rounded-l-2xl ${
-                  canScrollLeft ? "opacity-100" : "opacity-0"
-                }`}
-              />
-
-              {/* Scrollable Track */}
               <div
                 ref={sliderRef}
                 onScroll={checkScrollability}
-                className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-100/90 rounded-2xl border border-slate-200 overflow-x-auto no-scrollbar scroll-smooth w-full min-w-0"
+                className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-slate-100/90 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar scroll-smooth w-full min-w-0"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
                 {FILTER_OPTIONS.map((tab) => {
@@ -360,21 +329,21 @@ export default function FacultyPage() {
                     <button
                       key={tab.value}
                       onClick={() => setActiveFacultyFilter(tab.value)}
-                      className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 group ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 group ${
                         isSelected
-                          ? "bg-primary-800 text-white shadow-md ring-2 ring-primary-700/40 translate-y-[-1px]"
-                          : "bg-white text-slate-700 hover:text-primary-900 hover:bg-white border border-slate-200/80 hover:border-primary-300 hover:shadow-xs"
+                          ? "bg-primary-900 text-white shadow-xs"
+                          : "bg-white text-slate-700 hover:text-primary-900 border border-slate-200/80"
                       }`}
                     >
-                      <span className={`transition-colors ${isSelected ? "text-secondary-400" : "text-primary-700 group-hover:text-primary-900"}`}>
+                      <span className={`transition-colors ${isSelected ? "text-secondary-400" : "text-primary-700"}`}>
                         {tab.icon}
                       </span>
                       <span>{tab.label}</span>
                       <span
-                        className={`text-[10px] sm:text-xs font-black px-1.5 py-0.5 rounded-full transition-colors ${
+                        className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
                           isSelected
-                            ? "bg-secondary-400 text-slate-950 font-extrabold"
-                            : "bg-slate-100 text-slate-600 group-hover:bg-primary-100 group-hover:text-primary-900"
+                            ? "bg-secondary-400 text-slate-950"
+                            : "bg-slate-100 text-slate-600"
                         }`}
                       >
                         {count}
@@ -383,24 +352,6 @@ export default function FacultyPage() {
                   );
                 })}
               </div>
-
-              {/* Right Gradient Mask */}
-              <div
-                className={`pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-l from-white via-white/80 to-transparent z-10 transition-opacity duration-300 rounded-r-2xl ${
-                  canScrollRight ? "opacity-100" : "opacity-0"
-                }`}
-              />
-
-              {/* Right Arrow Button */}
-              <button
-                type="button"
-                onClick={() => handleScroll("right")}
-                disabled={!canScrollRight}
-                aria-label="Next departments"
-                className={`absolute right-0 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/95 backdrop-blur-md border border-slate-300 text-slate-700 shadow-md hover:bg-primary-50 hover:text-primary-900 hover:scale-105 active:scale-95 transition-all flex items-center justify-center -mr-1 sm:-mr-3 disabled:opacity-0 disabled:pointer-events-none`}
-              >
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-primary-900" />
-              </button>
             </div>
 
             {/* Active filter helper notice if filtered */}

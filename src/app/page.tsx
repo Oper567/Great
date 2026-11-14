@@ -210,7 +210,8 @@ export default function HomePage() {
             >
               <Image
                 src={slide.image}
-                alt={slide.imageAlt}
+                alt=""
+                aria-hidden="true"
                 fill
                 priority={idx === 0}
                 sizes="100vw"
@@ -223,12 +224,12 @@ export default function HomePage() {
           ))}
 
           {/* Hero Foreground Copy */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-20 lg:py-24 relative z-20 w-full">
+          <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 py-8 sm:py-20 lg:py-24 relative z-20 w-full">
             <div className="max-w-3xl space-y-3.5 sm:space-y-6 reveal-init reveal-fade-up delay-100">
               {/* Institutional Eyebrow */}
-              <div className="inline-flex items-center gap-2 bg-primary-900/90 border border-white/15 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider text-secondary-400">
+              <div className="inline-flex items-center gap-2 max-w-full bg-primary-900/90 border border-white/15 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider text-secondary-400">
                 <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-secondary-400 shrink-0" />
-                <span className="truncate">{activeHero.eyebrow}</span>
+                <span className="leading-snug break-words">{activeHero.eyebrow}</span>
               </div>
 
               {/* Authoritative Editorial Headline */}
@@ -280,10 +281,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Hero Slide Selector Bar */}
+        {/* Hero Automatic Slide Progress Bar (No Manual Arrows) */}
         <div className="relative z-20 border-t border-white/10 bg-primary-950/90 backdrop-blur-xs">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
-            <div className="grid grid-cols-3 gap-2 sm:gap-6 flex-1 max-w-2xl">
+          <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 py-2.5 sm:py-3">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 max-w-2xl">
               {HERO_SLIDES.map((slide, idx) => {
                 const active = idx === heroIndex;
                 return (
@@ -293,9 +294,9 @@ export default function HomePage() {
                     onClick={() => setHeroIndex(idx)}
                     className="text-left group py-1"
                   >
-                    <div className="flex items-center gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 mb-1">
                       <span
-                        className={`text-xs font-extrabold tabular-nums ${
+                        className={`text-[11px] sm:text-xs font-extrabold tabular-nums ${
                           active ? "text-secondary-400" : "text-slate-400 group-hover:text-slate-200"
                         }`}
                       >
@@ -320,25 +321,6 @@ export default function HomePage() {
                 );
               })}
             </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={prevHero}
-                aria-label="Previous slide"
-                className="w-9 h-9 rounded-lg border border-white/15 hover:border-white/40 text-white flex items-center justify-center transition"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={nextHero}
-                aria-label="Next slide"
-                className="w-9 h-9 rounded-lg border border-white/15 hover:border-white/40 text-white flex items-center justify-center transition"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -347,7 +329,7 @@ export default function HomePage() {
           2. INSTITUTIONAL KEY FACTS RIBBON
           ===================================================================== */}
       <section className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
           <div className="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 divide-x divide-slate-200 border-x border-slate-200">
             {[
               {
@@ -397,8 +379,8 @@ export default function HomePage() {
       {/* =====================================================================
           3. WELCOME & INSTITUTIONAL CHARTER SPLIT (EMERALD "WHO WE ARE" LAYOUT)
           ===================================================================== */}
-      <section className="py-8 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-10 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Column: Editorial Campus Visual Composition */}
             <div className="lg:col-span-5 space-y-3 sm:space-y-4 reveal-init reveal-fade-left delay-100">
@@ -520,8 +502,8 @@ export default function HomePage() {
       {/* =====================================================================
           4. OUR SCHOOLS, ONE SHARED VISION (EMERALD ACADEMIC DIVISIONS GRID)
           ===================================================================== */}
-      <section className="py-8 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-12">
+      <section className="py-10 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
           {/* Editorial Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-1.5 sm:space-y-2.5 max-w-2xl">
@@ -614,8 +596,8 @@ export default function HomePage() {
       {/* =====================================================================
           5. WHY FAMILIES CHOOSE GREAT-FAVOUR (4 INSTITUTIONAL PILLARS)
           ===================================================================== */}
-      <section className="py-8 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-12">
+      <section className="py-10 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
           <div className="max-w-3xl space-y-1.5 sm:space-y-2.5 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-0.5 bg-secondary-500" />
@@ -684,85 +666,10 @@ export default function HomePage() {
       <DigitalCampusGateway />
 
       {/* =====================================================================
-          8. OFFICIAL EXAMINATION APPROVALS & UNIVERSITY PATHWAYS SHOWCASE
+          8. VOICES OF OUR PARENTS & ADMISSIONS INVITATION
           ===================================================================== */}
-      <section className="py-8 sm:py-16 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up">
-            <div className="space-y-1.5 sm:space-y-2 max-w-2xl">
-              <div className="flex items-center gap-2.5">
-                <span className="w-8 h-0.5 bg-secondary-500" />
-                <span className="section-badge">National &amp; Regional Accreditations</span>
-              </div>
-              <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950 tracking-tight">
-                Approved Center for WAEC, NECO, BECE &amp; JAMB Preparation
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Great-Favour Montessori School is fully licensed and accredited to prepare and present candidates for Nigeria and West Africa&apos;s premier external examinations.
-              </p>
-            </div>
-            <Link
-              href="/academics"
-              className="editorial-link text-xs sm:text-sm font-extrabold text-primary-900 shrink-0"
-            >
-              <span>View Academic Curriculum</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Compact 2x2 Grid on Mobile, 4-Col on Desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-            {INSTITUTIONAL_ACCREDITATION.approvedExaminations.map((exam, idx) => (
-              <div
-                key={exam.code}
-                className="editorial-card bg-white p-3.5 sm:p-5 rounded-xl flex flex-col justify-between space-y-2.5 sm:space-y-4 reveal-init reveal-fade-up"
-                style={{ transitionDelay: `${idx * 90}ms` }}
-              >
-                <div className="space-y-2.5 sm:space-y-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="w-11 h-11 sm:w-16 sm:h-16 rounded-lg sm:rounded-xl bg-white border border-slate-200 p-1.5 sm:p-2 flex items-center justify-center shadow-xs shrink-0">
-                      <Image
-                        src={exam.logo}
-                        alt={`${exam.code} Official Emblem`}
-                        width={56}
-                        height={56}
-                        className="object-contain w-full h-full"
-                      />
-                    </div>
-                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md bg-primary-950 text-secondary-400 font-extrabold text-[10px] sm:text-xs tracking-wider uppercase">
-                      {exam.code}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] sm:text-[11px] font-bold text-primary-800 block truncate">
-                      {exam.category}
-                    </span>
-                    <h3 className="text-xs sm:text-base font-extrabold text-primary-950 leading-snug mt-0.5 line-clamp-2">
-                      {exam.title}
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed mt-1 line-clamp-2 sm:line-clamp-none">
-                      {exam.description}
-                    </p>
-                  </div>
-                </div>
-                <div className="pt-2 sm:pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-emerald-800">
-                  <span className="flex items-center gap-1 truncate">
-                    <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-700 shrink-0" />
-                    <span className="truncate">{exam.badge}</span>
-                  </span>
-                  <span className="hidden sm:inline text-slate-400 font-mono">GFMS</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* =====================================================================
-          9. VOICES OF OUR PARENTS & ADMISSIONS INVITATION
-          ===================================================================== */}
-      <section className="py-8 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-12">
+      <section className="py-10 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-1.5 sm:space-y-2.5 max-w-2xl">
               <div className="flex items-center gap-2.5">
