@@ -1184,7 +1184,7 @@ export default function AdminCbtDashboardClient({
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white p-0.5 flex items-center justify-center shadow shrink-0 ring-2 ring-yellow-500/30">
               <Image
-                src="/assets/images/school-logo.jpg"
+                src="/assets/images/school-logo.webp"
                 alt="GFMS Logo"
                 width={32}
                 height={32}

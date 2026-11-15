@@ -12,6 +12,10 @@ export const metadata = {
   title: "Super Admin CBT Command Center | GFMS",
   description:
     "Computer-Based Test Exam Creator, Question Uploader, Student RegNo Desk, Staff Desk, Scratch Card Generator, and Terminal Result Preparation Desk",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function AdminCbtPage() {

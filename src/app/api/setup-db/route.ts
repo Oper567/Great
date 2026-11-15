@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-import { constantTimeEqual } from "@/lib/security";
+import {
+  checkRateLimit,
+  constantTimeEqual,
+  getClientIp,
+  getRateLimitStatus,
+  RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+  RATE_LIMIT_WINDOW_MS,
+  releaseRateLimitAttempt,
+} from "@/lib/security";
 import { getAdminSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +24,58 @@ export async function GET(request: Request) {
   const adminSession = await getAdminSession().catch(() => null);
   const isSuperAdmin = adminSession?.role === "SUPER_ADMIN";
 
+  const clientIp = getClientIp();
+  const setupRateBucket = `setup-db-fail:ip:${clientIp}`;
+  if (!isSuperAdmin) {
+    const lockStatus = getRateLimitStatus(setupRateBucket, RATE_LIMIT_MAX_FAILED_ATTEMPTS);
+    if (!lockStatus.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too Many Requests",
+          message: `Too many failed setup attempts. Please wait ${Math.ceil(lockStatus.retryAfterSec / 60)} minute(s).`,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(lockStatus.retryAfterSec) },
+        }
+      );
+    }
+  }
+
   const configuredSecret = process.env.SETUP_SECRET || "";
   const setupEnabled = process.env.ENABLE_SETUP_DB === "true";
+
+  let rlWindowResetAt: number | undefined;
+  if (!isSuperAdmin && secret.length > 0) {
+    const rl = checkRateLimit(
+      setupRateBucket,
+      RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+      RATE_LIMIT_WINDOW_MS
+    );
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too Many Requests",
+          message: `Too many failed setup attempts. Please wait ${Math.ceil(rl.retryAfterSec / 60)} minute(s).`,
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rl.retryAfterSec) },
+        }
+      );
+    }
+    rlWindowResetAt = rl.windowResetAt;
+  }
+
   const hasValidSecret =
     setupEnabled &&
     configuredSecret.length >= 16 &&
     secret.length > 0 &&
     constantTimeEqual(secret, configuredSecret);
+
+  if (hasValidSecret && rlWindowResetAt !== undefined) {
+    releaseRateLimitAttempt(setupRateBucket, rlWindowResetAt);
+  }
 
   if (!isSuperAdmin && !hasValidSecret) {
     return NextResponse.json(

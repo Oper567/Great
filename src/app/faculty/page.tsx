@@ -152,12 +152,14 @@ export default function FacultyPage() {
       <section className="relative bg-primary-950 text-white py-8 sm:py-14 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/assets/images/graduation-1.jpg"
+            src="/assets/school-compound/central-quadrangle.webp"
             alt=""
             aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
@@ -247,6 +249,8 @@ export default function FacultyPage() {
                       src={KEY_PERSONNEL.headTeacher.image}
                       alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
                       fill
+                      loading="lazy"
+                      decoding="async"
                       sizes="80px"
                       className="object-cover object-top"
                     />
@@ -401,6 +405,8 @@ export default function FacultyPage() {
                           src={member.image}
                           alt={`${member.name} - ${member.role}`}
                           fill
+                          loading="lazy"
+                          decoding="async"
                           sizes="(max-width: 640px) 112px, (max-width: 1024px) 50vw, 33vw"
                           className={`object-cover ${member.objectPosition || "object-top"} group-hover:scale-105 transition-transform duration-500`}
                         />

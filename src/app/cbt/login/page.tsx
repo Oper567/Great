@@ -87,7 +87,7 @@ export default function StudentLoginPage() {
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white p-0.5 flex items-center justify-center shrink-0 shadow-md shadow-blue-950">
               <Image
-                src="/assets/images/school-logo.jpg"
+                src="/assets/images/school-logo.webp"
                 alt="GFMS Logo"
                 width={32}
                 height={32}
@@ -128,7 +128,7 @@ export default function StudentLoginPage() {
           <div className="text-center space-y-2 mb-5 sm:mb-6 pt-1">
             <div className="relative inline-flex items-center justify-center w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-white p-1.5 shadow-xl shadow-blue-950/80 mx-auto ring-4 ring-blue-500/20">
               <Image
-                src="/assets/images/school-logo.jpg"
+                src="/assets/images/school-logo.webp"
                 alt="Great-Favour Montessori School Crest"
                 width={60}
                 height={60}

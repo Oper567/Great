@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import net from "net";
-import { constantTimeEqual } from "@/lib/security";
+import {
+  checkRateLimit,
+  constantTimeEqual,
+  getClientIp,
+  getRateLimitStatus,
+  RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+  RATE_LIMIT_WINDOW_MS,
+  releaseRateLimitAttempt,
+} from "@/lib/security";
 import { getAdminSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -44,9 +52,50 @@ export async function GET(request: Request) {
   const secret = searchParams.get("secret") || "";
   const configuredSecret = process.env.SETUP_SECRET || "";
   const adminSession = await getAdminSession().catch(() => null);
-  const isAuthorizedDiagnostic =
-    adminSession?.role === "SUPER_ADMIN" ||
-    (configuredSecret.length >= 16 && secret.length > 0 && constantTimeEqual(secret, configuredSecret));
+  const isSuperAdmin = adminSession?.role === "SUPER_ADMIN";
+
+  const clientIp = getClientIp();
+  const healthRateBucket = `health-secret-fail:ip:${clientIp}`;
+  let rlWindowResetAt: number | undefined;
+
+  if (!isSuperAdmin && secret.length > 0) {
+    const lockStatus = getRateLimitStatus(healthRateBucket, RATE_LIMIT_MAX_FAILED_ATTEMPTS);
+    if (!lockStatus.allowed) {
+      return NextResponse.json(
+        { error: "Too Many Requests" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(lockStatus.retryAfterSec) },
+        }
+      );
+    }
+    const rl = checkRateLimit(
+      healthRateBucket,
+      RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+      RATE_LIMIT_WINDOW_MS
+    );
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too Many Requests" },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rl.retryAfterSec) },
+        }
+      );
+    }
+    rlWindowResetAt = rl.windowResetAt;
+  }
+
+  const hasValidSecret =
+    configuredSecret.length >= 16 &&
+    secret.length > 0 &&
+    constantTimeEqual(secret, configuredSecret);
+
+  if (hasValidSecret && rlWindowResetAt !== undefined) {
+    releaseRateLimitAttempt(healthRateBucket, rlWindowResetAt);
+  }
+
+  const isAuthorizedDiagnostic = isSuperAdmin || hasValidSecret;
 
   let dbSuccess = false;
   let adminCount = 0;

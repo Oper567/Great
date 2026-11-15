@@ -201,7 +201,7 @@ export default function ReportCardView({ data, scratchCardCheckInfo }: ReportCar
               <div className="col-span-2 flex flex-col items-center justify-center text-center">
                 <div className="relative w-12 h-12 sm:w-14 sm:h-14">
                   <Image
-                    src="/assets/images/school-logo.jpg"
+                    src="/assets/images/school-logo.webp"
                     alt="Great-Favour Montessori School Crest"
                     width={54}
                     height={54}

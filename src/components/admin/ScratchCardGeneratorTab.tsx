@@ -646,7 +646,7 @@ export default function ScratchCardGeneratorTab({ initialCardsData }: Props) {
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-blue-950 p-0.5 flex items-center justify-center shrink-0">
                           <Image
-                            src="/assets/images/school-logo.jpg"
+                            src="/assets/images/school-logo.webp"
                             alt="GFMS Logo"
                             width={24}
                             height={24}

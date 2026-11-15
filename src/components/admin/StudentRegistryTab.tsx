@@ -1100,7 +1100,7 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-full bg-blue-950 p-1 flex items-center justify-center">
                           <Image
-                            src="/assets/images/school-logo.jpg"
+                            src="/assets/images/school-logo.webp"
                             alt="GFMS Logo"
                             width={28}
                             height={28}

@@ -23,12 +23,14 @@ export default function AcademicsPage() {
       <section className="relative bg-primary-950 text-white py-10 sm:py-16 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/assets/images/classroom.jpg"
+            src="/assets/images/classroom.webp"
             alt=""
             aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>

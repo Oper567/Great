@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
-import { SCHOOL_BRAND, SCHOOL_NAME } from "@/constants/school";
+import { SCHOOL_BRAND, SCHOOL_CONTACT, SCHOOL_NAME } from "@/constants/school";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingActions from "@/components/FloatingActions";
@@ -121,6 +121,7 @@ export default function RootLayout({
     "slogan": SCHOOL_BRAND.motto,
     "description": `${SCHOOL_NAME} - ${SCHOOL_BRAND.mission}`,
     "foundingDate": "2014-09",
+    "sameAs": [SCHOOL_CONTACT.facebookUrl],
     "address": {
       "@type": "PostalAddress",
       "addressCountry": "NG"

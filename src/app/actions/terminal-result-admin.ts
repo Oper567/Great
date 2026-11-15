@@ -26,7 +26,12 @@ import {
   requireAdminSession,
 } from "@/lib/session";
 import { findPublishedResultForLookup } from "@/lib/result-lookup";
-import { sanitizeErrorMessage } from "@/lib/security";
+import {
+  checkRateLimit,
+  getClientIp,
+  RATE_LIMIT_WINDOW_MS,
+  sanitizeErrorMessage,
+} from "@/lib/security";
 import {
   parseClassAndArm,
   formatClassWithArm,
@@ -978,6 +983,15 @@ export async function getStudentAvailableTermsAction(
   className?: string;
 }> {
   try {
+    const adminSession = await getAdminSession().catch(() => null);
+    if (!adminSession) {
+      const ip = getClientIp();
+      const rl = checkRateLimit(`avail-terms:ip:${ip}`, 30, RATE_LIMIT_WINDOW_MS);
+      if (!rl.allowed) {
+        return { success: false, terms: [] };
+      }
+    }
+
     const cleanAdmNo = admNo.trim().toUpperCase();
     const termsMap = new Map<string, { session: string; term: string }>();
     let studentName = "";
@@ -1015,7 +1029,6 @@ export async function getStudentAvailableTermsAction(
       }
     } catch {}
 
-    const adminSession = await getAdminSession().catch(() => null);
     return {
       success: true,
       terms: Array.from(termsMap.values()),

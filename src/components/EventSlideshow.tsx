@@ -16,7 +16,7 @@ interface EventSlide {
 const EVENT_SLIDES: EventSlide[] = [
   {
     id: "evt-1",
-    image: "/assets/images/assembly-sports.jpg",
+    image: "/assets/images/assembly-sports.webp",
     title: "Morning Assembly & Sports Parade",
     date: "Weekly Sessions • 2026/2027",
     description:
@@ -25,7 +25,7 @@ const EVENT_SLIDES: EventSlide[] = [
   },
   {
     id: "evt-2",
-    image: "/assets/images/interhouse-sports.jpg",
+    image: "/assets/images/interhouse-sports.webp",
     title: "Annual Inter-House Athletics & Sports Gala",
     date: "November 2026 • Main Athletics Field",
     description:
@@ -34,7 +34,7 @@ const EVENT_SLIDES: EventSlide[] = [
   },
   {
     id: "evt-3",
-    image: "/assets/images/classroom-study.jpg",
+    image: "/assets/images/classroom-study.webp",
     title: "Continuous Assessment & Practical Study Clinics",
     date: "Termly Curriculum Focus",
     description:
@@ -43,7 +43,7 @@ const EVENT_SLIDES: EventSlide[] = [
   },
   {
     id: "evt-4",
-    image: "/assets/images/campus-courtyard.jpg",
+    image: "/assets/images/campus-courtyard.webp",
     title: "Secondary School Orientation & Leadership Forum",
     date: "First Term Academic Session",
     description:
@@ -52,7 +52,7 @@ const EVENT_SLIDES: EventSlide[] = [
   },
   {
     id: "evt-5",
-    image: "/assets/images/assembly-red.jpg",
+    image: "/assets/images/assembly-red.webp",
     title: "General School Fellowship & Moral Poise Day",
     date: "Monthly Character Seminar",
     description:
@@ -61,7 +61,7 @@ const EVENT_SLIDES: EventSlide[] = [
   },
   {
     id: "evt-6",
-    image: "/assets/images/classroom.jpg",
+    image: "/assets/images/classroom.webp",
     title: "Montessori & Collaborative Classroom Discovery",
     date: "Daily Learning Routine",
     description:
@@ -143,9 +143,10 @@ export default function EventSlideshow() {
                     alt=""
                     aria-hidden="true"
                     fill
+                    loading="lazy"
+                    decoding="async"
                     sizes="(max-width: 1024px) 100vw, 66vw"
                     className="object-cover"
-                    priority={index === 0}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent" />
                 </div>

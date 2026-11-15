@@ -981,7 +981,7 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 rounded-full bg-white p-0.5 flex items-center justify-center shrink-0">
             <Image
-              src="/assets/images/school-logo.jpg"
+              src="/assets/images/school-logo.webp"
               alt="GFMS"
               width={28}
               height={28}

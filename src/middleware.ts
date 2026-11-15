@@ -66,19 +66,16 @@ function applySecurityHeaders(
 
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains"
+  );
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set(
     "Permissions-Policy",
     "camera=(), microphone=(), geolocation=(), interest-cohort=()"
   );
-
-  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
-  if (proto === "https") {
-    response.headers.set(
-      "Strict-Transport-Security",
-      "max-age=31536000; includeSubDomains"
-    );
-  }
+  response.headers.set("X-DNS-Prefetch-Control", "off");
 
   return response;
 }
@@ -90,7 +87,7 @@ export function middleware(request: NextRequest) {
   // Handle CORS preflight strictly against allowlisted origins
   if (request.method === "OPTIONS") {
     if (!allowedOrigin) {
-      return new NextResponse(null, { status: 403 });
+      return applySecurityHeaders(new NextResponse(null, { status: 403 }), request, null);
     }
     const preflight = new NextResponse(null, {
       status: 204,
@@ -115,7 +112,11 @@ export function middleware(request: NextRequest) {
     pathname === "/cbt/cbt-offline.html"
   ) {
     const strippedPath = pathname.replace(/^\/cbt/, "") || "/";
-    return NextResponse.rewrite(new URL(strippedPath + request.nextUrl.search, request.url));
+    return applySecurityHeaders(
+      NextResponse.rewrite(new URL(strippedPath + request.nextUrl.search, request.url)),
+      request,
+      allowedOrigin
+    );
   }
 
   const forwardedHost = request.headers.get("x-forwarded-host");

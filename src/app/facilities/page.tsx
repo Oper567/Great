@@ -19,12 +19,14 @@ export default function FacilitiesPage() {
       <section className="relative bg-primary-950 text-white py-8 sm:py-14 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/assets/images/science-lab.jpg"
+            src="/assets/images/science-lab.webp"
             alt=""
             aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
@@ -72,9 +74,11 @@ export default function FacilitiesPage() {
               <div>
                 <div className="relative h-56 sm:h-64 lg:h-72 w-full overflow-hidden">
                   <Image
-                    src="/assets/images/ict-lab.jpg"
+                    src="/assets/images/ict-lab.webp"
                     alt="Great-Favour Montessori School Modern ICT Center"
                     fill
+                    loading="lazy"
+                    decoding="async"
                     className="object-cover editorial-img-zoom"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -103,9 +107,11 @@ export default function FacilitiesPage() {
               <div>
                 <div className="relative h-56 sm:h-64 lg:h-72 w-full overflow-hidden">
                   <Image
-                    src="/assets/images/science-lab.jpg"
+                    src="/assets/images/science-lab.webp"
                     alt="Great-Favour Montessori School Advanced Science Laboratories"
                     fill
+                    loading="lazy"
+                    decoding="async"
                     className="object-cover editorial-img-zoom"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -134,9 +140,11 @@ export default function FacilitiesPage() {
               <div>
                 <div className="relative h-56 sm:h-64 lg:h-72 w-full overflow-hidden">
                   <Image
-                    src="/assets/images/classroom.jpg"
+                    src="/assets/images/classroom.webp"
                     alt="Great-Favour Montessori School Eco-Friendly Learning Environment"
                     fill
+                    loading="lazy"
+                    decoding="async"
                     className="object-cover object-center editorial-img-zoom"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

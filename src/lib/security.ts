@@ -6,12 +6,22 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
+export interface RateLimitDecision {
+  allowed: boolean;
+  retryAfterSec: number;
+  remaining: number;
+  windowResetAt: number;
+}
+
+export const RATE_LIMIT_MAX_FAILED_ATTEMPTS = 5;
+export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
 declare global {
   // eslint-disable-next-line no-var
   var __gfmsRateLimits: Map<string, RateLimitEntry> | undefined;
 }
 
-const MAX_RATE_LIMIT_ENTRIES = 5000;
+const MAX_RATE_LIMIT_ENTRIES = 20000;
 
 function getRateLimitStore(): Map<string, RateLimitEntry> {
   if (!global.__gfmsRateLimits) {
@@ -20,23 +30,85 @@ function getRateLimitStore(): Map<string, RateLimitEntry> {
   return global.__gfmsRateLimits;
 }
 
+function pruneRateLimitStore(store: Map<string, RateLimitEntry>, now: number): void {
+  if (store.size < MAX_RATE_LIMIT_ENTRIES) return;
+  store.forEach((val, key) => {
+    if (now >= val.resetAt) {
+      store.delete(key);
+    }
+  });
+  while (store.size >= MAX_RATE_LIMIT_ENTRIES) {
+    const oldestKey = store.keys().next().value;
+    if (!oldestKey) break;
+    store.delete(oldestKey);
+  }
+}
+
+function normalizeIpCandidate(raw: string): string {
+  let cleaned = raw.trim().slice(0, 64);
+  if (!cleaned) return "";
+  if (cleaned.toLowerCase().startsWith("::ffff:")) {
+    cleaned = cleaned.slice(7);
+  }
+  // Strip IPv4 port suffix if present (e.g. "203.0.113.5:54321")
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(cleaned)) {
+    cleaned = cleaned.split(":")[0];
+  }
+  return cleaned;
+}
+
+function isLoopbackIp(ip: string): boolean {
+  return ip === "127.0.0.1" || ip === "::1";
+}
+
 /**
  * Extracts best-effort client IP from incoming request headers for rate limiting.
+ * Prefers proxy-overwritten headers and rightmost proxy-appended X-Forwarded-For entry
+ * to resist client-side header spoofing.
  */
 export function getClientIp(): string {
   try {
     const hdrs = headers();
-    const cfIp = hdrs.get("cf-connecting-ip");
-    if (cfIp) return cfIp.trim().slice(0, 64);
 
-    const forwarded = hdrs.get("x-forwarded-for");
-    if (forwarded) {
-      const first = forwarded.split(",")[0]?.trim();
-      if (first) return first.slice(0, 64);
+    const cfIp = hdrs.get("cf-connecting-ip");
+    if (cfIp) {
+      const normalized = normalizeIpCandidate(cfIp);
+      if (normalized) return normalized;
     }
 
     const realIp = hdrs.get("x-real-ip");
-    if (realIp) return realIp.trim().slice(0, 64);
+    if (realIp) {
+      const normalized = normalizeIpCandidate(realIp);
+      if (normalized) return normalized;
+    }
+
+    const forwarded = hdrs.get("x-forwarded-for");
+    if (forwarded) {
+      const candidates = forwarded
+        .split(",")
+        .map((part) => normalizeIpCandidate(part))
+        .filter(Boolean);
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        if (!isLoopbackIp(candidates[i])) {
+          return candidates[i];
+        }
+      }
+      if (candidates.length > 0) {
+        return candidates[candidates.length - 1];
+      }
+    }
+
+    const clientIp = hdrs.get("x-client-ip") || hdrs.get("true-client-ip");
+    if (clientIp) {
+      const normalized = normalizeIpCandidate(clientIp);
+      if (normalized) return normalized;
+    }
+
+    const socketIp = hdrs.get("x-gfms-remote-ip");
+    if (socketIp) {
+      const normalized = normalizeIpCandidate(socketIp);
+      if (normalized) return normalized;
+    }
   } catch {
     // headers() may throw outside a request context
   }
@@ -52,6 +124,9 @@ export function isHttpsRequest(): boolean {
     const proto = hdrs.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
     if (proto === "https") return true;
     if (hdrs.get("x-forwarded-ssl")?.trim().toLowerCase() === "on") return true;
+    if (hdrs.get("front-end-https")?.trim().toLowerCase() === "on") return true;
+    const cfVisitor = hdrs.get("cf-visitor") || "";
+    if (cfVisitor.includes('"https"')) return true;
     const origin = hdrs.get("origin") || "";
     const referer = hdrs.get("referer") || "";
     if (origin.startsWith("https://") || referer.startsWith("https://")) return true;
@@ -62,44 +137,121 @@ export function isHttpsRequest(): boolean {
 }
 
 /**
- * Bounded in-memory sliding/fixed-window rate limiter to mitigate credential brute-force attacks.
+ * Checks whether a rate-limit bucket is currently blocked without incrementing its counter.
+ */
+export function getRateLimitStatus(
+  bucketKey: string,
+  maxAttempts: number
+): RateLimitDecision {
+  const store = getRateLimitStore();
+  const now = Date.now();
+  const existing = store.get(bucketKey);
+
+  if (!existing || now >= existing.resetAt) {
+    if (existing) store.delete(bucketKey);
+    return {
+      allowed: maxAttempts > 0,
+      retryAfterSec: 0,
+      remaining: Math.max(0, maxAttempts),
+      windowResetAt: 0,
+    };
+  }
+
+  if (existing.count >= maxAttempts) {
+    const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
+    return {
+      allowed: false,
+      retryAfterSec,
+      remaining: 0,
+      windowResetAt: existing.resetAt,
+    };
+  }
+
+  return {
+    allowed: true,
+    retryAfterSec: 0,
+    remaining: Math.max(0, maxAttempts - existing.count),
+    windowResetAt: existing.resetAt,
+  };
+}
+
+/**
+ * Bounded in-memory fixed-window rate limiter that synchronously reserves an attempt slot
+ * before async DB/hash work to prevent concurrent burst bypasses.
+ * Pair with `releaseRateLimitAttempt` on verified success when counting failed attempts only.
  */
 export function checkRateLimit(
   bucketKey: string,
   maxAttempts: number,
   windowMs: number
-): { allowed: boolean; retryAfterSec: number } {
+): RateLimitDecision {
   const store = getRateLimitStore();
   const now = Date.now();
 
-  // Prune expired entries when store grows large to bound memory usage
-  if (store.size >= MAX_RATE_LIMIT_ENTRIES) {
-    store.forEach((val, key) => {
-      if (now >= val.resetAt) {
-        store.delete(key);
-      }
-    });
-    while (store.size >= MAX_RATE_LIMIT_ENTRIES) {
-      const oldestKey = store.keys().next().value;
-      if (!oldestKey) break;
-      store.delete(oldestKey);
-    }
+  pruneRateLimitStore(store, now);
+
+  if (maxAttempts <= 0) {
+    return {
+      allowed: false,
+      retryAfterSec: Math.max(1, Math.ceil(windowMs / 1000)),
+      remaining: 0,
+      windowResetAt: now + windowMs,
+    };
   }
 
   const existing = store.get(bucketKey);
   if (!existing || now >= existing.resetAt) {
-    store.set(bucketKey, { count: 1, resetAt: now + windowMs });
-    return { allowed: true, retryAfterSec: 0 };
+    const resetAt = now + windowMs;
+    store.set(bucketKey, { count: 1, resetAt });
+    return {
+      allowed: true,
+      retryAfterSec: 0,
+      remaining: Math.max(0, maxAttempts - 1),
+      windowResetAt: resetAt,
+    };
   }
 
   if (existing.count >= maxAttempts) {
     const retryAfterSec = Math.max(1, Math.ceil((existing.resetAt - now) / 1000));
-    return { allowed: false, retryAfterSec };
+    return {
+      allowed: false,
+      retryAfterSec,
+      remaining: 0,
+      windowResetAt: existing.resetAt,
+    };
   }
 
   existing.count += 1;
   store.set(bucketKey, existing);
-  return { allowed: true, retryAfterSec: 0 };
+  return {
+    allowed: true,
+    retryAfterSec: 0,
+    remaining: Math.max(0, maxAttempts - existing.count),
+    windowResetAt: existing.resetAt,
+  };
+}
+
+/**
+ * Releases a previously reserved rate-limit slot when authentication/verification succeeds,
+ * ensuring only failed attempts count toward lockout thresholds.
+ */
+export function releaseRateLimitAttempt(
+  bucketKey: string,
+  expectedResetAt?: number
+): void {
+  const store = getRateLimitStore();
+  const existing = store.get(bucketKey);
+  if (!existing) return;
+  if (expectedResetAt !== undefined && existing.resetAt !== expectedResetAt) {
+    return;
+  }
+
+  existing.count -= 1;
+  if (existing.count <= 0) {
+    store.delete(bucketKey);
+  } else {
+    store.set(bucketKey, existing);
+  }
 }
 
 /**

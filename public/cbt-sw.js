@@ -4,14 +4,14 @@
  * Version: 1.0.0
  */
 
-const CACHE_NAME = 'gfms-cbt-cache-v4';
+const CACHE_NAME = 'gfms-cbt-cache-v5';
 
 // Critical static assets to pre-cache on service worker installation
 const PRECACHE_ASSETS = [
   '/cbt-manifest.webmanifest',
   '/cbt-offline.html',
   '/assets/images/gfms-logo.svg',
-  '/assets/images/school-logo.jpg',
+  '/assets/images/school-logo.webp',
   '/logo.jpg',
   '/icon.jpg',
   '/favicon.ico',

@@ -388,12 +388,23 @@ app.prepare()
           res.setHeader('X-Forwarded-Proto', cleanProto);
         }
 
-        if (req.headers['x-forwarded-for']) {
-          const rawFwdFor = Array.isArray(req.headers['x-forwarded-for'])
-            ? req.headers['x-forwarded-for'][0]
-            : req.headers['x-forwarded-for'];
-          req.headers['x-forwarded-for'] = rawFwdFor.split(',')[0].trim();
+        if (req.headers['x-forwarded-for'] && Array.isArray(req.headers['x-forwarded-for'])) {
+          req.headers['x-forwarded-for'] = req.headers['x-forwarded-for'].join(', ');
         }
+
+        // Preserve verified TCP socket peer IP as fallback without trusting spoofed client header
+        delete req.headers['x-gfms-remote-ip'];
+        if (req.socket && req.socket.remoteAddress) {
+          req.headers['x-gfms-remote-ip'] = req.socket.remoteAddress;
+        }
+
+        // Baseline HTTP Security Headers for all server responses (clickjacking, MIME sniffing & HSTS)
+        res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), interest-cohort=()');
+        res.setHeader('X-DNS-Prefetch-Control', 'off');
 
         // Normalize cPanel subdomain subdirectory prefixing (e.g. when cbt.* document root is public_html/cbt)
         if (req.url) {

@@ -5,7 +5,16 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { StudentSession, AdminSession } from "@/types/cbt";
 import { isSeniorSecondaryClass } from "@/lib/cbt-utils";
-import { checkRateLimit, getClientIp, isHttpsRequest, sanitizeErrorMessage } from "@/lib/security";
+import {
+  checkRateLimit,
+  getClientIp,
+  getRateLimitStatus,
+  isHttpsRequest,
+  RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+  RATE_LIMIT_WINDOW_MS,
+  releaseRateLimitAttempt,
+  sanitizeErrorMessage,
+} from "@/lib/security";
 
 import {
   STUDENT_COOKIE_NAME,
@@ -34,6 +43,16 @@ export async function studentLoginAction(formData: FormData): Promise<{
   const inputAdmNo = typeof rawAdmNo === "string" ? rawAdmNo.trim() : "";
   const inputSurname = typeof rawSurname === "string" ? rawSurname.trim() : "";
 
+  const ip = getClientIp();
+  const ipBucket = `stu-login-fail:ip:${ip}`;
+  const ipLockStatus = getRateLimitStatus(ipBucket, 15);
+  if (!ipLockStatus.allowed) {
+    return {
+      success: false,
+      error: `Too many failed login attempts from your IP. Please wait ${Math.ceil(ipLockStatus.retryAfterSec / 60)} minute(s) and try again.`,
+    };
+  }
+
   if (!inputAdmNo || !inputSurname) {
     return {
       success: false,
@@ -41,13 +60,33 @@ export async function studentLoginAction(formData: FormData): Promise<{
     };
   }
 
-  // Sliding-window rate limiting to prevent admission-number/surname enumeration
-  const ip = getClientIp();
-  const rl = checkRateLimit(`stu-login:${ip}:${inputAdmNo.toUpperCase()}`, 20, 10 * 60 * 1000);
-  if (!rl.allowed) {
+  const ipAdmBucket = `stu-login-fail:ip-adm:${ip}:${inputAdmNo.toUpperCase()}`;
+  const admLockStatus = getRateLimitStatus(ipAdmBucket, RATE_LIMIT_MAX_FAILED_ATTEMPTS);
+  if (!admLockStatus.allowed) {
     return {
       success: false,
-      error: `Too many login attempts. Please wait ${Math.ceil(rl.retryAfterSec / 60)} minute(s) and try again.`,
+      error: `Too many failed login attempts. Please wait ${Math.ceil(admLockStatus.retryAfterSec / 60)} minute(s) and try again.`,
+    };
+  }
+
+  // Sliding-window failed-attempt rate limiting per IP+AdmNo (5/15m) & per IP (15/15m)
+  const ipRl = checkRateLimit(ipBucket, 15, RATE_LIMIT_WINDOW_MS);
+  if (!ipRl.allowed) {
+    return {
+      success: false,
+      error: `Too many failed login attempts from your IP. Please wait ${Math.ceil(ipRl.retryAfterSec / 60)} minute(s) and try again.`,
+    };
+  }
+  const admRl = checkRateLimit(
+    ipAdmBucket,
+    RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+    RATE_LIMIT_WINDOW_MS
+  );
+  if (!admRl.allowed) {
+    releaseRateLimitAttempt(ipBucket, ipRl.windowResetAt);
+    return {
+      success: false,
+      error: `Too many failed login attempts. Please wait ${Math.ceil(admRl.retryAfterSec / 60)} minute(s) and try again.`,
     };
   }
 
@@ -107,6 +146,9 @@ export async function studentLoginAction(formData: FormData): Promise<{
       maxAge: 60 * 60 * 12,
     });
 
+    releaseRateLimitAttempt(ipAdmBucket, admRl.windowResetAt);
+    releaseRateLimitAttempt(ipBucket, ipRl.windowResetAt);
+
     return {
       success: true,
       student: sessionData,
@@ -114,6 +156,8 @@ export async function studentLoginAction(formData: FormData): Promise<{
   } catch (err: any) {
     const detail = err?.message || String(err);
     if (detail.includes("Can't reach database server") || detail.includes("ETIMEDOUT") || detail.includes("ECONNREFUSED")) {
+      releaseRateLimitAttempt(ipAdmBucket, admRl.windowResetAt);
+      releaseRateLimitAttempt(ipBucket, ipRl.windowResetAt);
       return {
         success: false,
         error: "Service temporarily unavailable: Could not connect to the academic database.",
@@ -158,6 +202,16 @@ export async function adminLoginAction(formData: FormData): Promise<{
   const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
   const password = typeof rawPassword === "string" ? rawPassword : "";
 
+  const ip = getClientIp();
+  const ipBucket = `adm-login-fail:ip:${ip}`;
+  const lockStatus = getRateLimitStatus(ipBucket, RATE_LIMIT_MAX_FAILED_ATTEMPTS);
+  if (!lockStatus.allowed) {
+    return {
+      success: false,
+      error: `Too many failed login attempts. Please wait ${Math.ceil(lockStatus.retryAfterSec / 60)} minute(s) before trying again.`,
+    };
+  }
+
   if (!email || !password) {
     return {
       success: false,
@@ -165,9 +219,12 @@ export async function adminLoginAction(formData: FormData): Promise<{
     };
   }
 
-  // Rate limiting against brute-force attacks
-  const ip = getClientIp();
-  const rl = checkRateLimit(`adm-login:${ip}:${email}`, 10, 15 * 60 * 1000);
+  // Per-IP failed-attempt rate limiting against staff/admin credential brute-force (max 5 failed attempts / 15m)
+  const rl = checkRateLimit(
+    ipBucket,
+    RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+    RATE_LIMIT_WINDOW_MS
+  );
   if (!rl.allowed) {
     return {
       success: false,
@@ -187,18 +244,18 @@ export async function adminLoginAction(formData: FormData): Promise<{
       };
     }
 
-    if (admin.status && admin.status.toUpperCase() !== "ACTIVE") {
-      return {
-        success: false,
-        error: "This staff account is inactive. Please contact the Super Administrator.",
-      };
-    }
-
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       return {
         success: false,
         error: "Invalid administrator credentials.",
+      };
+    }
+
+    if (admin.status && admin.status.toUpperCase() !== "ACTIVE") {
+      return {
+        success: false,
+        error: "This staff account is inactive. Please contact the Super Administrator.",
       };
     }
 
@@ -230,6 +287,8 @@ export async function adminLoginAction(formData: FormData): Promise<{
       maxAge: 60 * 60 * 12,
     });
 
+    releaseRateLimitAttempt(ipBucket, rl.windowResetAt);
+
     return {
       success: true,
       admin: sessionData,
@@ -237,6 +296,7 @@ export async function adminLoginAction(formData: FormData): Promise<{
   } catch (err: any) {
     const detail = err?.message || String(err);
     if (detail.includes("Can't reach database server") || detail.includes("ETIMEDOUT") || detail.includes("ECONNREFUSED")) {
+      releaseRateLimitAttempt(ipBucket, rl.windowResetAt);
       return {
         success: false,
         error: "Service temporarily unavailable: Could not connect to the academic database.",

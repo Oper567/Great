@@ -113,7 +113,7 @@ export default function StaffLoginClient({ initialAdmin }: Props) {
           <Link href="/" className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-full bg-white p-0.5 shadow-sm flex items-center justify-center shrink-0">
               <Image
-                src="/assets/images/school-logo.jpg"
+                src="/assets/images/school-logo.webp"
                 alt="Great-Favour Montessori School Logo"
                 width={36}
                 height={36}

@@ -1252,7 +1252,7 @@ export async function downloadTerminalReportCardPdf(data: ReportCardData): Promi
   if (typeof window === "undefined") return;
 
   const [schoolLogo, studentPhoto] = await Promise.all([
-    rasterizeImageToJpeg("/assets/images/school-logo.jpg", 160, 160, "contain"),
+    rasterizeImageToJpeg("/assets/images/school-logo.webp", 160, 160, "contain"),
     data.student?.avatarUrl
       ? rasterizeImageToJpeg(data.student.avatarUrl, 176, 200, "cover-top")
       : Promise.resolve(null),

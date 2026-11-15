@@ -25,12 +25,14 @@ export default function AboutPage() {
       <section className="relative bg-primary-950 text-white py-8 sm:py-14 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
-            src="/assets/images/school-building-front.jpg"
+            src="/assets/school-compound/main-academic-block.webp"
             alt=""
             aria-hidden="true"
             fill
             className="object-cover object-center opacity-20"
             priority
+            fetchPriority="high"
+            decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
@@ -149,6 +151,8 @@ export default function AboutPage() {
                         src={KEY_PERSONNEL.deputyDirector.image}
                         alt={`${KEY_PERSONNEL.deputyDirector.fullName} - ${KEY_PERSONNEL.deputyDirector.title}`}
                         fill
+                        loading="lazy"
+                        decoding="async"
                         sizes="120px"
                         className="object-cover object-top"
                       />
@@ -195,6 +199,8 @@ export default function AboutPage() {
                             alt={exam.code}
                             width={28}
                             height={28}
+                            loading="lazy"
+                            decoding="async"
                             className="object-contain w-full h-full"
                           />
                         </div>

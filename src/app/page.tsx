@@ -8,7 +8,9 @@ import {
   SCHOOL_BRAND,
 } from "@/constants/school";
 import EventSlideshow from "@/components/EventSlideshow";
+import FacebookPageEmbed from "@/components/FacebookPageEmbed";
 import DigitalCampusGateway from "@/components/DigitalCampusGateway";
+import ParentComplimentsSlider from "@/components/ParentComplimentsSlider";
 import {
   GraduationCap,
   CheckCircle2,
@@ -19,9 +21,7 @@ import {
   HeartHandshake,
   ChevronRight,
   ChevronLeft,
-  Calendar,
   Award,
-  Quote,
   ShieldCheck,
 } from "lucide-react";
 
@@ -33,7 +33,7 @@ const HERO_SLIDES = [
     title: "Raising Honest, Confident Leaders for Tomorrow's World",
     description:
       "A licensed, full-spectrum educational institution delivering authentic Montessori early learning, rigorous Basic Primary foundations, and accredited Junior & Senior Secondary education.",
-    image: "/assets/school%20cmmpound/DSC_1797@1053034621.JPG",
+    image: "/assets/school-compound/main-academic-block.webp",
     imageAlt: "Great-Favour Montessori School Main Academic Block",
   },
   {
@@ -43,7 +43,7 @@ const HERO_SLIDES = [
     title: "Unbroken Continuity from Early Discovery to University Readiness",
     description:
       "Small class sizes (15:1 ratio), dedicated science and ICT laboratories, and TRCN-certified educators preparing scholars for national and international excellence.",
-    image: "/assets/images/classroom-study.jpg",
+    image: "/assets/images/classroom-study.webp",
     imageAlt: "Scholars in Classroom Study Session at Great-Favour Montessori School",
   },
   {
@@ -53,7 +53,7 @@ const HERO_SLIDES = [
     title: "Where Academic Rigor Meets Moral Poise and Discipline",
     description:
       "Set within a serene, purpose-built compound featuring ventilated classroom wings, expansive athletics fields, and a warm family community.",
-    image: "/assets/images/assembly-sports.jpg",
+    image: "/assets/images/assembly-sports.webp",
     imageAlt: "Morning Assembly and Sports Parade at Great-Favour Montessori School",
   },
 ];
@@ -64,7 +64,7 @@ const ACADEMIC_DIVISIONS = [
     levelBadge: "Ages 3 Months – 5 Years",
     title: "Creche & Montessori Nursery",
     classes: "Creche • Playgroup • Nursery 1 – 3",
-    image: "/assets/images/classroom.jpg",
+    image: "/assets/images/classroom.webp",
     description:
       "Guided by Maria Montessori principles, young learners develop early literacy with Jolly Phonics, sensorial numeracy, practical life grace, and curiosity.",
     highlights: ["Sensorial & Tactile Apparatus", "Jolly Phonics & Early Numeracy"],
@@ -76,7 +76,7 @@ const ACADEMIC_DIVISIONS = [
     levelBadge: "Ages 5 – 11 Years",
     title: "Basic Primary School",
     classes: "Basic 1 – Basic 6 • FLSC Accredited",
-    image: "/assets/images/classroom-study.jpg",
+    image: "/assets/images/classroom-study.webp",
     description:
       "Blends the Nigerian National Curriculum with global elementary standards in quantitative reasoning, verbal aptitude, basic science, and computer literacy.",
     highlights: ["Quantitative & Verbal Mastery", "Weekly ICT & Practical Science"],
@@ -88,7 +88,7 @@ const ACADEMIC_DIVISIONS = [
     levelBadge: "Ages 10 – 13 Years",
     title: "Junior Secondary School",
     classes: "JSS 1 – JSS 3 • BECE Accredited",
-    image: "/assets/images/campus-courtyard.jpg",
+    image: "/assets/images/campus-courtyard.webp",
     description:
       "Bridges elementary foundations with intermediate sciences, technology, humanities, business studies, and computer-based assessment readiness for BECE.",
     highlights: ["Comprehensive JSS Subject Track", "BECE & CBT Exam Preparation"],
@@ -100,7 +100,7 @@ const ACADEMIC_DIVISIONS = [
     levelBadge: "Ages 13 – 17 Years",
     title: "Senior Secondary School",
     classes: "SS 1 – SS 3 • WASSCE & NECO",
-    image: "/assets/images/science-lab.jpg",
+    image: "/assets/images/science-lab.webp",
     description:
       "Specialized Science, Arts, and Commercial departments supported by equipped Physics, Chemistry, Biology, and ICT laboratories for WAEC, NECO, and UTME.",
     highlights: ["Science, Arts & Commercial Streams", "WAEC, NECO & UTME Clinics"],
@@ -135,25 +135,6 @@ const CORE_PILLARS = [
       "Intentional mentorship in honesty, public speaking, civic responsibility, and personal discipline so every graduate leads with integrity.",
     footer: "Daily Devotion & Mentoring",
     icon: HeartHandshake,
-    delay: "delay-300",
-  },
-];
-
-const PARENT_TESTIMONIALS = [
-  {
-    quote:
-      "Enrolling my three children at Great-Favour Montessori School was the best decision for our family. My youngest in Nursery 2 reads fluently with Jolly Phonics, while my eldest in SS 2 excels in Physics and Chemistry.",
-    name: "Engr. & Mrs. Chukwuma Nwosu",
-    ward: "Parents of 3 Scholars (Nursery 2, Basic 4 & SS 2)",
-    tenure: "GFMS Family Since 2021",
-    delay: "delay-150",
-  },
-  {
-    quote:
-      "The online scratch card result portal and CBT testing center show how forward-thinking the school is. Even more impressive is the moral discipline, neatness, and confidence the teachers instill in every child.",
-    name: "Dr. (Mrs.) Adesuwa Obaseki",
-    ward: "Parent of JSS 3 Scholar",
-    tenure: "BECE Distinction Parent",
     delay: "delay-300",
   },
 ];
@@ -205,6 +186,9 @@ export default function HomePage() {
                 aria-hidden="true"
                 fill
                 priority={idx === 0}
+                fetchPriority={idx === 0 ? "high" : "low"}
+                loading={idx === 0 ? undefined : "lazy"}
+                decoding="async"
                 sizes="100vw"
                 className="object-cover object-center"
               />
@@ -377,9 +361,11 @@ export default function HomePage() {
             <div className="lg:col-span-5 space-y-3 sm:space-y-4 reveal-init reveal-fade-left delay-100">
               <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-card h-60 sm:h-auto sm:aspect-[4/3] bg-slate-100 group">
                 <Image
-                  src="/assets/images/campus-courtyard.jpg"
+                  src="/assets/images/campus-courtyard.webp"
                   alt="Great-Favour Montessori School Courtyard and Scholars"
                   fill
+                  loading="lazy"
+                  decoding="async"
                   sizes="(max-width: 1024px) 100vw, 42vw"
                   className="object-cover editorial-img-zoom"
                 />
@@ -445,6 +431,8 @@ export default function HomePage() {
                           alt={`${exam.code} Official Logo`}
                           width={48}
                           height={48}
+                          loading="lazy"
+                          decoding="async"
                           className="object-contain w-full h-full"
                         />
                       </div>
@@ -533,6 +521,8 @@ export default function HomePage() {
                       src={div.image}
                       alt={div.title}
                       fill
+                      loading="lazy"
+                      decoding="async"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       className="object-cover editorial-img-zoom"
                     />
@@ -652,73 +642,19 @@ export default function HomePage() {
       <EventSlideshow />
 
       {/* =====================================================================
+          6B. OFFICIAL SCHOOL FACEBOOK COMMUNITY & LIVE FEED
+          ===================================================================== */}
+      <FacebookPageEmbed />
+
+      {/* =====================================================================
           7. DIGITAL CAMPUS & PORTALS GATEWAY
           ===================================================================== */}
       <DigitalCampusGateway />
 
       {/* =====================================================================
-          8. VOICES OF OUR PARENTS & ADMISSIONS INVITATION
+          8. VOICES OF OUR PARENTS — SLIDING PARENT COMPLIMENTS (5 FAMILIES)
           ===================================================================== */}
-      <section className="py-7 sm:py-14 lg:py-18 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
-            <div className="space-y-1.5 sm:space-y-2.5 max-w-2xl">
-              <div className="flex items-center gap-2.5">
-                <span className="w-8 h-0.5 bg-secondary-500" />
-                <span className="section-badge">Parent Community</span>
-              </div>
-              <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-primary-950 tracking-tight">
-                Trusted by Families Across Delta State
-              </h2>
-              <p className="text-slate-600 text-xs sm:text-base leading-relaxed">
-                Hear directly from parents and guardians whose children learn and grow at Great-Favour Montessori School.
-              </p>
-            </div>
-
-            <Link
-              href="/admissions#tour"
-              className="inline-flex items-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-lg bg-primary-900 hover:bg-primary-950 text-white text-xs sm:text-sm font-bold transition self-start md:self-end shrink-0"
-            >
-              <Calendar className="w-4 h-4 text-secondary-400" />
-              <span>Book a Campus Tour</span>
-            </Link>
-          </div>
-
-          {/* Testimonials Grid — Compact Readable Cards on Mobile */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-6">
-            {PARENT_TESTIMONIALS.map((t) => (
-              <div
-                key={t.name}
-                className={`editorial-card rounded-xl p-4 sm:p-8 flex flex-col justify-between space-y-3 sm:space-y-5 reveal-init reveal-fade-up ${t.delay}`}
-              >
-                <div className="space-y-2.5 sm:space-y-4">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-secondary-50 border border-secondary-200 text-secondary-700 flex items-center justify-center">
-                    <Quote className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </div>
-                  <blockquote className="text-slate-700 text-xs sm:text-base leading-relaxed">
-                    &ldquo;{t.quote}&rdquo;
-                  </blockquote>
-                </div>
-
-                <div className="pt-3 sm:pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div>
-                    <strong className="text-xs sm:text-base font-extrabold text-primary-950 block">
-                      {t.name}
-                    </strong>
-                    <span className="text-[11px] sm:text-xs text-slate-600 font-medium">
-                      {t.ward}
-                    </span>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-bold text-accent-green-800 bg-accent-green-50 border border-accent-green-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded shrink-0">
-                    <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-accent-green-700" />
-                    <span>{t.tenure}</span>
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ParentComplimentsSlider />
     </>
   );
 }

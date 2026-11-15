@@ -63,7 +63,7 @@ export default function ResultEmptyStateView({
           {/* School Crest */}
           <div className="w-16 h-16 mx-auto relative mb-3 bg-white p-1 rounded-full shadow-md">
             <Image
-              src="/assets/images/school-logo.jpg"
+              src="/assets/images/school-logo.webp"
               alt="Great-Favour Montessori School Logo"
               width={64}
               height={64}

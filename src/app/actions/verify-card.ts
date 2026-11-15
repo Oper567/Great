@@ -2,7 +2,15 @@
 
 import { cookies } from "next/headers";
 import prisma from "@/lib/prisma";
-import { checkRateLimit, getClientIp, isHttpsRequest } from "@/lib/security";
+import {
+  checkRateLimit,
+  getClientIp,
+  getRateLimitStatus,
+  isHttpsRequest,
+  RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+  RATE_LIMIT_WINDOW_MS,
+  releaseRateLimitAttempt,
+} from "@/lib/security";
 import { RESULT_COOKIE_NAME, serializeResultAccessCookie } from "@/lib/session";
 
 export interface VerifyCardResult {
@@ -41,6 +49,16 @@ export async function verifyScratchCardAction(
   const term = typeof rawTerm === "string" ? rawTerm.trim() : "Third Term";
   const inputPin = typeof rawPin === "string" ? rawPin.trim().toUpperCase() : "";
 
+  const clientIp = getClientIp();
+  const ipRateBucket = `pin-fail:ip:${clientIp}`;
+  const lockStatus = getRateLimitStatus(ipRateBucket, RATE_LIMIT_MAX_FAILED_ATTEMPTS);
+  if (!lockStatus.allowed) {
+    return {
+      success: false,
+      error: `Too many failed verification attempts. Please wait ${Math.ceil(lockStatus.retryAfterSec / 60)} minute(s) before trying again.`,
+    };
+  }
+
   if (!fullName) {
     return { success: false, error: "Please enter Student Full Name." };
   }
@@ -57,13 +75,17 @@ export async function verifyScratchCardAction(
     return { success: false, error: "Please enter Scratch Card PIN." };
   }
 
-  // Rate limit brute-force scratch card PIN guessing per IP & Admission Number
-  const clientIp = getClientIp();
-  const rateCheck = checkRateLimit(`pin:${clientIp}:${inputAdmNo}`, 12, 15 * 60 * 1000);
+  // Reserve a failed-attempt slot synchronously per IP (max 5 failed attempts per 15 minutes per IP);
+  // released only upon verified card success to block brute-force PIN guessing across any AdmNo.
+  const rateCheck = checkRateLimit(
+    ipRateBucket,
+    RATE_LIMIT_MAX_FAILED_ATTEMPTS,
+    RATE_LIMIT_WINDOW_MS
+  );
   if (!rateCheck.allowed) {
     return {
       success: false,
-      error: `Too many verification attempts. Please wait ${Math.ceil(rateCheck.retryAfterSec / 60)} minute(s) before trying again.`,
+      error: `Too many failed verification attempts. Please wait ${Math.ceil(rateCheck.retryAfterSec / 60)} minute(s) before trying again.`,
     };
   }
 
@@ -143,6 +165,8 @@ export async function verifyScratchCardAction(
         pending: "true",
         cardPreserved: "true",
       });
+
+      releaseRateLimitAttempt(ipRateBucket, rateCheck.windowResetAt);
 
       return {
         success: true,
@@ -224,6 +248,8 @@ export async function verifyScratchCardAction(
       session,
       term,
     });
+
+    releaseRateLimitAttempt(ipRateBucket, rateCheck.windowResetAt);
 
     return {
       success: true,

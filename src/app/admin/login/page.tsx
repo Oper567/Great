@@ -5,6 +5,10 @@ export const metadata = {
   title: "Super Admin Command Portal Login | Great-Favour Montessori School",
   description:
     "Secure administrative login portal for Great-Favour Montessori School (GFMS) administrators and CBT directors.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function AdminLoginPage() {

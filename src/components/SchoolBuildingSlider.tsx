@@ -27,7 +27,7 @@ export interface BuildingSlide {
 export const BUILDING_SLIDES: BuildingSlide[] = [
   {
     id: "compound-1",
-    image: "/assets/school%20cmmpound/DSC_1797@1053034621.JPG",
+    image: "/assets/school-compound/main-academic-block.webp",
     title: "Main Academic Block & Frontage",
     badge: "Official Facade",
     caption:
@@ -36,7 +36,7 @@ export const BUILDING_SLIDES: BuildingSlide[] = [
   },
   {
     id: "compound-2",
-    image: "/assets/school%20cmmpound/DSC_1799@-1100977988.JPG",
+    image: "/assets/school-compound/campus-lawns.webp",
     title: "Expansive Campus Lawns & Sports Ground",
     badge: "Athletics & Grounds",
     caption:
@@ -45,7 +45,7 @@ export const BUILDING_SLIDES: BuildingSlide[] = [
   },
   {
     id: "compound-3",
-    image: "/assets/school%20cmmpound/DSC_1800@33696695.JPG",
+    image: "/assets/school-compound/central-quadrangle.webp",
     title: "Central Quadrangle & Interconnected Wings",
     badge: "Campus Architecture",
     caption:
@@ -54,7 +54,7 @@ export const BUILDING_SLIDES: BuildingSlide[] = [
   },
   {
     id: "compound-4",
-    image: "/assets/school%20cmmpound/DSC_1802@-1073652927.JPG",
+    image: "/assets/school-compound/covered-corridors.webp",
     title: "Eco-Friendly Classrooms & Covered Corridors",
     badge: "Classroom Wings",
     caption:
@@ -63,7 +63,7 @@ export const BUILDING_SLIDES: BuildingSlide[] = [
   },
   {
     id: "compound-5",
-    image: "/assets/school%20cmmpound/DSC_1803@-145918595.JPG",
+    image: "/assets/school-compound/compound-panorama.webp",
     title: "Full Compound Panorama & Assembly Grounds",
     badge: "Issele-Azagba Campus",
     caption:
@@ -205,7 +205,8 @@ export default function SchoolBuildingSlider() {
                   alt=""
                   aria-hidden="true"
                   fill
-                  priority={idx === 0}
+                  loading="lazy"
+                  decoding="async"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                   className="object-cover object-center"
                 />
@@ -317,6 +318,8 @@ export default function SchoolBuildingSlider() {
                     src={slide.image}
                     alt={slide.title}
                     fill
+                    loading="lazy"
+                    decoding="async"
                     sizes="96px"
                     className="object-cover"
                   />

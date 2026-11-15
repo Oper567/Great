@@ -134,7 +134,7 @@ function ResultPortalContent() {
           {/* Official School Crest Logo */}
           <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto relative mb-1.5 sm:mb-2">
             <Image
-              src="/assets/images/school-logo.jpg"
+              src="/assets/images/school-logo.webp"
               alt="Great-Favour Montessori School Official Crest"
               width={56}
               height={56}
