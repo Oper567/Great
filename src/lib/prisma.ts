@@ -123,6 +123,18 @@ export function getPgPool(): any {
   }
 }
 
+function toNumericScore(val: any, fallback = 0): number {
+  if (val === null || val === undefined || val === "") return fallback;
+  const num = Number(val);
+  return Number.isNaN(num) ? fallback : num;
+}
+
+function toNullableNumericScore(val: any): number | null {
+  if (val === null || val === undefined || val === "") return null;
+  const num = Number(val);
+  return Number.isNaN(num) ? null : num;
+}
+
 // Helper for direct parameterized SQL execution with transient retry logic for high concurrency
 export async function queryRawPg<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   const pool = getPgPool();
@@ -1421,9 +1433,9 @@ async function executePgFallback(model: string, method: string, args: any): Prom
                 startedAt: att.started_at,
                 submittedAt: att.submitted_at,
                 isCompleted: att.is_completed,
-                objectiveScore: att.objective_score,
-                theoryScore: att.theory_score,
-                totalScore: att.total_score,
+                objectiveScore: toNumericScore(att.objective_score, 0),
+                theoryScore: toNullableNumericScore(att.theory_score),
+                totalScore: toNumericScore(att.total_score, 0),
                 studentAnswers: att.student_answers,
                 isTransmittedToAdmin: att.is_transmitted_to_admin,
                 teacherComment: att.teacher_comment,
@@ -1710,27 +1722,50 @@ async function executePgFallback(model: string, method: string, args: any): Prom
   // 6. objectiveQuestion
   if (model === "objectiveQuestion") {
     if (method === "findMany") {
-      const examId = args?.where?.examId;
+      const examIdFilter = args?.where?.examId;
+      const inList =
+        examIdFilter && typeof examIdFilter === "object" && Array.isArray(examIdFilter.in)
+          ? examIdFilter.in.map(Number).filter((n: number) => Number.isInteger(n))
+          : null;
+
+      if (inList !== null && inList.length === 0) return [];
+
+      const whereSql =
+        inList !== null
+          ? "WHERE exam_id = ANY($1::int[]) ORDER BY exam_id ASC, id ASC"
+          : examIdFilter !== undefined && examIdFilter !== null
+          ? "WHERE exam_id = $1 ORDER BY id ASC"
+          : "ORDER BY exam_id ASC, id ASC";
+      const params =
+        inList !== null
+          ? [inList]
+          : examIdFilter !== undefined && examIdFilter !== null
+          ? [Number(examIdFilter)]
+          : [];
+
       try {
-        const rows = await queryRawPg("SELECT * FROM objective_questions WHERE exam_id = $1 ORDER BY id ASC", [examId]);
+        const rows = await queryRawPg(`SELECT * FROM objective_questions ${whereSql}`, params);
         return rows.map((r: any) => ({
           id: r.id,
           examId: r.exam_id,
           questionText: r.question_text,
           options: r.options,
           correctAnswer: r.correct_answer,
-          points: r.points,
+          points: r.points != null ? Number(r.points) : 0.5,
           imageUrl: r.image_url || null,
         }));
       } catch {
-        const rows = await queryRawPg("SELECT id, exam_id, question_text, options, correct_answer, points FROM objective_questions WHERE exam_id = $1 ORDER BY id ASC", [examId]);
+        const rows = await queryRawPg(
+          `SELECT id, exam_id, question_text, options, correct_answer, points FROM objective_questions ${whereSql}`,
+          params
+        );
         return rows.map((r: any) => ({
           id: r.id,
           examId: r.exam_id,
           questionText: r.question_text,
           options: r.options,
           correctAnswer: r.correct_answer,
-          points: r.points,
+          points: r.points != null ? Number(r.points) : 0.5,
           imageUrl: null,
         }));
       }
@@ -1983,6 +2018,46 @@ async function executePgFallback(model: string, method: string, args: any): Prom
 
   // 8. examAttempt
   if (model === "examAttempt") {
+    const mapExamAttemptRow = (r: any) => ({
+      id: r.id,
+      studentId: r.student_id,
+      examId: r.exam_id,
+      startedAt: r.started_at,
+      submittedAt: r.submitted_at,
+      isCompleted: r.is_completed,
+      objectiveScore: toNumericScore(r.objective_score, 0),
+      theoryScore: toNullableNumericScore(r.theory_score),
+      totalScore: toNumericScore(r.total_score, 0),
+      studentAnswers: r.student_answers,
+      isTransmittedToAdmin: r.is_transmitted_to_admin,
+      teacherComment: r.teacher_comment,
+      gradedByTeacherName: r.graded_by_teacher_name,
+    });
+
+    const mapExamAttemptStudent = (s: any) => ({
+      id: s.id,
+      admNo: s.adm_no,
+      surname: s.surname,
+      fullName: s.full_name,
+      currentClass: s.current_class,
+      arm: s.arm || "",
+      gender: s.gender,
+      session: s.session,
+      status: s.status,
+    });
+
+    const mapExamAttemptExam = (e: any) => ({
+      id: e.id,
+      title: e.title,
+      subject: e.subject,
+      targetClass: e.target_class,
+      examDate: e.exam_date,
+      durationMinutes: e.duration_minutes,
+      isActive: e.is_active,
+      hasTheory: e.has_theory,
+      createdBy: e.created_by || null,
+    });
+
     if (method === "deleteMany") {
       const examId = args?.where?.examId;
       if (examId) {
@@ -2016,52 +2091,18 @@ async function executePgFallback(model: string, method: string, args: any): Prom
       }
       if (!row) return null;
 
-      const result: any = {
-        id: row.id,
-        studentId: row.student_id,
-        examId: row.exam_id,
-        startedAt: row.started_at,
-        submittedAt: row.submitted_at,
-        isCompleted: row.is_completed,
-        objectiveScore: row.objective_score,
-        theoryScore: row.theory_score,
-        totalScore: row.total_score,
-        studentAnswers: row.student_answers,
-        isTransmittedToAdmin: row.is_transmitted_to_admin,
-        teacherComment: row.teacher_comment,
-        gradedByTeacherName: row.graded_by_teacher_name,
-      };
+      const result: any = mapExamAttemptRow(row);
 
       if (args?.include?.student) {
         const sRows = await queryRawPg("SELECT * FROM students WHERE id = $1 LIMIT 1", [row.student_id]).catch(() => []);
         if (sRows.length > 0) {
-          const s = sRows[0];
-          result.student = {
-            id: s.id,
-            admNo: s.adm_no,
-            surname: s.surname,
-            fullName: s.full_name,
-            currentClass: s.current_class,
-            gender: s.gender,
-            session: s.session,
-            status: s.status,
-          };
+          result.student = mapExamAttemptStudent(sRows[0]);
         }
       }
       if (args?.include?.exam) {
         const eRows = await queryRawPg("SELECT * FROM exams WHERE id = $1 LIMIT 1", [row.exam_id]).catch(() => []);
         if (eRows.length > 0) {
-          const e = eRows[0];
-          result.exam = {
-            id: e.id,
-            title: e.title,
-            subject: e.subject,
-            targetClass: e.target_class,
-            examDate: e.exam_date,
-            durationMinutes: e.duration_minutes,
-            isActive: e.is_active,
-            hasTheory: e.has_theory,
-          };
+          result.exam = mapExamAttemptExam(eRows[0]);
         }
       }
       return result;
@@ -2126,16 +2167,7 @@ async function executePgFallback(model: string, method: string, args: any): Prom
         const studentIds = Array.from(new Set(rows.map((r: any) => r.student_id)));
         const sRows = await queryRawPg("SELECT * FROM students WHERE id = ANY($1::int[])", [studentIds]).catch(() => []);
         for (const s of sRows) {
-          studentMap[s.id] = {
-            id: s.id,
-            admNo: s.adm_no,
-            surname: s.surname,
-            fullName: s.full_name,
-            currentClass: s.current_class,
-            gender: s.gender,
-            session: s.session,
-            status: s.status,
-          };
+          studentMap[s.id] = mapExamAttemptStudent(s);
         }
       }
 
@@ -2143,41 +2175,19 @@ async function executePgFallback(model: string, method: string, args: any): Prom
         const examIds = Array.from(new Set(rows.map((r: any) => r.exam_id)));
         const eRows = await queryRawPg("SELECT * FROM exams WHERE id = ANY($1::int[])", [examIds]).catch(() => []);
         for (const e of eRows) {
-          examMap[e.id] = {
-            id: e.id,
-            title: e.title,
-            subject: e.subject,
-            targetClass: e.target_class,
-            examDate: e.exam_date,
-            durationMinutes: e.duration_minutes,
-            isActive: e.is_active,
-            hasTheory: e.has_theory,
-          };
+          examMap[e.id] = mapExamAttemptExam(e);
         }
       }
 
       return rows.map((r: any) => {
-        const item: any = {
-          id: r.id,
-          studentId: r.student_id,
-          examId: r.exam_id,
-          startedAt: r.started_at,
-          submittedAt: r.submitted_at,
-          isCompleted: r.is_completed,
-          objectiveScore: r.objective_score,
-          theoryScore: r.theory_score,
-          totalScore: r.total_score,
-          studentAnswers: r.student_answers,
-          isTransmittedToAdmin: r.is_transmitted_to_admin,
-          teacherComment: r.teacher_comment,
-          gradedByTeacherName: r.graded_by_teacher_name,
-        };
+        const item: any = mapExamAttemptRow(r);
         if (args?.include?.student) {
           item.student = studentMap[r.student_id] || {
             id: r.student_id,
             admNo: "N/A",
             fullName: "Student",
             currentClass: "N/A",
+            arm: "",
           };
         }
         if (args?.include?.exam) {
@@ -2187,6 +2197,7 @@ async function executePgFallback(model: string, method: string, args: any): Prom
             subject: "General",
             targetClass: "SS",
             hasTheory: false,
+            createdBy: null,
           };
         }
         return item;
@@ -2204,7 +2215,7 @@ async function executePgFallback(model: string, method: string, args: any): Prom
             d.examId,
             d.isCompleted ?? false,
             d.objectiveScore ?? 0,
-            d.theoryScore ?? 0,
+            d.theoryScore !== undefined ? d.theoryScore : null,
             d.totalScore ?? 0,
             JSON.stringify(d.studentAnswers || {}),
             d.isTransmittedToAdmin ?? false,
@@ -2224,7 +2235,7 @@ async function executePgFallback(model: string, method: string, args: any): Prom
             d.examId,
             d.isCompleted ?? false,
             d.objectiveScore ?? 0,
-            d.theoryScore ?? 0,
+            d.theoryScore !== undefined ? d.theoryScore : null,
             d.totalScore ?? 0,
             JSON.stringify(d.studentAnswers || {}),
             d.isTransmittedToAdmin ?? false,
@@ -2234,22 +2245,7 @@ async function executePgFallback(model: string, method: string, args: any): Prom
         );
         await queryRawPg(`SELECT setval(pg_get_serial_sequence('"exam_attempts"', 'id'), $1, true)`, [nextId]).catch(() => {});
       }
-      const r = rows[0];
-      return {
-        id: r.id,
-        studentId: r.student_id,
-        examId: r.exam_id,
-        startedAt: r.started_at,
-        submittedAt: r.submitted_at,
-        isCompleted: r.is_completed,
-        objectiveScore: r.objective_score,
-        theoryScore: r.theory_score,
-        totalScore: r.total_score,
-        studentAnswers: r.student_answers,
-        isTransmittedToAdmin: r.is_transmitted_to_admin,
-        teacherComment: r.teacher_comment,
-        gradedByTeacherName: r.graded_by_teacher_name,
-      };
+      return mapExamAttemptRow(rows[0]);
     }
     if (method === "update") {
       const id = args?.where?.id;
@@ -2286,53 +2282,19 @@ async function executePgFallback(model: string, method: string, args: any): Prom
       const r = rows[0];
       if (!r) return null;
 
-      const result: any = {
-        id: r.id,
-        studentId: r.student_id,
-        examId: r.exam_id,
-        startedAt: r.started_at,
-        submittedAt: r.submitted_at,
-        isCompleted: r.is_completed,
-        objectiveScore: r.objective_score,
-        theoryScore: r.theory_score,
-        totalScore: r.total_score,
-        studentAnswers: r.student_answers,
-        isTransmittedToAdmin: r.is_transmitted_to_admin,
-        teacherComment: r.teacher_comment,
-        gradedByTeacherName: r.graded_by_teacher_name,
-      };
+      const result: any = mapExamAttemptRow(r);
 
       if (args?.include?.student) {
         const sRows = await queryRawPg("SELECT * FROM students WHERE id = $1 LIMIT 1", [r.student_id]).catch(() => []);
         if (sRows.length > 0) {
-          const s = sRows[0];
-          result.student = {
-            id: s.id,
-            admNo: s.adm_no,
-            surname: s.surname,
-            fullName: s.full_name,
-            currentClass: s.current_class,
-            gender: s.gender,
-            session: s.session,
-            status: s.status,
-          };
+          result.student = mapExamAttemptStudent(sRows[0]);
         }
       }
 
       if (args?.include?.exam) {
         const eRows = await queryRawPg("SELECT * FROM exams WHERE id = $1 LIMIT 1", [r.exam_id]).catch(() => []);
         if (eRows.length > 0) {
-          const e = eRows[0];
-          result.exam = {
-            id: e.id,
-            title: e.title,
-            subject: e.subject,
-            targetClass: e.target_class,
-            examDate: e.exam_date,
-            durationMinutes: e.duration_minutes,
-            isActive: e.is_active,
-            hasTheory: e.has_theory,
-          };
+          result.exam = mapExamAttemptExam(eRows[0]);
         }
       }
 

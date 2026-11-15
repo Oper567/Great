@@ -299,3 +299,292 @@ export function shuffleArrayWithSeed<T>(array: T[], seed: string): T[] {
   }
   return copy;
 }
+
+/**
+ * Checks whether a teacher's assigned subject is unrestricted ("All Subjects", "General", etc.).
+ */
+export function isUnrestrictedSubject(subject?: string | null): boolean {
+  const clean = (subject || "").trim().toLowerCase();
+  return (
+    !clean ||
+    clean === "all" ||
+    clean === "all subjects" ||
+    clean === "all courses" ||
+    clean === "general"
+  );
+}
+
+/**
+ * Checks whether a teacher's assigned class is unrestricted ("All Classes", "All", etc.).
+ */
+export function isUnrestrictedClass(cls?: string | null): boolean {
+  const clean = (cls || "").trim().toLowerCase();
+  return (
+    !clean ||
+    clean === "all" ||
+    clean === "all classes" ||
+    clean === "all secondary" ||
+    clean === "general"
+  );
+}
+
+/**
+ * Normalizes a subject name or token for flexible course matching
+ * (e.g. "Maths" <-> "Mathematics", "Agric" <-> "Agricultural Science").
+ */
+function normalizeSubjectToken(raw: string): string {
+  const lower = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  if (lower === "math" || lower === "maths") return "mathematics";
+  if (lower === "agric" || lower === "agric science") return "agricultural science";
+  if (lower === "english") return "english language";
+  if (lower === "crs") return "christian religious studies";
+  if (lower === "irs") return "islamic religious studies";
+  return lower;
+}
+
+/**
+ * Matches a teacher's `assignedSubject` (supports comma/semicolon lists) against an exam's `subject`.
+ */
+export function doesSubjectMatch(
+  assignedSubject?: string | null,
+  examSubject?: string | null
+): boolean {
+  if (isUnrestrictedSubject(assignedSubject)) return true;
+  const targetRaw = (examSubject || "").trim().toLowerCase();
+  if (!targetRaw) return false;
+
+  const targetNorm = normalizeSubjectToken(targetRaw);
+  const tokens = (assignedSubject || "")
+    .split(/[,;]+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+  return tokens.some((tok) => {
+    const tokLower = tok.toLowerCase();
+    const tokNorm = normalizeSubjectToken(tok);
+    return (
+      targetRaw === tokLower ||
+      targetNorm === tokNorm ||
+      targetRaw.includes(tokLower) ||
+      tokLower.includes(targetRaw) ||
+      targetNorm.includes(tokNorm) ||
+      tokNorm.includes(targetNorm)
+    );
+  });
+}
+
+/**
+ * Single source of truth for teacher ownership / authorization on an Exam:
+ * - SUPER_ADMIN can view and grade any exam.
+ * - TEACHER can view and grade an exam if they created it (`createdBy === email`),
+ *   OR if their `assignedSubject` matches `exam.subject` (or their `assignedClass` matches
+ *   when `assignedSubject` is "General" / "All Subjects").
+ */
+export function doesTeacherMatchExam(
+  teacher:
+    | {
+        role?: string | null;
+        email?: string | null;
+        assignedSubject?: string | null;
+        assignedClass?: string | null;
+      }
+    | null
+    | undefined,
+  exam:
+    | {
+        createdBy?: string | null;
+        subject?: string | null;
+        targetClass?: string | null;
+      }
+    | null
+    | undefined
+): boolean {
+  if (!teacher || !exam) return false;
+  if (teacher.role === "SUPER_ADMIN") return true;
+  if (teacher.role && teacher.role !== "TEACHER") return false;
+
+  const teacherEmail = (teacher.email || "").trim().toLowerCase();
+  const examCreator = (exam.createdBy || "").trim().toLowerCase();
+  if (teacherEmail && examCreator && teacherEmail === examCreator) {
+    return true;
+  }
+
+  if (!isUnrestrictedSubject(teacher.assignedSubject)) {
+    return doesSubjectMatch(teacher.assignedSubject, exam.subject);
+  }
+
+  // Unrestricted / General subject: scope by assignedClass if one is specified
+  if (!isUnrestrictedClass(teacher.assignedClass) && exam.targetClass) {
+    return (
+      doesExamTargetMatchStudent(exam.targetClass, teacher.assignedClass!) ||
+      doesExamTargetMatchStudent(teacher.assignedClass!, exam.targetClass)
+    );
+  }
+
+  return true;
+}
+
+/**
+ * Consistently determines whether a completed student CBT attempt still needs manual theory grading.
+ * Handles both `theoryScore === null` and legacy/interrupted rows where `theory_score` was
+ * initialized to `0` while still untransmitted and without any `gradedByTeacherName`.
+ */
+export function isAttemptAwaitingTheory(attempt: {
+  isCompleted?: boolean | null;
+  theoryScore?: number | null;
+  isTransmittedToAdmin?: boolean | null;
+  gradedByTeacherName?: string | null;
+}): boolean {
+  if (!attempt || attempt.isCompleted === false) return false;
+  if (attempt.isTransmittedToAdmin) return false;
+  if (attempt.theoryScore === null || attempt.theoryScore === undefined) return true;
+  return Number(attempt.theoryScore) === 0 && !(attempt.gradedByTeacherName || "").trim();
+}
+
+export interface ParsedStudentAnswersPayload {
+  answers: Record<string, string>;
+  answeredCount: number;
+  flaggedQuestionIds: number[];
+  questionOrder: number[];
+  remainingSeconds: number | null;
+  lastSavedAt: string | null;
+  currentIndex: number | null;
+}
+
+function normalizePositiveIntArray(value: unknown, limit = 500): number[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const raw of value) {
+    const num = Number(raw);
+    if (Number.isInteger(num) && num > 0 && !seen.has(num)) {
+      seen.add(num);
+      out.push(num);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+/**
+ * Safely parses `exam_attempts.student_answers` JSON and separates numeric question responses
+ * from internal `__meta_*` tracking fields (`__meta_flagged`, `__meta_qOrder`, timing heartbeats).
+ */
+export function parseStudentAnswersPayload(
+  raw: string | null | undefined
+): ParsedStudentAnswersPayload {
+  const empty: ParsedStudentAnswersPayload = {
+    answers: {},
+    answeredCount: 0,
+    flaggedQuestionIds: [],
+    questionOrder: [],
+    remainingSeconds: null,
+    lastSavedAt: null,
+    currentIndex: null,
+  };
+  if (!raw || typeof raw !== "string") return empty;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return empty;
+
+    const answers: Record<string, string> = {};
+    let answeredCount = 0;
+    for (const [k, v] of Object.entries(parsed)) {
+      if (!k.startsWith("__meta_") && typeof v === "string") {
+        const trimmed = v.trim();
+        if (trimmed) {
+          answers[k] = trimmed;
+          answeredCount++;
+        }
+      }
+    }
+
+    const remainingSeconds =
+      typeof (parsed as any).__meta_remainingSec === "number" &&
+      Number.isFinite((parsed as any).__meta_remainingSec)
+        ? (parsed as any).__meta_remainingSec
+        : null;
+
+    const lastSavedAt =
+      typeof (parsed as any).__meta_heartbeatMs === "number" &&
+      Number.isFinite((parsed as any).__meta_heartbeatMs)
+        ? new Date((parsed as any).__meta_heartbeatMs).toISOString()
+        : null;
+
+    const currentIndex =
+      typeof (parsed as any).__meta_currentIndex === "number" &&
+      Number.isInteger((parsed as any).__meta_currentIndex) &&
+      (parsed as any).__meta_currentIndex >= 0
+        ? (parsed as any).__meta_currentIndex
+        : null;
+
+    return {
+      answers,
+      answeredCount,
+      flaggedQuestionIds: normalizePositiveIntArray((parsed as any).__meta_flagged),
+      questionOrder: normalizePositiveIntArray((parsed as any).__meta_qOrder),
+      remainingSeconds,
+      lastSavedAt,
+      currentIndex,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Serializes `student_answers` safely for final submission or checkpoints while preserving
+ * flagged question IDs and randomized question order unless explicitly overridden.
+ */
+export function buildStudentAnswersPayload(
+  answers: Record<string, string>,
+  existingRaw?: string | null,
+  overrides?: {
+    flaggedIds?: number[];
+    questionOrder?: number[];
+    remainingSeconds?: number;
+    heartbeatMs?: number;
+    currentIndex?: number;
+  }
+): string {
+  const existing = parseStudentAnswersPayload(existingRaw);
+  const out: Record<string, unknown> = {};
+
+  for (const [k, v] of Object.entries(answers || {})) {
+    if (!k.startsWith("__meta_") && /^\d+$/.test(k) && typeof v === "string") {
+      const trimmed = v.trim();
+      if (trimmed && trimmed.length <= 32) {
+        out[k] = trimmed;
+      }
+    }
+  }
+
+  const effectiveFlags =
+    overrides?.flaggedIds !== undefined
+      ? normalizePositiveIntArray(overrides.flaggedIds)
+      : existing.flaggedQuestionIds;
+  if (effectiveFlags.length > 0) {
+    out.__meta_flagged = effectiveFlags;
+  }
+
+  const effectiveOrder =
+    overrides?.questionOrder !== undefined
+      ? normalizePositiveIntArray(overrides.questionOrder)
+      : existing.questionOrder;
+  if (effectiveOrder.length > 0) {
+    out.__meta_qOrder = effectiveOrder;
+  }
+
+  if (typeof overrides?.heartbeatMs === "number" && Number.isFinite(overrides.heartbeatMs)) {
+    out.__meta_heartbeatMs = overrides.heartbeatMs;
+  }
+  if (typeof overrides?.remainingSeconds === "number" && Number.isFinite(overrides.remainingSeconds)) {
+    out.__meta_remainingSec = overrides.remainingSeconds;
+  }
+  if (typeof overrides?.currentIndex === "number" && Number.isInteger(overrides.currentIndex) && overrides.currentIndex >= 0) {
+    out.__meta_currentIndex = overrides.currentIndex;
+  }
+
+  return JSON.stringify(out);
+}

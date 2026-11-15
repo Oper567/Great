@@ -37,8 +37,10 @@ import {
   ChevronRight,
   FileSpreadsheet,
   Download,
+  RefreshCw,
+  Flag,
 } from "lucide-react";
-import { AdminSession } from "@/types/cbt";
+import { AdminSession, FlaggedQuestionSummaryItem } from "@/types/cbt";
 import { adminLogoutAction } from "@/app/actions/cbt-auth";
 import {
   submitTeacherQuestionsAction,
@@ -46,18 +48,23 @@ import {
   ManualQuestionItem,
 } from "@/app/actions/teacher-submissions";
 import {
+  getTeacherGradingAttemptsAction,
   saveAndTransmitTheoryScoreAction,
   TeacherGradingRow,
 } from "@/app/actions/teacher-grading";
 import {
+  forceSubmitInterruptedAttemptAction,
   getAdminExamWithQuestionsAction,
   getExamGradingAttemptsAction,
+  getFlaggedQuestionsSummaryAction,
   updateExamDurationAction,
   updateObjectiveQuestionAction,
 } from "@/app/actions/cbt-admin";
 import { downloadExamScoresPdf } from "@/lib/pdf-score-export";
+import { doesTeacherMatchExam, isAttemptAwaitingTheory } from "@/lib/cbt-utils";
 import { MathToolbar, FloatingMathButton } from "@/components/cbt/MathToolbar";
 import { FormattedMathText } from "@/components/cbt/FormattedMathText";
+import { FlaggedQuestionsModal } from "@/components/cbt/FlaggedQuestionsModal";
 import DelegatedSubjectScoreUploader from "@/components/results/DelegatedSubjectScoreUploader";
 
 interface Props {
@@ -66,6 +73,7 @@ interface Props {
   initialGradingAttempts?: TeacherGradingRow[];
   initialExams?: any[];
   initialStudents?: any[];
+  initialFlaggedQuestions?: FlaggedQuestionSummaryItem[];
 }
 
 export default function TeacherQuestionDeskClient({
@@ -74,11 +82,20 @@ export default function TeacherQuestionDeskClient({
   initialGradingAttempts = [],
   initialExams = [],
   initialStudents = [],
+  initialFlaggedQuestions = [],
 }: Props) {
   const [activeWorkspace, setActiveWorkspace] = useState<"questions" | "grading" | "exams" | "scores">("questions");
   const [submissions, setSubmissions] = useState<any[]>(initialSubmissions);
   const [gradingAttempts, setGradingAttempts] = useState<TeacherGradingRow[]>(initialGradingAttempts);
   const [myExams, setMyExams] = useState<any[]>(initialExams);
+  const [flaggedQuestions, setFlaggedQuestions] = useState<FlaggedQuestionSummaryItem[]>(initialFlaggedQuestions);
+  const [flaggedModalConfig, setFlaggedModalConfig] = useState<{
+    title: string;
+    subtitle?: string;
+    items: FlaggedQuestionSummaryItem[];
+    highlightStudentAdmNo?: string | null;
+  } | null>(null);
+  const [loadingFlaggedModal, setLoadingFlaggedModal] = useState(false);
 
   useEffect(() => {
     setGradingAttempts(initialGradingAttempts);
@@ -91,8 +108,17 @@ export default function TeacherQuestionDeskClient({
   useEffect(() => {
     setMyExams(initialExams);
   }, [initialExams]);
+
+  useEffect(() => {
+    setFlaggedQuestions(initialFlaggedQuestions);
+  }, [initialFlaggedQuestions]);
+
   const [gradingSearchQuery, setGradingSearchQuery] = useState("");
   const [gradingClassFilter, setGradingClassFilter] = useState("ALL");
+  const [gradingExamFilter, setGradingExamFilter] = useState("ALL");
+  const [gradingStatusFilter, setGradingStatusFilter] = useState<"ALL" | "AWAITING" | "TRANSMITTED" | "IN_PROGRESS" | "FLAGGED">("ALL");
+  const [refreshingAttempts, setRefreshingAttempts] = useState(false);
+  const [recoveringAttemptId, setRecoveringAttemptId] = useState<number | null>(null);
   const [tempScores, setTempScores] = useState<Record<number, number>>({});
   const [tempComments, setTempComments] = useState<Record<number, string>>({});
   const [savingAttemptId, setSavingAttemptId] = useState<number | null>(null);
@@ -745,12 +771,10 @@ export default function TeacherQuestionDeskClient({
     });
   };
 
-  // Filtered exams for current subject teacher (Strictly only courses this teacher uploaded)
+  // Filtered exams for current subject teacher (courses created by them OR matching their assigned subject)
   const filteredExams = myExams.filter((exam: any) => {
-    if (teacher?.role === "TEACHER" && teacher?.email) {
-      if (exam.createdBy && exam.createdBy.toLowerCase() !== teacher.email.toLowerCase()) {
-        return false;
-      }
+    if (teacher?.role === "TEACHER" && !doesTeacherMatchExam(teacher, exam)) {
+      return false;
     }
     if (!examSearchQuery.trim()) return true;
     const q = examSearchQuery.toLowerCase();
@@ -805,23 +829,60 @@ export default function TeacherQuestionDeskClient({
     });
   };
 
-  const awaitingTheoryCount = gradingAttempts.filter(
-    (a) => a.theoryScore === null || !a.isTransmittedToAdmin
-  ).length;
-  const transmittedCount = gradingAttempts.filter((a) => a.isTransmittedToAdmin).length;
-
-  const filteredAttempts = gradingAttempts.filter((a) => {
-    if (teacher?.role === "TEACHER" && teacher?.email && a.examCreatedBy) {
-      if (a.examCreatedBy.toLowerCase() !== teacher.email.toLowerCase()) {
-        return false;
-      }
+  const authorizedAttempts = gradingAttempts.filter((a) => {
+    if (teacher?.role === "TEACHER") {
+      return doesTeacherMatchExam(teacher, {
+        createdBy: a.examCreatedBy,
+        subject: a.examSubject,
+        targetClass: a.targetClass,
+      });
     }
+    return true;
+  });
+
+  const authorizedExamIdSet = new Set(
+    myExams
+      .filter((ex: any) => teacher?.role !== "TEACHER" || doesTeacherMatchExam(teacher, ex))
+      .map((ex: any) => Number(ex.id))
+  );
+
+  const authorizedFlaggedQuestions = flaggedQuestions.filter((item) =>
+    authorizedExamIdSet.size > 0
+      ? authorizedExamIdSet.has(item.examId)
+      : teacher?.role !== "TEACHER" ||
+        doesTeacherMatchExam(teacher, { subject: item.examSubject, targetClass: item.targetClass })
+  );
+
+  const completedAttempts = authorizedAttempts.filter((a) => a.isCompleted);
+  const awaitingTheoryCount = completedAttempts.filter((a) => isAttemptAwaitingTheory(a)).length;
+  const transmittedCount = completedAttempts.filter((a) => a.isTransmittedToAdmin).length;
+  const inProgressCount = authorizedAttempts.filter((a) => !a.isCompleted).length;
+  const flaggedAttemptCount = authorizedAttempts.filter((a) => (a.flaggedQuestionIds?.length ?? 0) > 0).length;
+
+  const filteredAttempts = authorizedAttempts.filter((a) => {
     const sName = (a.studentFullName || "").toLowerCase();
     const aNo = (a.studentAdmNo || "").toLowerCase();
+    const exTitle = (a.examTitle || "").toLowerCase();
+    const exSub = (a.examSubject || "").toLowerCase();
     const q = gradingSearchQuery.toLowerCase();
-    const matchesSearch = sName.includes(q) || aNo.includes(q);
-    const matchesClass = gradingClassFilter === "ALL" || a.studentClass.includes(gradingClassFilter);
-    return matchesSearch && matchesClass;
+    const matchesSearch =
+      sName.includes(q) || aNo.includes(q) || exTitle.includes(q) || exSub.includes(q);
+    const matchesClass =
+      gradingClassFilter === "ALL" ||
+      a.studentClass.toLowerCase().includes(gradingClassFilter.toLowerCase()) ||
+      (a.targetClass || "").toLowerCase().includes(gradingClassFilter.toLowerCase());
+    const matchesExam = gradingExamFilter === "ALL" || String(a.examId) === gradingExamFilter;
+    const matchesStatus =
+      gradingStatusFilter === "ALL"
+        ? true
+        : gradingStatusFilter === "AWAITING"
+        ? isAttemptAwaitingTheory(a)
+        : gradingStatusFilter === "TRANSMITTED"
+        ? Boolean(a.isTransmittedToAdmin)
+        : gradingStatusFilter === "FLAGGED"
+        ? (a.flaggedQuestionIds?.length ?? 0) > 0
+        : !a.isCompleted;
+    return matchesSearch && matchesClass && matchesExam && matchesStatus;
   });
 
   const [exportingExamId, setExportingExamId] = useState<number | null>(null);
@@ -857,6 +918,162 @@ export default function TeacherQuestionDeskClient({
       mode,
       examinerName: teacher?.fullName || "Subject Examiner",
     });
+  };
+
+  const handleRefreshAttempts = async () => {
+    setRefreshingAttempts(true);
+    try {
+      const [res, flaggedRes] = await Promise.all([
+        getTeacherGradingAttemptsAction(
+          teacher?.assignedSubject || undefined,
+          teacher?.assignedClass || undefined,
+          teacher?.role === "TEACHER" ? teacher?.email : undefined
+        ),
+        getFlaggedQuestionsSummaryAction().catch(() => ({ success: false, flaggedQuestions: [] })),
+      ]);
+      if (res.success && Array.isArray(res.attempts)) {
+        setGradingAttempts(res.attempts);
+      }
+      if (flaggedRes.success && Array.isArray(flaggedRes.flaggedQuestions)) {
+        setFlaggedQuestions(flaggedRes.flaggedQuestions);
+      }
+    } finally {
+      setRefreshingAttempts(false);
+    }
+  };
+
+  const handleOpenAttemptFlaggedModal = async (att: TeacherGradingRow) => {
+    const matchingLocal = flaggedQuestions.filter(
+      (f) => f.examId === att.examId && f.flaggedByStudents.some((s) => s.attemptId === att.id)
+    );
+    setFlaggedModalConfig({
+      title: `Flagged Questions — ${att.studentFullName}`,
+      subtitle: `${att.examSubject} (${att.targetClass}) • ${att.studentAdmNo}`,
+      items: matchingLocal,
+      highlightStudentAdmNo: att.studentAdmNo,
+    });
+    if (matchingLocal.length === 0) {
+      setLoadingFlaggedModal(true);
+      try {
+        const res = await getFlaggedQuestionsSummaryAction(att.examId);
+        if (res.success) {
+          const freshMatches = res.flaggedQuestions.filter((f) =>
+            f.flaggedByStudents.some((s) => s.attemptId === att.id)
+          );
+          setFlaggedModalConfig((prev) => (prev ? { ...prev, items: freshMatches } : prev));
+        }
+      } finally {
+        setLoadingFlaggedModal(false);
+      }
+    }
+  };
+
+  const handleOpenExamFlaggedModal = async (exam?: {
+    id: number;
+    subject: string;
+    targetClass: string;
+    title: string;
+  }) => {
+    if (!exam) {
+      setFlaggedModalConfig({
+        title: "All Course Flagged Questions",
+        subtitle: "Questions flagged by students across your assigned courses.",
+        items: authorizedFlaggedQuestions,
+      });
+      return;
+    }
+    const localItems = authorizedFlaggedQuestions.filter((f) => f.examId === exam.id);
+    setFlaggedModalConfig({
+      title: `Flagged Questions — ${exam.subject} (${exam.targetClass})`,
+      subtitle: exam.title,
+      items: localItems,
+    });
+    setLoadingFlaggedModal(true);
+    try {
+      const res = await getFlaggedQuestionsSummaryAction(exam.id);
+      if (res.success) {
+        setFlaggedModalConfig((prev) => (prev ? { ...prev, items: res.flaggedQuestions } : prev));
+      }
+    } finally {
+      setLoadingFlaggedModal(false);
+    }
+  };
+
+  const handleEditFlaggedQuestionFromModal = async (item: FlaggedQuestionSummaryItem) => {
+    setFlaggedModalConfig(null);
+    setActiveWorkspace("exams");
+    setLoadingExamDetails(true);
+    try {
+      const res = await getAdminExamWithQuestionsAction(item.examId);
+      if (res?.success && res.exam) {
+        setSelectedExamForModal(res.exam);
+        setModalExamDurationInput(res.exam.durationMinutes ?? 60);
+        const targetQ = (res.exam.objectiveQuestions || []).find((q: any) => q.id === item.questionId);
+        if (targetQ) {
+          let parsedOpts = ["", "", "", ""];
+          try {
+            const arr = typeof targetQ.options === "string" ? JSON.parse(targetQ.options) : targetQ.options;
+            if (Array.isArray(arr)) parsedOpts = [arr[0] || "", arr[1] || "", arr[2] || "", arr[3] || ""];
+          } catch {}
+          setEditingModalObjQ({
+            id: targetQ.id,
+            questionText: targetQ.questionText || "",
+            optA: parsedOpts[0],
+            optB: parsedOpts[1],
+            optC: parsedOpts[2],
+            optD: parsedOpts[3],
+            correctAnswer: targetQ.correctAnswer || "A",
+            points: targetQ.points ?? 0.5,
+            imageUrl: targetQ.imageUrl || null,
+          });
+        }
+      }
+    } finally {
+      setLoadingExamDetails(false);
+    }
+  };
+
+  const handleFinalizeInterruptedAttempt = async (attemptId: number) => {
+    setRecoveringAttemptId(attemptId);
+    try {
+      const res = await forceSubmitInterruptedAttemptAction(attemptId);
+      if (res.success) {
+        await handleRefreshAttempts();
+      } else {
+        alert(res.error || "Could not finalize interrupted CBT attempt.");
+      }
+    } finally {
+      setRecoveringAttemptId(null);
+    }
+  };
+
+  const renderGradingStatusPill = (att: TeacherGradingRow) => {
+    if (!att.isCompleted) {
+      return (
+        <span className="text-[10px] font-bold text-sky-300 bg-sky-950/60 border border-sky-700/70 px-2 py-0.5 rounded-full">
+          In Progress ({att.answeredCount ?? 0} ans)
+        </span>
+      );
+    }
+    if (isAttemptAwaitingTheory(att)) {
+      return (
+        <span className="text-[10px] font-bold text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded-full">
+          Awaiting Theory
+        </span>
+      );
+    }
+    if (att.isTransmittedToAdmin) {
+      return (
+        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
+          Transmitted
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800 px-2 py-0.5 rounded-full">
+        Ready to Send
+      </span>
+    );
   };
 
   const handleExportSingleExamPdf = async (exam: any, mode: "obj_only" | "full" = "obj_only") => {
@@ -999,7 +1216,7 @@ export default function TeacherQuestionDeskClient({
                 </span>
               ) : (
                 <span className="bg-slate-950 text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full shrink-0">
-                  {gradingAttempts.length}
+                  {authorizedAttempts.length}
                 </span>
               )}
             </button>
@@ -1015,7 +1232,7 @@ export default function TeacherQuestionDeskClient({
               <BookOpen className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
               <span className="truncate">My Subject Exams</span>
               <span className="bg-slate-950 text-slate-300 text-[10px] px-1.5 py-0.5 rounded-full shrink-0">
-                {myExams.length}
+                {myExams.filter((ex: any) => teacher?.role !== "TEACHER" || doesTeacherMatchExam(teacher, ex)).length}
               </span>
             </button>
 
@@ -2275,7 +2492,7 @@ export default function TeacherQuestionDeskClient({
                 </div>
                 <div className="min-w-0">
                   <div className="text-[11px] sm:text-xs text-slate-400 font-medium truncate">Total Attempts</div>
-                  <div className="text-base sm:text-lg font-black text-white">{gradingAttempts.length}</div>
+                  <div className="text-base sm:text-lg font-black text-white">{authorizedAttempts.length}</div>
                 </div>
               </div>
 
@@ -2306,15 +2523,97 @@ export default function TeacherQuestionDeskClient({
                 <div>
                   <div className="text-xs text-slate-400 font-medium">Average Objective</div>
                   <div className="text-lg font-black text-yellow-400">
-                    {gradingAttempts.length > 0
+                    {completedAttempts.length > 0
                       ? (
-                          gradingAttempts.reduce((acc, a) => acc + a.objectiveScore, 0) /
-                          gradingAttempts.length
+                          completedAttempts.reduce((acc, a) => acc + Number(a.objectiveScore || 0), 0) /
+                          completedAttempts.length
                         ).toFixed(1) + " pts"
                       : "0 pts"}
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Grading Filter & Course Bar */}
+            <div className="bg-slate-900/90 border border-white/10 rounded-xl p-3 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(
+                    [
+                      { id: "ALL", label: `All Attempts (${authorizedAttempts.length})` },
+                      { id: "AWAITING", label: `Awaiting Theory (${awaitingTheoryCount})` },
+                      { id: "TRANSMITTED", label: `Transmitted (${transmittedCount})` },
+                      ...(flaggedAttemptCount > 0 || authorizedFlaggedQuestions.length > 0
+                        ? [{ id: "FLAGGED" as const, label: `Flagged (${flaggedAttemptCount})` }]
+                        : []),
+                      ...(inProgressCount > 0
+                        ? [{ id: "IN_PROGRESS" as const, label: `In Progress (${inProgressCount})` }]
+                        : []),
+                    ] as const
+                  ).map((pill) => (
+                    <button
+                      key={pill.id}
+                      type="button"
+                      onClick={() => setGradingStatusFilter(pill.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                        gradingStatusFilter === pill.id
+                          ? pill.id === "AWAITING"
+                            ? "bg-rose-600 border-rose-500 text-white"
+                            : pill.id === "TRANSMITTED"
+                            ? "bg-emerald-600 border-emerald-500 text-white"
+                            : pill.id === "FLAGGED"
+                            ? "bg-amber-500 border-amber-400 text-slate-950"
+                            : "bg-yellow-500 border-yellow-400 text-slate-950"
+                          : "bg-slate-950 border-slate-800 text-slate-300 hover:text-white"
+                      }`}
+                    >
+                      {pill.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {authorizedFlaggedQuestions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenExamFlaggedModal()}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-950/90 hover:bg-amber-900 border border-amber-600/80 text-xs font-bold text-amber-300 transition active:scale-95"
+                    >
+                      <Flag className="w-3.5 h-3.5 text-amber-400" />
+                      <span>
+                        {authorizedFlaggedQuestions.length} Flagged Q{authorizedFlaggedQuestions.length === 1 ? "" : "s"}
+                      </span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRefreshAttempts}
+                    disabled={refreshingAttempts}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 transition active:scale-95 disabled:opacity-60"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${refreshingAttempts ? "animate-spin" : ""}`} />
+                    <span>{refreshingAttempts ? "Refreshing..." : "Refresh Attempts"}</span>
+                  </button>
+                </div>
+              </div>
+              {myExams.filter((ex: any) => teacher?.role !== "TEACHER" || doesTeacherMatchExam(teacher, ex)).length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-slate-400 shrink-0">Filter Course:</span>
+                  <select
+                    value={gradingExamFilter}
+                    onChange={(e) => setGradingExamFilter(e.target.value)}
+                    className="flex-1 max-w-md px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-yellow-500"
+                  >
+                    <option value="ALL">All My Course Papers</option>
+                    {myExams
+                      .filter((ex: any) => teacher?.role !== "TEACHER" || doesTeacherMatchExam(teacher, ex))
+                      .map((ex: any) => (
+                        <option key={ex.id} value={String(ex.id)}>
+                          {ex.subject} — {ex.targetClass} ({ex.title})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Filter & Search */}
@@ -2392,18 +2691,43 @@ export default function TeacherQuestionDeskClient({
               </div>
 
               {filteredAttempts.length === 0 ? (
-                <div className="p-10 text-center text-slate-500 space-y-2">
+                <div className="p-10 text-center text-slate-500 space-y-2.5">
                   <ClipboardList className="w-10 h-10 mx-auto text-slate-600 opacity-60" />
-                  <p className="text-xs">No student CBT attempts found matching your criteria.</p>
+                  <p className="text-xs">
+                    {authorizedAttempts.length > 0
+                      ? "No student attempts match your active search, class, or status filter."
+                      : "No student CBT attempts found yet for your subject/courses."}
+                  </p>
+                  {authorizedAttempts.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGradingSearchQuery("");
+                        setGradingClassFilter("ALL");
+                        setGradingExamFilter("ALL");
+                        setGradingStatusFilter("ALL");
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition"
+                    >
+                      Show All {authorizedAttempts.length} Course Attempts
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
                   {/* Mobile Touch-Friendly Card View for Theory Grading */}
                   <div className="md:hidden space-y-3 p-3">
                     {filteredAttempts.map((att) => {
-                      const currentTheory = tempScores[att.id] !== undefined ? tempScores[att.id] : att.theoryScore ?? 0;
-                      const dynamicTotal = att.objectiveScore + Number(currentTheory);
-                      const isAwaiting = att.theoryScore === null;
+                      const objScore = Number(att.objectiveScore || 0);
+                      const isAwaiting = isAttemptAwaitingTheory(att);
+                      const currentTheory = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                      const dynamicTotal = objScore + Number(currentTheory || 0);
+                      const theoryInputVal =
+                        tempScores[att.id] !== undefined
+                          ? tempScores[att.id]
+                          : isAwaiting && att.theoryScore === 0
+                          ? ""
+                          : (att.theoryScore ?? "");
                       const isSaving = savingAttemptId === att.id;
                       const isSaved = transmitSuccess[att.id];
 
@@ -2422,15 +2746,31 @@ export default function TeacherQuestionDeskClient({
                             </span>
                           </div>
 
-                          <div className="text-xs text-slate-400">
-                            Exam: <strong className="text-slate-200">{att.examTitle}</strong> &bull; {att.examSubject}
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                            <span>
+                              Exam: <strong className="text-slate-200">{att.examTitle}</strong> &bull; {att.examSubject}
+                            </span>
+                            {(att.flaggedQuestionIds?.length ?? 0) > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenAttemptFlaggedModal(att)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600/80 text-amber-300 text-[10px] font-bold transition"
+                              >
+                                <Flag className="w-3 h-3 text-amber-400" />
+                                <span>
+                                  {att.flaggedQuestionIds!.length} Flagged Q{att.flaggedQuestionIds!.length === 1 ? "" : "s"}
+                                </span>
+                              </button>
+                            )}
                           </div>
 
                           {/* Scores Grid */}
                           <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-center items-center">
                             <div>
                               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Objective</span>
-                              <span className="text-sm font-bold text-blue-400 font-mono">{att.objectiveScore} pts</span>
+                              <span className="text-sm font-bold text-blue-400 font-mono">
+                                {att.isCompleted ? `${objScore} pts` : `${att.answeredCount ?? 0} ans`}
+                              </span>
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Theory</span>
@@ -2438,7 +2778,8 @@ export default function TeacherQuestionDeskClient({
                                 type="number"
                                 min="0"
                                 max="100"
-                                value={tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? "")}
+                                disabled={!att.isCompleted}
+                                value={att.isCompleted ? theoryInputVal : ""}
                                 onChange={(e) => {
                                   const val = parseInt(e.target.value, 10);
                                   setTempScores((prev) => ({
@@ -2446,110 +2787,102 @@ export default function TeacherQuestionDeskClient({
                                     [att.id]: isNaN(val) ? 0 : val,
                                   }));
                                 }}
-                                placeholder="0"
-                                className="w-20 px-2 py-1.5 mt-0.5 bg-slate-950 border border-slate-700 rounded-lg text-center text-base sm:text-sm font-bold font-mono text-white focus:outline-none focus:border-yellow-500"
+                                placeholder={att.isCompleted ? "0" : "—"}
+                                className="w-20 px-2 py-1.5 mt-0.5 bg-slate-950 border border-slate-700 rounded-lg text-center text-base sm:text-sm font-bold font-mono text-white focus:outline-none focus:border-yellow-500 disabled:opacity-40"
                               />
                             </div>
                             <div>
                               <span className="text-[10px] text-slate-400 uppercase font-semibold block">Total</span>
-                              <span className="text-sm font-black text-emerald-400 font-mono">{dynamicTotal} pts</span>
+                              <span className="text-sm font-black text-emerald-400 font-mono">
+                                {att.isCompleted ? `${dynamicTotal} pts` : "Pending"}
+                              </span>
                             </div>
                           </div>
 
                           {/* Quick Score Adjustment Buttons (Mobile-Centric Touch Grading) */}
-                          <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                Quick Score Touch:
-                              </span>
-                              <span className="text-[10px] font-mono text-yellow-400 font-bold">
-                                {currentTheory} marks
-                              </span>
+                          {att.isCompleted && (
+                            <div className="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                  Quick Score Touch:
+                                </span>
+                                <span className="text-[10px] font-mono text-yellow-400 font-bold">
+                                  {currentTheory} marks
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                                    setTempScores((prev) => ({ ...prev, [att.id]: Math.max(0, cur - 5) }));
+                                  }}
+                                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-mono font-bold rounded-lg border border-slate-700"
+                                >
+                                  -5
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                                    setTempScores((prev) => ({ ...prev, [att.id]: Math.max(0, cur - 1) }));
+                                  }}
+                                  className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-mono font-bold rounded-lg border border-slate-700"
+                                >
+                                  -1
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                                    setTempScores((prev) => ({ ...prev, [att.id]: Math.min(100, cur + 1) }));
+                                  }}
+                                  className="px-3 py-1 bg-blue-900/60 hover:bg-blue-800 active:scale-95 text-blue-200 text-xs font-mono font-bold rounded-lg border border-blue-700/60"
+                                >
+                                  +1
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                                    setTempScores((prev) => ({ ...prev, [att.id]: Math.min(100, cur + 5) }));
+                                  }}
+                                  className="px-3 py-1 bg-blue-900/60 hover:bg-blue-800 active:scale-95 text-blue-200 text-xs font-mono font-bold rounded-lg border border-blue-700/60"
+                                >
+                                  +5
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                                    setTempScores((prev) => ({ ...prev, [att.id]: Math.min(100, cur + 10) }));
+                                  }}
+                                  className="px-3 py-1 bg-emerald-900/60 hover:bg-emerald-800 active:scale-95 text-emerald-200 text-xs font-mono font-bold rounded-lg border border-emerald-700/60"
+                                >
+                                  +10
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTempScores((prev) => ({ ...prev, [att.id]: 40 }))}
+                                  className="px-2.5 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 active:scale-95 text-yellow-300 text-xs font-mono font-bold rounded-lg border border-yellow-500/40"
+                                >
+                                  40
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTempScores((prev) => ({ ...prev, [att.id]: 0 }))}
+                                  className="px-2 py-1 bg-rose-950/60 hover:bg-rose-900 active:scale-95 text-rose-300 text-xs font-mono font-bold rounded-lg border border-rose-800"
+                                >
+                                  0
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
-                                  setTempScores((prev) => ({ ...prev, [att.id]: Math.max(0, cur - 5) }));
-                                }}
-                                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-mono font-bold rounded-lg border border-slate-700"
-                              >
-                                -5
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
-                                  setTempScores((prev) => ({ ...prev, [att.id]: Math.max(0, cur - 1) }));
-                                }}
-                                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 text-xs font-mono font-bold rounded-lg border border-slate-700"
-                              >
-                                -1
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
-                                  setTempScores((prev) => ({ ...prev, [att.id]: Math.min(100, cur + 1) }));
-                                }}
-                                className="px-3 py-1 bg-blue-900/60 hover:bg-blue-800 active:scale-95 text-blue-200 text-xs font-mono font-bold rounded-lg border border-blue-700/60"
-                              >
-                                +1
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
-                                  setTempScores((prev) => ({ ...prev, [att.id]: Math.min(100, cur + 5) }));
-                                }}
-                                className="px-3 py-1 bg-blue-900/60 hover:bg-blue-800 active:scale-95 text-blue-200 text-xs font-mono font-bold rounded-lg border border-blue-700/60"
-                              >
-                                +5
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const cur = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
-                                  setTempScores((prev) => ({ ...prev, [att.id]: Math.min(100, cur + 10) }));
-                                }}
-                                className="px-3 py-1 bg-emerald-900/60 hover:bg-emerald-800 active:scale-95 text-emerald-200 text-xs font-mono font-bold rounded-lg border border-emerald-700/60"
-                              >
-                                +10
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setTempScores((prev) => ({ ...prev, [att.id]: 40 }))}
-                                className="px-2.5 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 active:scale-95 text-yellow-300 text-xs font-mono font-bold rounded-lg border border-yellow-500/40"
-                              >
-                                40
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setTempScores((prev) => ({ ...prev, [att.id]: 0 }))}
-                                className="px-2 py-1 bg-rose-950/60 hover:bg-rose-900 active:scale-95 text-rose-300 text-xs font-mono font-bold rounded-lg border border-rose-800"
-                              >
-                                0
-                              </button>
-                            </div>
-                          </div>
+                          )}
 
                           {/* Status Pill */}
                           <div className="flex items-center justify-between">
                             <span className="text-[11px] text-slate-400">Grading Status:</span>
-                            {isAwaiting ? (
-                              <span className="text-[10px] font-bold text-rose-400 bg-rose-950/60 border border-rose-800 px-2 py-0.5 rounded-full">
-                                Awaiting Theory
-                              </span>
-                            ) : att.isTransmittedToAdmin ? (
-                              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-full">
-                                Transmitted
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800 px-2 py-0.5 rounded-full">
-                                Ready to Send
-                              </span>
-                            )}
+                            {renderGradingStatusPill(att)}
                           </div>
 
                           {/* Teacher Appraisal Comment & Quick Chips */}
@@ -2578,33 +2911,44 @@ export default function TeacherQuestionDeskClient({
                             </div>
                           </div>
 
-                          {/* Submit Button */}
-                          <button
-                            onClick={() => handleTransmitScore(att.id)}
-                            disabled={isSaving}
-                            className={`w-full py-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 active:scale-95 shadow-md ${
-                              isSaved
-                                ? "bg-emerald-600 text-white"
-                                : "bg-yellow-500 hover:bg-yellow-400 text-slate-950 shadow"
-                            }`}
-                          >
-                            {isSaving ? (
-                              <>
-                                <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                                <span>Sending Score...</span>
-                              </>
-                            ) : isSaved ? (
-                              <>
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Transmitted to Super Admin!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Send className="w-3.5 h-3.5" />
-                                <span>Save &amp; Transmit Score</span>
-                              </>
-                            )}
-                          </button>
+                          {/* Submit or Finalize Interrupted Attempt Button */}
+                          {!att.isCompleted ? (
+                            <button
+                              type="button"
+                              onClick={() => handleFinalizeInterruptedAttempt(att.id)}
+                              disabled={recoveringAttemptId === att.id}
+                              className="w-full py-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 active:scale-95 shadow-md bg-sky-600 hover:bg-sky-500 text-white disabled:opacity-60"
+                            >
+                              <span>{recoveringAttemptId === att.id ? "Finalizing CBT..." : "Finalize CBT & Enable Theory Grading"}</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleTransmitScore(att.id)}
+                              disabled={isSaving}
+                              className={`w-full py-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 active:scale-95 shadow-md ${
+                                isSaved
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-yellow-500 hover:bg-yellow-400 text-slate-950 shadow"
+                              }`}
+                            >
+                              {isSaving ? (
+                                <>
+                                  <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                  <span>Sending Score...</span>
+                                </>
+                              ) : isSaved ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Transmitted to Super Admin!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Save &amp; Transmit Score</span>
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -2626,9 +2970,16 @@ export default function TeacherQuestionDeskClient({
                       </thead>
                       <tbody className="divide-y divide-slate-800/60 text-slate-300">
                         {filteredAttempts.map((att) => {
-                          const currentTheory = tempScores[att.id] !== undefined ? tempScores[att.id] : att.theoryScore ?? 0;
-                          const dynamicTotal = att.objectiveScore + Number(currentTheory);
-                          const isAwaiting = att.theoryScore === null;
+                          const objScore = Number(att.objectiveScore || 0);
+                          const isAwaiting = isAttemptAwaitingTheory(att);
+                          const currentTheory = tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? 0);
+                          const dynamicTotal = objScore + Number(currentTheory || 0);
+                          const theoryInputVal =
+                            tempScores[att.id] !== undefined
+                              ? tempScores[att.id]
+                              : isAwaiting && att.theoryScore === 0
+                              ? ""
+                              : (att.theoryScore ?? "");
                           const isSaving = savingAttemptId === att.id;
                           const isSaved = transmitSuccess[att.id];
 
@@ -2641,15 +2992,28 @@ export default function TeacherQuestionDeskClient({
 
                               <td className="p-3">
                                 <div className="font-medium text-slate-200">{att.examTitle}</div>
-                                <div className="text-[10px] text-slate-400">
-                                  {att.examSubject} &bull; <strong className="text-blue-400">{att.studentClass}</strong>
+                                <div className="text-[10px] text-slate-400 flex items-center gap-2 flex-wrap mt-0.5">
+                                  <span>
+                                    {att.examSubject} &bull; <strong className="text-blue-400">{att.studentClass}</strong>
+                                  </span>
+                                  {(att.flaggedQuestionIds?.length ?? 0) > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAttemptFlaggedModal(att)}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600/80 text-amber-300 text-[10px] font-bold transition"
+                                      title="Inspect flagged questions from this candidate"
+                                    >
+                                      <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                      <span>{att.flaggedQuestionIds!.length} Flagged</span>
+                                    </button>
+                                  )}
                                 </div>
                               </td>
 
                               {/* Objective Score */}
                               <td className="p-3 text-center">
                                 <span className="inline-block px-2.5 py-1 rounded-lg font-mono font-bold text-sm bg-blue-950/70 border border-blue-800 text-blue-300">
-                                  {att.objectiveScore} pts
+                                  {att.isCompleted ? `${objScore} pts` : `${att.answeredCount ?? 0} ans`}
                                 </span>
                               </td>
 
@@ -2660,7 +3024,8 @@ export default function TeacherQuestionDeskClient({
                                     type="number"
                                     min="0"
                                     max="100"
-                                    value={tempScores[att.id] !== undefined ? tempScores[att.id] : (att.theoryScore ?? "")}
+                                    disabled={!att.isCompleted}
+                                    value={att.isCompleted ? theoryInputVal : ""}
                                     onChange={(e) => {
                                       const val = parseInt(e.target.value, 10);
                                       setTempScores((prev) => ({
@@ -2668,29 +3033,17 @@ export default function TeacherQuestionDeskClient({
                                         [att.id]: isNaN(val) ? 0 : val,
                                       }));
                                     }}
-                                    placeholder="0"
-                                    className="w-20 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono font-bold text-sm focus:outline-none focus:border-yellow-500 text-center"
+                                    placeholder={att.isCompleted ? "0" : "—"}
+                                    className="w-20 px-2.5 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono font-bold text-sm focus:outline-none focus:border-yellow-500 text-center disabled:opacity-40"
                                   />
-                                  {isAwaiting ? (
-                                    <span className="text-[10px] font-bold text-rose-400 bg-rose-950/60 border border-rose-800 px-1.5 py-0.2 rounded-full">
-                                      Awaiting Theory
-                                    </span>
-                                  ) : att.isTransmittedToAdmin ? (
-                                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.2 rounded-full">
-                                      Transmitted
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800 px-1.5 py-0.2 rounded-full">
-                                      Ready to Send
-                                    </span>
-                                  )}
+                                  {renderGradingStatusPill(att)}
                                 </div>
                               </td>
 
                               {/* Live Computed Total */}
                               <td className="p-3 text-center">
                                 <span className="text-sm font-black text-emerald-400 font-mono">
-                                  {dynamicTotal} pts
+                                  {att.isCompleted ? `${dynamicTotal} pts` : "Pending"}
                                 </span>
                               </td>
 
@@ -2710,32 +3063,43 @@ export default function TeacherQuestionDeskClient({
 
                               {/* Save & Transmit Button */}
                               <td className="p-3 text-right">
-                                <button
-                                  onClick={() => handleTransmitScore(att.id)}
-                                  disabled={isSaving}
-                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ml-auto ${
-                                    isSaved
-                                      ? "bg-emerald-600 text-white"
-                                      : "bg-yellow-500 hover:bg-yellow-400 text-slate-950 shadow"
-                                  }`}
-                                >
-                                  {isSaving ? (
-                                    <>
-                                      <div className="w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                                      <span>Sending</span>
-                                    </>
-                                  ) : isSaved ? (
-                                    <>
-                                      <Check className="w-3.5 h-3.5" />
-                                      <span>Transmitted!</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Send className="w-3.5 h-3.5" />
-                                      <span>Send to Admin</span>
-                                    </>
-                                  )}
-                                </button>
+                                {!att.isCompleted ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleFinalizeInterruptedAttempt(att.id)}
+                                    disabled={recoveringAttemptId === att.id}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ml-auto bg-sky-600 hover:bg-sky-500 text-white shadow disabled:opacity-60"
+                                  >
+                                    <span>{recoveringAttemptId === att.id ? "Finalizing..." : "Finalize CBT"}</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleTransmitScore(att.id)}
+                                    disabled={isSaving}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ml-auto ${
+                                      isSaved
+                                        ? "bg-emerald-600 text-white"
+                                        : "bg-yellow-500 hover:bg-yellow-400 text-slate-950 shadow"
+                                    }`}
+                                  >
+                                    {isSaving ? (
+                                      <>
+                                        <div className="w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                        <span>Sending</span>
+                                      </>
+                                    ) : isSaved ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Transmitted!</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Send className="w-3.5 h-3.5" />
+                                        <span>Send to Admin</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );
@@ -2774,7 +3138,10 @@ export default function TeacherQuestionDeskClient({
               </div>
               <div className="shrink-0 flex items-center gap-2">
                 <span className="text-xs font-semibold text-slate-400">
-                  Authorized Papers: <strong className="text-emerald-400 font-mono text-sm">{myExams.length}</strong>
+                  Authorized Papers:{" "}
+                  <strong className="text-emerald-400 font-mono text-sm">
+                    {myExams.filter((ex: any) => teacher?.role !== "TEACHER" || doesTeacherMatchExam(teacher, ex)).length}
+                  </strong>
                 </span>
               </div>
             </div>
@@ -2792,7 +3159,10 @@ export default function TeacherQuestionDeskClient({
                 />
               </div>
               <div className="text-xs text-slate-400 flex items-center gap-2">
-                <span>Showing {filteredExams.length} of {myExams.length} exams</span>
+                <span>
+                  Showing {filteredExams.length} of{" "}
+                  {myExams.filter((ex: any) => teacher?.role !== "TEACHER" || doesTeacherMatchExam(teacher, ex)).length} exams
+                </span>
               </div>
             </div>
 
@@ -2809,7 +3179,13 @@ export default function TeacherQuestionDeskClient({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredExams.map((exam: any) => (
+                {filteredExams.map((exam: any) => {
+                  const examAttempts = authorizedAttempts.filter((a) => a.examId === exam.id);
+                  const examAwaiting = examAttempts.filter((a) => isAttemptAwaitingTheory(a)).length;
+                  const examTotalAttempts = Math.max(exam._count?.attempts ?? 0, examAttempts.length);
+                  const examFlaggedItems = authorizedFlaggedQuestions.filter((f) => f.examId === exam.id);
+
+                  return (
                   <div
                     key={exam.id}
                     className="bg-slate-900/90 border border-white/10 hover:border-emerald-500/50 rounded-2xl p-5 flex flex-col justify-between transition group shadow-lg"
@@ -2819,15 +3195,32 @@ export default function TeacherQuestionDeskClient({
                         <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/60 text-emerald-300">
                           {exam.subject}
                         </span>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            exam.isActive
-                              ? "bg-emerald-950/60 border-emerald-600 text-emerald-300"
-                              : "bg-slate-800 border-slate-700 text-slate-400"
-                          }`}
-                        >
-                          {exam.isActive ? "● Active" : "○ Inactive"}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          {examFlaggedItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenExamFlaggedModal(exam)}
+                              className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600 text-amber-300 inline-flex items-center gap-1 transition"
+                            >
+                              <Flag className="w-2.5 h-2.5 text-amber-400" />
+                              <span>{examFlaggedItems.length} Flagged</span>
+                            </button>
+                          )}
+                          {examAwaiting > 0 && (
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-950/80 border border-rose-700 text-rose-300">
+                              {examAwaiting} Awaiting Theory
+                            </span>
+                          )}
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              exam.isActive
+                                ? "bg-emerald-950/60 border-emerald-600 text-emerald-300"
+                                : "bg-slate-800 border-slate-700 text-slate-400"
+                            }`}
+                          >
+                            {exam.isActive ? "● Active" : "○ Inactive"}
+                          </span>
+                        </div>
                       </div>
 
                       <div>
@@ -2858,44 +3251,64 @@ export default function TeacherQuestionDeskClient({
                         <div className="bg-slate-950/60 rounded-lg p-2 border border-white/5">
                           <div className="text-[10px] text-slate-400">Attempts</div>
                           <div className="text-xs font-mono font-bold text-emerald-400">
-                            {exam._count?.attempts ?? 0}
+                            {examTotalAttempts}
                           </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between gap-2">
+                    <div className="pt-4 mt-4 border-t border-white/10 space-y-2">
                       <button
                         type="button"
-                        onClick={() => handleInspectExam(exam.id)}
-                        disabled={loadingExamDetails}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition active:scale-95"
+                        onClick={() => {
+                          setGradingExamFilter(String(exam.id));
+                          setGradingStatusFilter(examAwaiting > 0 ? "AWAITING" : "ALL");
+                          setActiveWorkspace("grading");
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/40 text-yellow-300 text-xs font-bold transition active:scale-95"
                       >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Inspect Questions</span>
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span>
+                          {examAwaiting > 0
+                            ? `Grade Theory (${examAwaiting} Awaiting)`
+                            : `View Student Attempts (${examTotalAttempts})`}
+                        </span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleExportSingleExamPdf(exam, "obj_only")}
-                        disabled={exportingExamId === exam.id}
-                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/90 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 text-xs font-bold transition active:scale-95"
-                        title="Export PDF Score Sheet with Student Name and OBJ Scores"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>{exportingExamId === exam.id ? "..." : "OBJ PDF"}</span>
-                      </button>
-                      <Link
-                        href={`/cbt/exam/${exam.id}`}
-                        target="_blank"
-                        className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs transition"
-                        title="Preview CBT Candidate Portal"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </Link>
+                      <div className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleInspectExam(exam.id)}
+                          disabled={loadingExamDetails}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition active:scale-95"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect Questions</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleExportSingleExamPdf(exam, "obj_only")}
+                          disabled={exportingExamId === exam.id}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-950/90 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 text-xs font-bold transition active:scale-95"
+                          title="Export PDF Score Sheet with Student Name and OBJ Scores"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>{exportingExamId === exam.id ? "..." : "OBJ PDF"}</span>
+                        </button>
+                        <Link
+                          href={`/cbt/exam/${exam.id}`}
+                          target="_blank"
+                          className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs transition"
+                          title="Preview CBT Candidate Portal"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -3178,6 +3591,17 @@ export default function TeacherQuestionDeskClient({
                                     <FormattedMathText text={q.questionText} />
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
+                                    {(() => {
+                                      const flagItem = flaggedQuestions.find(
+                                        (f) => f.examId === selectedExamForModal.id && f.questionId === q.id
+                                      );
+                                      return flagItem ? (
+                                        <span className="text-[10px] font-bold bg-amber-950/80 border border-amber-600/80 text-amber-300 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                          <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                          <span>Flagged ({flagItem.flagCount})</span>
+                                        </span>
+                                      ) : null;
+                                    })()}
                                     <span className="text-[10px] font-mono font-bold bg-amber-950/60 border border-amber-800 text-amber-300 px-2 py-0.5 rounded-md">
                                       {q.points === 0.5 ? "1/2" : (q.points || 1)} pt{q.points > 1 ? "s" : ""}
                                     </span>
@@ -3337,6 +3761,17 @@ export default function TeacherQuestionDeskClient({
           </div>
         )}
         {/* Lightbox Zoom Modal */}
+        <FlaggedQuestionsModal
+          isOpen={Boolean(flaggedModalConfig)}
+          onClose={() => setFlaggedModalConfig(null)}
+          title={flaggedModalConfig?.title}
+          subtitle={flaggedModalConfig?.subtitle}
+          items={flaggedModalConfig?.items || []}
+          highlightStudentAdmNo={flaggedModalConfig?.highlightStudentAdmNo}
+          onEditQuestion={handleEditFlaggedQuestionFromModal}
+          isLoading={loadingFlaggedModal}
+        />
+
         {lightboxImageUrl && (
           <div
             className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"

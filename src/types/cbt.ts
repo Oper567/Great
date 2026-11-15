@@ -77,4 +77,34 @@ export interface AttemptGradingRow {
   answeredCount?: number;
   remainingSeconds?: number | null;
   lastSavedAt?: string | null;
+  flaggedQuestionIds?: number[];
+  isTransmittedToAdmin?: boolean;
+  gradedByTeacherName?: string | null;
+}
+
+export interface FlaggedStudentRef {
+  attemptId: number;
+  studentId: number;
+  studentAdmNo: string;
+  studentFullName: string;
+  studentClass: string;
+  selectedOption: string | null;
+  isCompleted: boolean;
+  submittedAt: Date | null;
+}
+
+export interface FlaggedQuestionSummaryItem {
+  examId: number;
+  examTitle: string;
+  examSubject: string;
+  targetClass: string;
+  questionId: number;
+  questionNumber: number;
+  questionText: string;
+  options: string[];
+  correctAnswer: string;
+  points: number;
+  imageUrl?: string | null;
+  flagCount: number;
+  flaggedByStudents: FlaggedStudentRef[];
 }

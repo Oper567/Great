@@ -7,6 +7,8 @@ import {
   doesExamTargetMatchStudent,
   parseClassAndArm,
   formatClassWithArm,
+  parseStudentAnswersPayload,
+  buildStudentAnswersPayload,
 } from "@/lib/cbt-utils";
 import { ClientExamPayload, ClientObjectiveQuestion, ClientTheoryQuestion } from "@/types/cbt";
 import { requireAdminSession } from "@/lib/session";
@@ -458,33 +460,20 @@ export async function saveExamProgressCheckpointAction(
       authoritativeRemainingSec = Math.max(0, Math.min(durationSeconds, durationSeconds - elapsedSec));
     }
 
-    const cleanPayload: Record<string, any> = {};
-    for (const [k, v] of Object.entries(answers)) {
-      if (!k.startsWith("__meta_") && /^\d+$/.test(k) && typeof v === "string" && v.length <= 32) {
-        cleanPayload[k] = v;
+    const serializedPayload = buildStudentAnswersPayload(
+      answers,
+      attemptRow.student_answers,
+      {
+        heartbeatMs: serverNowMs,
+        remainingSeconds: authoritativeRemainingSec,
+        currentIndex:
+          meta?.currentIndex != null && Number.isInteger(meta.currentIndex) && meta.currentIndex >= 0
+            ? meta.currentIndex
+            : undefined,
+        flaggedIds: Array.isArray(meta?.flaggedIds) ? meta.flaggedIds : undefined,
+        questionOrder: Array.isArray(meta?.questionOrder) ? meta.questionOrder : undefined,
       }
-    }
-
-    cleanPayload.__meta_heartbeatMs = serverNowMs;
-    cleanPayload.__meta_remainingSec = authoritativeRemainingSec;
-
-    if (meta?.currentIndex != null && Number.isInteger(meta.currentIndex) && meta.currentIndex >= 0) {
-      cleanPayload.__meta_currentIndex = meta.currentIndex;
-    }
-    if (Array.isArray(meta?.flaggedIds) && meta.flaggedIds.length > 0) {
-      cleanPayload.__meta_flagged = meta.flaggedIds
-        .map(Number)
-        .filter((n) => Number.isInteger(n) && n > 0)
-        .slice(0, 500);
-    }
-    if (Array.isArray(meta?.questionOrder) && meta.questionOrder.length > 0) {
-      cleanPayload.__meta_qOrder = meta.questionOrder
-        .map(Number)
-        .filter((n) => Number.isInteger(n) && n > 0)
-        .slice(0, 500);
-    }
-
-    const serializedPayload = JSON.stringify(cleanPayload);
+    );
 
     await queryRawPg(
       "UPDATE exam_attempts SET student_answers = $1 WHERE id = $2 AND student_id = $3 AND is_completed = false",
@@ -506,7 +495,8 @@ export async function saveExamProgressCheckpointAction(
 export async function submitExamAttemptAction(
   examId: number,
   answers: Record<string, string>,
-  reason?: "manual" | "time_expired" | "tab_switch_violation"
+  reason?: "manual" | "time_expired" | "tab_switch_violation",
+  flaggedIds?: number[]
 ): Promise<{
   success: boolean;
   error?: string;
@@ -580,13 +570,7 @@ export async function submitExamAttemptAction(
 
     // Idempotent: If already completed, return existing score immediately
     if (attempt.isCompleted) {
-      let existingAnsweredCount = 0;
-      try {
-        const parsed = JSON.parse(attempt.studentAnswers || "{}");
-        existingAnsweredCount = Object.keys(parsed).filter((k) => !k.startsWith("__meta_")).length;
-      } catch {
-        existingAnsweredCount = 0;
-      }
+      const existingAnsweredCount = parseStudentAnswersPayload(attempt.studentAnswers).answeredCount;
 
       const isTabViolation = attempt.teacherComment?.includes("CREDIBILITY MONITOR") || false;
 
@@ -622,6 +606,13 @@ export async function submitExamAttemptAction(
         "[CREDIBILITY MONITOR]: Candidate reached 3 proctor strikes (navigated away or minimized the exam window). Paper was automatically submitted.";
     }
 
+    // Preserve student's flagged question IDs and randomized order during final submission
+    const serializedSubmissionAnswers = buildStudentAnswersPayload(
+      answers,
+      attempt.studentAnswers,
+      Array.isArray(flaggedIds) ? { flaggedIds } : undefined
+    );
+
     // Fast Single-Query Submission Update
     await prisma.examAttempt.update({
       where: { id: attempt.id },
@@ -631,7 +622,7 @@ export async function submitExamAttemptAction(
         objectiveScore: calculatedScore,
         theoryScore: null, // Null until Super Admin grades physical booklets
         totalScore: calculatedScore,
-        studentAnswers: JSON.stringify(answers),
+        studentAnswers: serializedSubmissionAnswers,
         ...(teacherCommentToSave ? { teacherComment: teacherCommentToSave } : {}),
       },
     });

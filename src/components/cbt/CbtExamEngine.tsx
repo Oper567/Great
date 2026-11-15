@@ -77,12 +77,16 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
   const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
 
-  // Real-time answers & index refs to guarantee zero lost state in event handlers without re-triggering syncs on navigation
+  // Real-time answers, flags & index refs to guarantee zero lost state in event handlers without re-triggering syncs on navigation
   const answersRef = useRef<Record<number, string>>({});
+  const flaggedRef = useRef<Record<number, boolean>>({});
   const currentIndexRef = useRef<number>(0);
   useEffect(() => {
     answersRef.current = answers;
   }, [answers]);
+  useEffect(() => {
+    flaggedRef.current = flagged;
+  }, [flagged]);
 
   // Countdown Timer (Initialized synchronously from server payload duration/remainingSeconds)
   const [timeLeftSeconds, setTimeLeftSeconds] = useState<number>(() => {
@@ -236,6 +240,7 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
       if (cachedFlags) {
         restoredFlags = { ...restoredFlags, ...JSON.parse(cachedFlags) };
       }
+      flaggedRef.current = restoredFlags;
       setFlagged(restoredFlags);
     } catch {
       // ignore
@@ -400,12 +405,16 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
     }
 
     try {
-      // Use latest real-time answers from ref to guarantee no lost state
+      // Use latest real-time answers & flags from refs to guarantee no lost state
       const currentAnswers = answersRef.current;
       const answersMap: Record<string, string> = {};
       Object.entries(currentAnswers).forEach(([k, v]) => {
         answersMap[k] = v;
       });
+      const currentFlaggedIds = Object.entries(flaggedRef.current)
+        .filter(([, isFlagged]) => Boolean(isFlagged))
+        .map(([k]) => Number(k))
+        .filter((n) => Number.isInteger(n) && n > 0);
 
       // Transient spike resilience: Auto-retry up to 3 times before displaying manual fallback
       let res: any = null;
@@ -414,7 +423,7 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
 
       for (let attemptNum = 1; attemptNum <= MAX_RETRIES; attemptNum++) {
         try {
-          res = await submitExamAttemptAction(examId, answersMap, reason);
+          res = await submitExamAttemptAction(examId, answersMap, reason, currentFlaggedIds);
           if (res?.success) break;
           // If server confirmed completion or rejected session, do not loop
           if (res?.alreadyCompleted || res?.error?.includes("already submitted")) break;
@@ -556,10 +565,10 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
       mapToSave[k] = v;
     });
 
-    const flaggedIds = Object.entries(flagged)
+    const flaggedIds = Object.entries(flaggedRef.current)
       .filter(([, isFlagged]) => Boolean(isFlagged))
       .map(([k]) => Number(k))
-      .filter((n) => !isNaN(n));
+      .filter((n) => Number.isInteger(n) && n > 0);
 
     const signature = JSON.stringify({ mapToSave, flaggedIds, idx: currentIndexRef.current });
     const elapsedSinceSync = Date.now() - lastSyncedAtMsRef.current;
@@ -716,6 +725,7 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
   const handleToggleFlag = useCallback((questionId: number) => {
     setFlagged((prev) => {
       const nextFlags = { ...prev, [questionId]: !prev[questionId] };
+      flaggedRef.current = nextFlags;
       try {
         localStorage.setItem(flagsStorageKey, JSON.stringify(nextFlags));
       } catch {
@@ -1541,6 +1551,16 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
               <div className="text-[11px] text-amber-400 bg-amber-950/40 border border-amber-800/60 p-2.5 rounded-lg flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>You have unanswered questions remaining.</span>
+              </div>
+            )}
+
+            {Object.values(flagged).filter(Boolean).length > 0 && (
+              <div className="text-[11px] text-amber-300 bg-amber-950/50 border border-amber-700/60 p-2.5 rounded-lg flex items-center gap-2">
+                <Bookmark className="w-4 h-4 shrink-0 text-amber-400" />
+                <span>
+                  You have {Object.values(flagged).filter(Boolean).length} flagged question
+                  {Object.values(flagged).filter(Boolean).length > 1 ? "s" : ""} for review. Any flags left active will be sent to your teacher &amp; admin upon submission.
+                </span>
               </div>
             )}
 

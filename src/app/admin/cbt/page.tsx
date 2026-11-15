@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/session";
-import { getAllAdminExamsAction } from "@/app/actions/cbt-admin";
+import { getAllAdminExamsAction, getFlaggedQuestionsSummaryAction } from "@/app/actions/cbt-admin";
 import { getTeacherSubmissionsAction } from "@/app/actions/teacher-submissions";
 import { getAllTerminalResultsAction } from "@/app/actions/terminal-result-admin";
 import { getAllScratchCardsAction } from "@/app/actions/scratch-card-admin";
@@ -34,16 +34,18 @@ export default async function AdminCbtPage() {
     let cardsData: any = { cards: [], stats: null };
     let students: any[] = [];
     let teachers: any[] = [];
+    let flaggedQuestions: any[] = [];
 
     if (adminSession) {
       try {
-        const [examRes, subRes, resRes, cardRes, studentRes, teacherRes] = await Promise.all([
+        const [examRes, subRes, resRes, cardRes, studentRes, teacherRes, flaggedRes] = await Promise.all([
           getAllAdminExamsAction().catch(() => ({ exams: [] })),
           getTeacherSubmissionsAction().catch(() => ({ submissions: [] })),
           getAllTerminalResultsAction().catch(() => ({ results: [] })),
           getAllScratchCardsAction().catch(() => ({ cards: [], stats: null })),
           getAllStudentsAction().catch(() => ({ students: [] })),
           getAllTeachersAction().catch(() => ({ teachers: [] })),
+          getFlaggedQuestionsSummaryAction().catch(() => ({ flaggedQuestions: [] })),
         ]);
         exams = examRes?.exams || [];
         submissions = subRes?.submissions || [];
@@ -51,6 +53,7 @@ export default async function AdminCbtPage() {
         cardsData = cardRes || { cards: [], stats: null };
         students = studentRes?.students || [];
         teachers = teacherRes?.teachers || [];
+        flaggedQuestions = flaggedRes?.flaggedQuestions || [];
       } catch (err) {
         console.error("Failed to load admin dashboard data in AdminCbtPage:", err);
       }
@@ -65,6 +68,7 @@ export default async function AdminCbtPage() {
         initialCardsData={cardsData}
         initialStudents={students}
         initialTeachers={teachers}
+        initialFlaggedQuestions={flaggedQuestions}
       />
     );
   } catch (err) {
@@ -78,6 +82,7 @@ export default async function AdminCbtPage() {
         initialCardsData={{ cards: [], stats: null }}
         initialStudents={[]}
         initialTeachers={[]}
+        initialFlaggedQuestions={[]}
       />
     );
   }

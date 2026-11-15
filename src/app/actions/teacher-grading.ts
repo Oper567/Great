@@ -4,6 +4,12 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/session";
 import { sanitizeErrorMessage } from "@/lib/security";
+import {
+  doesTeacherMatchExam,
+  formatClassWithArm,
+  isAttemptAwaitingTheory,
+  parseStudentAnswersPayload,
+} from "@/lib/cbt-utils";
 
 export interface TeacherGradingRow {
   id: number;
@@ -21,7 +27,10 @@ export interface TeacherGradingRow {
   theoryScore: number | null;
   totalScore: number;
   isCompleted: boolean;
+  startedAt?: Date | null;
   submittedAt: Date | null;
+  answeredCount?: number;
+  flaggedQuestionIds: number[];
   isTransmittedToAdmin: boolean;
   teacherComment: string | null;
   gradedByTeacherName: string | null;
@@ -56,69 +65,96 @@ export async function getTeacherGradingAttemptsAction(
       ALTER TABLE "exam_attempts" ADD COLUMN IF NOT EXISTS "graded_by_teacher_name" TEXT;
     `).catch(() => {});
 
-    // If teacher role or effectiveEmail is present:
-    // Strictly find the exams that this teacher uploaded/created!
-    let teacherExamIds: number[] | null = null;
-    if (session?.role === "TEACHER" || effectiveEmail) {
-      const emailToMatch = (effectiveEmail || session?.email || "").trim();
-      if (!emailToMatch) {
+    // Resolve exams this staff member is authorized to grade:
+    // - TEACHER: exams created by them OR matching their assignedSubject (or assignedClass if subject is General/All)
+    // - SUPER_ADMIN: all exams (unless explicitly filtered by caller)
+    let targetExamIds: number[] | null = null;
+    if (session.role === "TEACHER") {
+      const allExams = await prisma.exam.findMany({
+        orderBy: { createdAt: "desc" },
+      });
+      const authorizedExams = allExams.filter((exam: any) => doesTeacherMatchExam(session, exam));
+      targetExamIds = authorizedExams.map((e: any) => e.id);
+
+      if (targetExamIds.length === 0) {
         return { success: true, attempts: [] };
       }
-      const uploadedExams = await prisma.exam.findMany({
-        where: {
-          createdBy: { equals: emailToMatch, mode: "insensitive" },
-        } as any,
-        select: { id: true },
+    } else if (
+      effectiveEmail ||
+      (teacherSubject && teacherSubject !== "All Subjects" && teacherSubject !== "General")
+    ) {
+      const allExams = await prisma.exam.findMany({
+        orderBy: { createdAt: "desc" },
       });
-
-      teacherExamIds = uploadedExams.map((e: any) => e.id);
-
-      // If this teacher has not uploaded any courses yet, return empty list!
-      if (teacherExamIds.length === 0) {
+      const scopedProfile = {
+        role: "TEACHER" as const,
+        email: effectiveEmail || null,
+        assignedSubject: teacherSubject || null,
+        assignedClass: teacherClass || null,
+      };
+      const scopedExams = allExams.filter((exam: any) => doesTeacherMatchExam(scopedProfile, exam));
+      targetExamIds = scopedExams.map((e: any) => e.id);
+      if (targetExamIds.length === 0) {
         return { success: true, attempts: [] };
       }
     }
 
     const attempts = await prisma.examAttempt.findMany({
-      where: {
-        isCompleted: true,
-        ...(teacherExamIds !== null
-          ? { examId: { in: teacherExamIds } }
-          : teacherSubject && teacherSubject !== "All Subjects" && teacherSubject !== "General"
-          ? { exam: { subject: { contains: teacherSubject, mode: "insensitive" } } }
-          : {}),
-        ...(teacherClass && teacherClass !== "All Classes"
-          ? { exam: { targetClass: { contains: teacherClass, mode: "insensitive" } } }
-          : {}),
-      },
+      where: targetExamIds !== null ? { examId: { in: targetExamIds } } : undefined,
       include: {
         student: true,
         exam: true,
       },
-      orderBy: { submittedAt: "desc" },
+      orderBy: [{ isCompleted: "desc" }, { submittedAt: "desc" }],
     });
 
-    const rows: TeacherGradingRow[] = attempts.map((att: any) => ({
-      id: att.id,
-      studentId: att.studentId,
-      studentAdmNo: att.student?.admNo || "Unknown",
-      studentFullName: att.student?.fullName || "Student",
-      studentClass: att.student?.currentClass || "SS",
-      examId: att.examId,
-      examTitle: att.exam?.title || "Exam",
-      examSubject: att.exam?.subject || "General",
-      targetClass: att.exam?.targetClass || "SS",
-      examCreatedBy: att.exam?.createdBy || null,
-      hasTheory: Boolean(att.exam?.hasTheory),
-      objectiveScore: att.objectiveScore ?? 0,
-      theoryScore: att.theoryScore !== null && att.theoryScore !== undefined ? att.theoryScore : null,
-      totalScore: att.totalScore ?? 0,
-      isCompleted: Boolean(att.isCompleted),
-      submittedAt: att.submittedAt,
-      isTransmittedToAdmin: Boolean(att.isTransmittedToAdmin),
-      teacherComment: att.teacherComment || null,
-      gradedByTeacherName: att.gradedByTeacherName || null,
-    }));
+    const rows: TeacherGradingRow[] = attempts.map((att: any) => {
+      const parsedPayload = parseStudentAnswersPayload(att.studentAnswers);
+      const answeredCount = parsedPayload.answeredCount;
+
+      const objScore = att.objectiveScore != null ? Number(att.objectiveScore) : 0;
+      const thScore =
+        att.theoryScore !== null && att.theoryScore !== undefined && att.theoryScore !== ""
+          ? Number(att.theoryScore)
+          : null;
+      const totScore = att.totalScore != null ? Number(att.totalScore) : objScore + (thScore ?? 0);
+
+      return {
+        id: att.id,
+        studentId: att.studentId,
+        studentAdmNo: att.student?.admNo || "Unknown",
+        studentFullName: att.student?.fullName || "Student",
+        studentClass: formatClassWithArm(att.student?.currentClass || att.exam?.targetClass || "SS", att.student?.arm),
+        examId: att.examId,
+        examTitle: att.exam?.title || "Exam",
+        examSubject: att.exam?.subject || "General",
+        targetClass: att.exam?.targetClass || "SS",
+        examCreatedBy: att.exam?.createdBy || null,
+        hasTheory: Boolean(att.exam?.hasTheory),
+        objectiveScore: Number.isNaN(objScore) ? 0 : objScore,
+        theoryScore: thScore !== null && !Number.isNaN(thScore) ? thScore : null,
+        totalScore: Number.isNaN(totScore) ? 0 : totScore,
+        isCompleted: Boolean(att.isCompleted),
+        startedAt: att.startedAt || null,
+        submittedAt: att.submittedAt || null,
+        answeredCount,
+        flaggedQuestionIds: parsedPayload.flaggedQuestionIds,
+        isTransmittedToAdmin: Boolean(att.isTransmittedToAdmin),
+        teacherComment: att.teacherComment || null,
+        gradedByTeacherName: att.gradedByTeacherName || null,
+      };
+    });
+
+    // Prioritize awaiting-theory completed attempts first, then newly submitted, then in-progress
+    rows.sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) return a.isCompleted ? -1 : 1;
+      const aAwaiting = isAttemptAwaitingTheory(a);
+      const bAwaiting = isAttemptAwaitingTheory(b);
+      if (aAwaiting !== bAwaiting) return aAwaiting ? -1 : 1;
+      const aTime = new Date(a.submittedAt || a.startedAt || 0).getTime();
+      const bTime = new Date(b.submittedAt || b.startedAt || 0).getTime();
+      return bTime - aTime;
+    });
 
     return { success: true, attempts: rows };
   } catch (err: any) {
@@ -160,27 +196,24 @@ export async function saveAndTransmitTheoryScoreAction(
       return { success: false, error: "Exam attempt record not found." };
     }
 
-    // Ownership check for TEACHER role: can only grade/transmit exams created by or assigned to them
-    if (session.role === "TEACHER") {
-      const createdBy = (attempt.exam?.createdBy || "").trim().toLowerCase();
-      const teacherEmail = (session.email || "").trim().toLowerCase();
-      const ownsByCreator = Boolean(createdBy && teacherEmail && createdBy === teacherEmail);
-      const assignedSub = (session.assignedSubject || "").trim().toLowerCase();
-      const examSub = (attempt.exam?.subject || "").trim().toLowerCase();
-      const ownsBySubject =
-        Boolean(assignedSub) &&
-        (assignedSub === "all" ||
-          assignedSub === "all subjects" ||
-          examSub.includes(assignedSub) ||
-          assignedSub.includes(examSub));
-
-      if (!ownsByCreator && (!createdBy ? !ownsBySubject : true)) {
-        return { success: false, error: "Unauthorized: You can only grade attempts belonging to your assigned subject or uploaded exam." };
-      }
+    // Ownership check for TEACHER role: can grade/transmit exams created by them OR matching their assigned subject
+    if (session.role === "TEACHER" && !doesTeacherMatchExam(session, attempt.exam)) {
+      return {
+        success: false,
+        error: "Unauthorized: You can only grade attempts belonging to your assigned subject or uploaded exam.",
+      };
     }
 
-    const validatedTheoryScore = Math.max(0, theoryScore);
-    const newTotalScore = attempt.objectiveScore + validatedTheoryScore;
+    if (!attempt.isCompleted) {
+      return {
+        success: false,
+        error: "This student's CBT attempt is still in progress. Finalize or await submission before saving theory score.",
+      };
+    }
+
+    const validatedTheoryScore = Math.max(0, Number(theoryScore) || 0);
+    const currentObjectiveScore = Number(attempt.objectiveScore || 0);
+    const newTotalScore = currentObjectiveScore + validatedTheoryScore;
 
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "exam_attempts" ADD COLUMN IF NOT EXISTS "is_transmitted_to_admin" BOOLEAN DEFAULT false;
@@ -205,10 +238,14 @@ export async function saveAndTransmitTheoryScoreAction(
 
     revalidatePath("/staff");
     revalidatePath("/admin/cbt");
+    revalidatePath("/cbt/dashboard");
 
     const studentAdmNo = updated.student?.admNo || attempt.student?.admNo || "Student";
     const studentFullName = updated.student?.fullName || attempt.student?.fullName || "Student";
-    const studentClass = updated.student?.currentClass || attempt.student?.currentClass || updated.exam?.targetClass || "SS";
+    const studentClass = formatClassWithArm(
+      updated.student?.currentClass || attempt.student?.currentClass || updated.exam?.targetClass || "SS",
+      updated.student?.arm || attempt.student?.arm
+    );
     const examTitle = updated.exam?.title || attempt.exam?.title || "Exam Paper";
     const examSubject = updated.exam?.subject || attempt.exam?.subject || "General";
     const targetClass = updated.exam?.targetClass || attempt.exam?.targetClass || "SS";
@@ -227,11 +264,15 @@ export async function saveAndTransmitTheoryScoreAction(
         examSubject,
         targetClass,
         hasTheory,
-        objectiveScore: updated.objectiveScore ?? 0,
-        theoryScore: updated.theoryScore ?? 0,
-        totalScore: updated.totalScore ?? 0,
-        isCompleted: updated.isCompleted,
+        objectiveScore: Number(updated.objectiveScore ?? 0),
+        theoryScore:
+          updated.theoryScore !== null && updated.theoryScore !== undefined
+            ? Number(updated.theoryScore)
+            : 0,
+        totalScore: Number(updated.totalScore ?? 0),
+        isCompleted: Boolean(updated.isCompleted),
         submittedAt: updated.submittedAt,
+        flaggedQuestionIds: parseStudentAnswersPayload(updated.studentAnswers).flaggedQuestionIds,
         isTransmittedToAdmin: true,
         teacherComment: (updated as any).teacherComment,
         gradedByTeacherName: (updated as any).gradedByTeacherName,

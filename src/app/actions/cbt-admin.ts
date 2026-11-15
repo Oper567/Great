@@ -4,9 +4,17 @@ import prisma, { queryRawPg } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/session";
 import { sanitizeErrorMessage, sanitizeMediaUrl, validateUploadedFile } from "@/lib/security";
 import { revalidatePath } from "next/cache";
-import { AttemptGradingRow } from "@/types/cbt";
+import {
+  AttemptGradingRow,
+  FlaggedQuestionSummaryItem,
+  FlaggedStudentRef,
+} from "@/types/cbt";
 import { invalidateExamCache } from "@/lib/cbt-cache";
-import { formatClassWithArm } from "@/lib/cbt-utils";
+import {
+  doesTeacherMatchExam,
+  formatClassWithArm,
+  parseStudentAnswersPayload,
+} from "@/lib/cbt-utils";
 
 /**
  * Security Gatekeeper: Ensure teachers can ONLY access exams & questions for their assigned subject or created by them.
@@ -19,19 +27,7 @@ async function isTeacherAuthorizedForExam(examId: number, session: any): Promise
   const targetExam = await prisma.exam.findUnique({ where: { id: examId } });
   if (!targetExam) return false;
 
-  const assigned = session.assignedSubject?.trim() || "";
-  if (!assigned || assigned.toLowerCase() === "all" || assigned.toLowerCase() === "all subjects") {
-    return true;
-  }
-
-  if (session.email && targetExam.createdBy && targetExam.createdBy.toLowerCase() === session.email.toLowerCase()) {
-    return true;
-  }
-
-  return (
-    targetExam.subject.toLowerCase().includes(assigned.toLowerCase()) ||
-    assigned.toLowerCase().includes(targetExam.subject.toLowerCase())
-  );
+  return doesTeacherMatchExam(session, targetExam);
 }
 
 /**
@@ -652,20 +648,8 @@ export async function getAllAdminExamsAction() {
       return { success: false, exams: [], error: auth.error };
     }
     const session = auth.session;
-    let whereClause: any = undefined;
-
-    if (session.role === "TEACHER") {
-      const teacherEmail = (session.email || "").trim();
-      if (!teacherEmail) {
-        return { success: true, exams: [] };
-      }
-      whereClause = {
-        createdBy: { equals: teacherEmail, mode: "insensitive" },
-      };
-    }
 
     const exams = await prisma.exam.findMany({
-      where: whereClause,
       include: {
         _count: {
           select: {
@@ -677,7 +661,13 @@ export async function getAllAdminExamsAction() {
       },
       orderBy: { createdAt: "desc" },
     });
-    return { success: true, exams };
+
+    const filteredExams =
+      session.role === "TEACHER"
+        ? exams.filter((exam: any) => doesTeacherMatchExam(session, exam))
+        : exams;
+
+    return { success: true, exams: filteredExams };
   } catch (err) {
     console.error("Fetch admin exams error:", err);
     return { success: false, exams: [] };
@@ -787,40 +777,28 @@ export async function getExamGradingAttemptsAction(examId: number): Promise<{
     }
 
     const rows: AttemptGradingRow[] = attempts.map((att: any) => {
-      let answeredCount = 0;
-      let remainingSeconds: number | null = null;
-      let lastSavedAt: string | null = null;
-      let liveObjScore = att.objectiveScore ?? 0;
+      const parsed = parseStudentAnswersPayload(att.studentAnswers);
+      let liveObjScore = att.objectiveScore != null ? Number(att.objectiveScore) : 0;
 
-      if (att.studentAnswers) {
-        try {
-          const parsed = JSON.parse(att.studentAnswers);
-          if (parsed && typeof parsed === "object") {
-            let calcLive = 0;
-            for (const [k, v] of Object.entries(parsed)) {
-              if (k === "__meta_remainingSec" && typeof v === "number") {
-                remainingSeconds = v;
-              } else if (k === "__meta_heartbeatMs" && typeof v === "number") {
-                lastSavedAt = new Date(v).toISOString();
-              } else if (!k.startsWith("__meta_") && typeof v === "string" && v.trim()) {
-                answeredCount++;
-                const qInfo = answerKey.get(Number(k));
-                if (qInfo && v.trim().toUpperCase() === qInfo.correct) {
-                  calcLive += qInfo.points;
-                }
-              }
-            }
-            if (!att.isCompleted) {
-              liveObjScore = calcLive;
-            }
+      if (!att.isCompleted) {
+        let calcLive = 0;
+        for (const [k, v] of Object.entries(parsed.answers)) {
+          const qInfo = answerKey.get(Number(k));
+          if (qInfo && v.trim().toUpperCase() === qInfo.correct) {
+            calcLive += qInfo.points;
           }
-        } catch {
-          // ignore
         }
+        liveObjScore = calcLive;
       }
 
-      const theoryScore = att.theoryScore ?? 0;
-      const totalScore = att.isCompleted ? (att.totalScore ?? liveObjScore + theoryScore) : liveObjScore + theoryScore;
+      const theoryScore =
+        att.theoryScore !== null && att.theoryScore !== undefined && att.theoryScore !== ""
+          ? Number(att.theoryScore)
+          : null;
+      const effectiveTheory = theoryScore !== null && !Number.isNaN(theoryScore) ? theoryScore : 0;
+      const totalScore = att.isCompleted
+        ? Number(att.totalScore ?? liveObjScore + effectiveTheory)
+        : liveObjScore + effectiveTheory;
 
       return {
         id: att.id,
@@ -833,12 +811,15 @@ export async function getExamGradingAttemptsAction(examId: number): Promise<{
         startedAt: att.startedAt,
         submittedAt: att.submittedAt,
         isCompleted: Boolean(att.isCompleted),
-        objectiveScore: liveObjScore,
-        theoryScore,
-        totalScore,
-        answeredCount,
-        remainingSeconds,
-        lastSavedAt,
+        objectiveScore: Number.isNaN(liveObjScore) ? 0 : liveObjScore,
+        theoryScore: theoryScore !== null && !Number.isNaN(theoryScore) ? theoryScore : null,
+        totalScore: Number.isNaN(totalScore) ? 0 : totalScore,
+        answeredCount: parsed.answeredCount,
+        remainingSeconds: parsed.remainingSeconds,
+        lastSavedAt: parsed.lastSavedAt,
+        flaggedQuestionIds: parsed.flaggedQuestionIds,
+        isTransmittedToAdmin: Boolean(att.isTransmittedToAdmin),
+        gradedByTeacherName: att.gradedByTeacherName || null,
       };
     });
 
@@ -892,13 +873,15 @@ export async function saveTheoryScoreAction(
       }
     }
 
-    const totalScore = attempt.objectiveScore + theoryScore;
+    const objScore = Number(attempt.objectiveScore || 0);
+    const totalScore = objScore + Number(theoryScore);
 
     const updated = await prisma.examAttempt.update({
       where: { id: attemptId },
       data: {
-        theoryScore,
+        theoryScore: Number(theoryScore),
         totalScore,
+        gradedByTeacherName: auth.session.fullName || "Administrator",
       },
     });
 
@@ -1225,8 +1208,8 @@ export async function forceSubmitInterruptedAttemptAction(
       }
     }
 
-    const theoryScore = attempt.theoryScore ?? 0;
-    const totalScore = calculatedScore + theoryScore;
+    const theoryNum = attempt.theoryScore != null ? Number(attempt.theoryScore) : 0;
+    const totalScore = calculatedScore + theoryNum;
 
     await prisma.examAttempt.update({
       where: { id: attemptId },
@@ -1234,6 +1217,7 @@ export async function forceSubmitInterruptedAttemptAction(
         isCompleted: true,
         submittedAt: new Date(),
         objectiveScore: calculatedScore,
+        ...(attempt.theoryScore === undefined ? { theoryScore: null } : {}),
         totalScore,
         teacherComment: "[ADMIN RECOVERY]: Auto-saved progress finalized and graded by administrator after power/system interruption.",
       },
@@ -1249,6 +1233,153 @@ export async function forceSubmitInterruptedAttemptAction(
     };
   } catch (err: any) {
     return { success: false, error: sanitizeErrorMessage(err, "Failed to finalize interrupted attempt.") };
+  }
+}
+
+/**
+ * Super Admin & Authorized Teachers:
+ * Aggregate student-flagged CBT objective questions across one exam or all authorized exams.
+ * Resolves exact question text, options, correct key, student's chosen option, and flag counts.
+ */
+export async function getFlaggedQuestionsSummaryAction(examId?: number): Promise<{
+  success: boolean;
+  error?: string;
+  flaggedQuestions: FlaggedQuestionSummaryItem[];
+}> {
+  try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, flaggedQuestions: [] };
+    }
+    const session = auth.session;
+
+    let authorizedExams: any[] = [];
+    if (examId && Number.isInteger(examId) && examId > 0) {
+      if (session.role === "TEACHER" && !(await isTeacherAuthorizedForExam(examId, session))) {
+        return { success: false, error: "Unauthorized for this subject.", flaggedQuestions: [] };
+      }
+      const single = await prisma.exam.findUnique({ where: { id: examId } });
+      if (single) authorizedExams = [single];
+    } else {
+      const allExams = await prisma.exam.findMany({ orderBy: { createdAt: "desc" } });
+      authorizedExams =
+        session.role === "TEACHER"
+          ? allExams.filter((ex: any) => doesTeacherMatchExam(session, ex))
+          : allExams;
+    }
+
+    if (authorizedExams.length === 0) {
+      return { success: true, flaggedQuestions: [] };
+    }
+
+    const examById = new Map<number, any>();
+    for (const ex of authorizedExams) {
+      examById.set(ex.id, ex);
+    }
+
+    const attempts = await prisma.examAttempt.findMany({
+      where: { examId: { in: Array.from(examById.keys()) } },
+      include: { student: true },
+      orderBy: [{ submittedAt: "desc" }, { startedAt: "desc" }],
+    });
+
+    // Map questionId -> FlaggedStudentRef[]
+    const refsByQuestionId = new Map<number, FlaggedStudentRef[]>();
+    const flaggedExamIdSet = new Set<number>();
+
+    for (const att of attempts) {
+      const parsed = parseStudentAnswersPayload(att.studentAnswers);
+      if (parsed.flaggedQuestionIds.length === 0) continue;
+
+      flaggedExamIdSet.add(att.examId);
+      const studentClass = formatClassWithArm(
+        att.student?.currentClass || examById.get(att.examId)?.targetClass || "SS",
+        (att.student as any)?.arm
+      );
+
+      for (const qId of parsed.flaggedQuestionIds) {
+        const list = refsByQuestionId.get(qId) || [];
+        if (!list.some((r) => r.attemptId === att.id)) {
+          const rawSelected = parsed.answers[String(qId)];
+          list.push({
+            attemptId: att.id,
+            studentId: att.studentId,
+            studentAdmNo: att.student?.admNo || "Unknown",
+            studentFullName: att.student?.fullName || "Student",
+            studentClass,
+            selectedOption: rawSelected ? rawSelected.toUpperCase() : null,
+            isCompleted: Boolean(att.isCompleted),
+            submittedAt: att.submittedAt || null,
+          });
+          refsByQuestionId.set(qId, list);
+        }
+      }
+    }
+
+    if (refsByQuestionId.size === 0) {
+      return { success: true, flaggedQuestions: [] };
+    }
+
+    // Load objective questions for exams that actually have flagged items so Q# numbering matches paper order
+    const questions = await prisma.objectiveQuestion.findMany({
+      where: { examId: { in: Array.from(flaggedExamIdSet) } },
+      orderBy: [{ examId: "asc" }, { id: "asc" }],
+    });
+
+    const examQuestionSeq = new Map<number, number>();
+    const items: FlaggedQuestionSummaryItem[] = [];
+
+    for (const q of questions) {
+      const seq = (examQuestionSeq.get(q.examId) || 0) + 1;
+      examQuestionSeq.set(q.examId, seq);
+
+      const flaggedByStudents = refsByQuestionId.get(q.id);
+      if (!flaggedByStudents || flaggedByStudents.length === 0) continue;
+
+      const ex = examById.get(q.examId);
+      if (!ex) continue;
+
+      let parsedOpts: string[] = [];
+      try {
+        const rawOpts = typeof q.options === "string" ? JSON.parse(q.options) : q.options;
+        if (Array.isArray(rawOpts)) {
+          parsedOpts = rawOpts.map((o: any) => String(o ?? ""));
+        }
+      } catch {
+        parsedOpts = [];
+      }
+
+      items.push({
+        examId: ex.id,
+        examTitle: ex.title || "CBT Paper",
+        examSubject: ex.subject || "Subject",
+        targetClass: ex.targetClass || "SS",
+        questionId: q.id,
+        questionNumber: seq,
+        questionText: q.questionText || "",
+        options: parsedOpts,
+        correctAnswer: (q.correctAnswer || "A").trim().toUpperCase(),
+        points: q.points != null ? Number(q.points) : 0.5,
+        imageUrl: q.imageUrl || null,
+        flagCount: flaggedByStudents.length,
+        flaggedByStudents,
+      });
+    }
+
+    items.sort((a, b) => {
+      if (b.flagCount !== a.flagCount) return b.flagCount - a.flagCount;
+      if (b.examId !== a.examId) return b.examId - a.examId;
+      return a.questionNumber - b.questionNumber;
+    });
+
+    return { success: true, flaggedQuestions: items };
+  } catch (err: any) {
+    console.error("Get flagged questions summary error:", err);
+    return {
+      success: false,
+      error: sanitizeErrorMessage(err, "Failed to load flagged questions."),
+      flaggedQuestions: [],
+    };
   }
 }
 

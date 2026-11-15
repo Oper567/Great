@@ -39,9 +39,11 @@ import {
   Archive,
   Award,
   Download,
+  Flag,
 } from "lucide-react";
-import { AdminSession, AttemptGradingRow } from "@/types/cbt";
+import { AdminSession, AttemptGradingRow, FlaggedQuestionSummaryItem } from "@/types/cbt";
 import { downloadExamScoresPdf } from "@/lib/pdf-score-export";
+import { isAttemptAwaitingTheory } from "@/lib/cbt-utils";
 import { adminLoginAction, adminLogoutAction } from "@/app/actions/cbt-auth";
 import {
   createExamAction,
@@ -53,6 +55,7 @@ import {
   clearAllExamQuestionsAction,
   getAdminExamWithQuestionsAction,
   getExamGradingAttemptsAction,
+  getFlaggedQuestionsSummaryAction,
   saveTheoryScoreAction,
   clearExamAttemptsAction,
   deleteExamAttemptAction,
@@ -71,6 +74,7 @@ import StudentRegistryTab from "@/components/admin/StudentRegistryTab";
 import StaffManagementTab from "@/components/admin/StaffManagementTab";
 import { MathToolbar, FloatingMathButton } from "./MathToolbar";
 import { FormattedMathText } from "./FormattedMathText";
+import { FlaggedQuestionsModal } from "./FlaggedQuestionsModal";
 
 type AdminTabId =
   | "exams"
@@ -123,6 +127,7 @@ interface Props {
   initialCardsData?: any;
   initialStudents?: any[];
   initialTeachers?: any[];
+  initialFlaggedQuestions?: FlaggedQuestionSummaryItem[];
 }
 
 export default function AdminCbtDashboardClient({
@@ -133,8 +138,24 @@ export default function AdminCbtDashboardClient({
   initialCardsData = { cards: [], stats: null },
   initialStudents = [],
   initialTeachers = [],
+  initialFlaggedQuestions = [],
 }: Props) {
   const router = useRouter();
+  const [flaggedQuestions, setFlaggedQuestions] = useState<FlaggedQuestionSummaryItem[]>(
+    initialFlaggedQuestions
+  );
+  const [flaggedModalConfig, setFlaggedModalConfig] = useState<{
+    title: string;
+    subtitle?: string;
+    items: FlaggedQuestionSummaryItem[];
+    highlightStudentAdmNo?: string | null;
+  } | null>(null);
+  const [loadingFlaggedModal, setLoadingFlaggedModal] = useState(false);
+  const [gradingFlaggedOnly, setGradingFlaggedOnly] = useState(false);
+
+  useEffect(() => {
+    setFlaggedQuestions(initialFlaggedQuestions);
+  }, [initialFlaggedQuestions]);
 
   // Active Admin Tab: "exams" | "questions" | "submissions" | "students" | "staff" | "grading" | "results" | "cards"
   const [activeTab, setActiveTab] = useState<AdminTabId>("exams");
@@ -805,7 +826,13 @@ export default function AdminCbtDashboardClient({
 
   const loadGradingAttempts = async (examId: number) => {
     if (!examId) return;
-    const res = await getExamGradingAttemptsAction(examId);
+    const [res, flaggedRes] = await Promise.all([
+      getExamGradingAttemptsAction(examId),
+      getFlaggedQuestionsSummaryAction(examId).catch(() => ({
+        success: false,
+        flaggedQuestions: [] as FlaggedQuestionSummaryItem[],
+      })),
+    ]);
     if (res.success) {
       setGradingAttempts(res.attempts);
       const initialScores: Record<number, string | number> = {};
@@ -814,6 +841,88 @@ export default function AdminCbtDashboardClient({
       });
       setGradingScores(initialScores);
     }
+    if (flaggedRes.success && Array.isArray(flaggedRes.flaggedQuestions)) {
+      setFlaggedQuestions((prev) => [
+        ...prev.filter((f) => f.examId !== examId),
+        ...flaggedRes.flaggedQuestions,
+      ]);
+    }
+  };
+
+  const handleOpenAdminAttemptFlaggedModal = async (att: AttemptGradingRow) => {
+    const localItems = flaggedQuestions.filter(
+      (f) => f.examId === att.examId && f.flaggedByStudents.some((s) => s.attemptId === att.id)
+    );
+    const parentExam = exams.find((e) => e.id === att.examId);
+    setFlaggedModalConfig({
+      title: `Flagged Questions — ${att.studentFullName}`,
+      subtitle: `${parentExam?.subject || "CBT"} (${att.studentClass}) • ${att.studentAdmNo}`,
+      items: localItems,
+      highlightStudentAdmNo: att.studentAdmNo,
+    });
+    if (localItems.length === 0) {
+      setLoadingFlaggedModal(true);
+      try {
+        const res = await getFlaggedQuestionsSummaryAction(att.examId);
+        if (res.success) {
+          const freshMatches = res.flaggedQuestions.filter((f) =>
+            f.flaggedByStudents.some((s) => s.attemptId === att.id)
+          );
+          setFlaggedModalConfig((prev) => (prev ? { ...prev, items: freshMatches } : prev));
+        }
+      } finally {
+        setLoadingFlaggedModal(false);
+      }
+    }
+  };
+
+  const handleOpenAdminExamFlaggedModal = async (examId?: number) => {
+    if (!examId) {
+      setFlaggedModalConfig({
+        title: "All Flagged CBT Questions",
+        subtitle: "Objective questions flagged by students across all courses.",
+        items: flaggedQuestions,
+      });
+      return;
+    }
+    const parentExam = exams.find((e) => e.id === examId);
+    const localItems = flaggedQuestions.filter((f) => f.examId === examId);
+    setFlaggedModalConfig({
+      title: `Flagged Questions — ${parentExam?.subject || "Exam"} (${parentExam?.targetClass || ""})`,
+      subtitle: parentExam?.title || "Review candidate flags and edit questions if needed.",
+      items: localItems,
+    });
+    setLoadingFlaggedModal(true);
+    try {
+      const res = await getFlaggedQuestionsSummaryAction(examId);
+      if (res.success) {
+        setFlaggedQuestions((prev) => [
+          ...prev.filter((f) => f.examId !== examId),
+          ...res.flaggedQuestions,
+        ]);
+        setFlaggedModalConfig((prev) => (prev ? { ...prev, items: res.flaggedQuestions } : prev));
+      }
+    } finally {
+      setLoadingFlaggedModal(false);
+    }
+  };
+
+  const handleAdminEditFlaggedQuestion = async (item: FlaggedQuestionSummaryItem) => {
+    setFlaggedModalConfig(null);
+    setSelectedExamIdForQuestions(item.examId);
+    selectTab("questions");
+    try {
+      const res = await getAdminExamWithQuestionsAction(item.examId);
+      if (res?.success && res.exam) {
+        setExamQuestionsPreview(res.exam);
+        const targetQ = (res.exam.objectiveQuestions || []).find(
+          (q: any) => q.id === item.questionId
+        );
+        if (targetQ) {
+          handleStartEditObjective(targetQ);
+        }
+      }
+    } catch {}
   };
 
   useEffect(() => {
@@ -995,6 +1104,7 @@ export default function AdminCbtDashboardClient({
     if (res.success) {
       setGradingAttempts([]);
       setGradingScores({});
+      setFlaggedQuestions((prev) => prev.filter((f) => f.examId !== selectedExamIdForGrading));
       setExams((prev) =>
         prev.map((e) =>
           e.id === selectedExamIdForGrading
@@ -1029,6 +1139,18 @@ export default function AdminCbtDashboardClient({
 
     if (res.success) {
       setGradingAttempts((prev) => prev.filter((a) => a.id !== attemptId));
+      setFlaggedQuestions((prev) =>
+        prev
+          .map((item) => {
+            const nextStudents = item.flaggedByStudents.filter((s) => s.attemptId !== attemptId);
+            return {
+              ...item,
+              flaggedByStudents: nextStudents,
+              flagCount: nextStudents.length,
+            };
+          })
+          .filter((item) => item.flagCount > 0)
+      );
       setGradingScores((prev) => {
         const next = { ...prev };
         delete next[attemptId];
@@ -1646,9 +1768,21 @@ export default function AdminCbtDashboardClient({
                       </button>
                     </div>
 
-                    <span className="text-xs text-slate-500">
-                      {displayedExams.length} {examFilterTab === "archived" ? "past / removed papers" : "active papers"}
-                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {flaggedQuestions.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAdminExamFlaggedModal()}
+                          className="px-2.5 py-1 rounded-lg bg-amber-950/90 hover:bg-amber-900 border border-amber-600/80 text-amber-300 text-xs font-bold inline-flex items-center gap-1.5 transition"
+                        >
+                          <Flag className="w-3.5 h-3.5 text-amber-400" />
+                          <span>{flaggedQuestions.length} Flagged Qs</span>
+                        </button>
+                      )}
+                      <span className="text-xs text-slate-500">
+                        {displayedExams.length} {examFilterTab === "archived" ? "past / removed papers" : "active papers"}
+                      </span>
+                    </div>
                   </div>
 
                   {displayedExams.length === 0 ? (
@@ -1679,6 +1813,19 @@ export default function AdminCbtDashboardClient({
                                   <span className="px-2 py-0.5 rounded bg-blue-950 border border-blue-800 text-yellow-400 font-mono font-bold text-[10px]">
                                     {ex.targetClass}
                                   </span>
+                                  {(() => {
+                                    const exFlags = flaggedQuestions.filter((f) => f.examId === ex.id).length;
+                                    return exFlags > 0 ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenAdminExamFlaggedModal(ex.id)}
+                                        className="px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600 text-amber-300 text-[10px] font-bold inline-flex items-center gap-1"
+                                      >
+                                        <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                        <span>{exFlags} Flagged</span>
+                                      </button>
+                                    ) : null;
+                                  })()}
                                 </div>
                                 <div className="text-slate-400 text-xs mt-0.5">{ex.title}</div>
                               </div>
@@ -1838,7 +1985,22 @@ export default function AdminCbtDashboardClient({
                             {displayedExams.map((ex) => (
                               <tr key={ex.id} className="hover:bg-slate-900/50 transition">
                                 <td className="p-3.5">
-                                  <div className="font-bold text-white text-sm">{ex.subject}</div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-bold text-white text-sm">{ex.subject}</span>
+                                    {(() => {
+                                      const exFlags = flaggedQuestions.filter((f) => f.examId === ex.id).length;
+                                      return exFlags > 0 ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleOpenAdminExamFlaggedModal(ex.id)}
+                                          className="px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600 text-amber-300 text-[10px] font-bold inline-flex items-center gap-1 transition"
+                                        >
+                                          <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                          <span>{exFlags} Flagged</span>
+                                        </button>
+                                      ) : null;
+                                    })()}
+                                  </div>
                                   <div className="text-slate-400 text-[11px]">{ex.title}</div>
                                 </td>
                                 <td className="p-3.5">
@@ -2590,6 +2752,21 @@ export default function AdminCbtDashboardClient({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {(() => {
+                    const selectedExamFlags = flaggedQuestions.filter(
+                      (f) => f.examId === selectedExamIdForQuestions
+                    ).length;
+                    return selectedExamFlags > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenAdminExamFlaggedModal(selectedExamIdForQuestions)}
+                        className="px-3 py-1.5 bg-amber-950/90 hover:bg-amber-900 border border-amber-600 text-amber-300 text-xs font-bold rounded-lg transition flex items-center gap-1.5 active:scale-95"
+                      >
+                        <Flag className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Review {selectedExamFlags} Flagged Q{selectedExamFlags === 1 ? "" : "s"}</span>
+                      </button>
+                    ) : null;
+                  })()}
                   {(examQuestionsPreview?.objectiveQuestions?.length > 0 ||
                     examQuestionsPreview?.theoryQuestions?.length > 0) && (
                     <button
@@ -2642,12 +2819,25 @@ export default function AdminCbtDashboardClient({
                           className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex items-start justify-between gap-4 text-xs"
                         >
                           <div className="space-y-1 flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-yellow-400">Q{i + 1}.</span>
                               <span className="text-white font-medium">
                                 <FormattedMathText text={q.questionText} />
                               </span>
                               <span className="text-slate-500">({q.points === 0.5 ? "1/2" : q.points} pt)</span>
+                              {(() => {
+                                const flagItem = flaggedQuestions.find(
+                                  (f) => f.examId === selectedExamIdForQuestions && f.questionId === q.id
+                                );
+                                return flagItem ? (
+                                  <span className="px-2 py-0.5 rounded-full bg-amber-950/90 border border-amber-600/80 text-amber-300 text-[10px] font-bold inline-flex items-center gap-1">
+                                    <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                    <span>
+                                      Flagged by {flagItem.flagCount} student{flagItem.flagCount === 1 ? "" : "s"}
+                                    </span>
+                                  </span>
+                                ) : null;
+                              })()}
                             </div>
                             {q.imageUrl && (
                               <div className="mt-2 relative inline-block group">
@@ -3311,29 +3501,106 @@ export default function AdminCbtDashboardClient({
             )}
 
             {/* Grading Table */}
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-              <div className="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
-                  Completed Submissions for Selected Examination
-                </h3>
-                <div className="flex items-center gap-3">
-                  {gradingAttempts.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleExportGradingPdf("obj_only")}
-                      className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 active:scale-95"
-                    >
-                      <Download className="w-3 h-3 text-emerald-400" />
-                      <span>Download OBJ Score Sheet (PDF)</span>
-                    </button>
-                  )}
-                  <span className="text-xs text-slate-500">
-                    {gradingAttempts.length} students submitted
-                  </span>
-                </div>
-              </div>
+            {(() => {
+              const selectedPaperFlags = flaggedQuestions.filter(
+                (f) => f.examId === selectedExamIdForGrading
+              );
+              const flaggedAttemptCountForPaper = gradingAttempts.filter(
+                (a) => (a.flaggedQuestionIds?.length ?? 0) > 0
+              ).length;
+              const visibleGradingAttempts = gradingFlaggedOnly
+                ? gradingAttempts.filter((a) => (a.flaggedQuestionIds?.length ?? 0) > 0)
+                : gradingAttempts;
 
-              {gradingAttempts.length === 0 ? (
+              return (
+                <>
+                  {(selectedPaperFlags.length > 0 || flaggedQuestions.length > 0) && (
+                    <div className="bg-amber-950/35 border border-amber-600/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+                          <Flag className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-black text-amber-300 uppercase tracking-wider">
+                            Candidate Flagged Questions Alert
+                          </div>
+                          <p className="text-xs text-slate-300 mt-0.5">
+                            {selectedPaperFlags.length > 0 ? (
+                              <>
+                                <strong className="text-white">{selectedPaperFlags.length}</strong> question
+                                {selectedPaperFlags.length === 1 ? " was" : "s were"} flagged in this exam paper
+                                ({flaggedAttemptCountForPaper} candidate{flaggedAttemptCountForPaper === 1 ? "" : "s"}).
+                              </>
+                            ) : (
+                              <>
+                                No questions flagged in this selected paper, with{" "}
+                                <strong className="text-white">{flaggedQuestions.length}</strong> flagged question
+                                {flaggedQuestions.length === 1 ? "" : "s"} across other courses.
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        {selectedPaperFlags.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAdminExamFlaggedModal(selectedExamIdForGrading)}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition active:scale-95"
+                          >
+                            Review This Paper ({selectedPaperFlags.length})
+                          </button>
+                        )}
+                        {flaggedQuestions.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAdminExamFlaggedModal()}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-amber-600/60 text-amber-300 text-xs font-bold transition"
+                          >
+                            All Courses ({flaggedQuestions.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                    <div className="p-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-300">
+                        Completed Submissions for Selected Examination
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        {flaggedAttemptCountForPaper > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setGradingFlaggedOnly((prev) => !prev)}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition inline-flex items-center gap-1.5 ${
+                              gradingFlaggedOnly
+                                ? "bg-amber-500 border-amber-400 text-slate-950"
+                                : "bg-amber-950/70 border-amber-700/70 text-amber-300 hover:bg-amber-900"
+                            }`}
+                          >
+                            <Flag className="w-3 h-3" />
+                            <span>Flagged Only ({flaggedAttemptCountForPaper})</span>
+                          </button>
+                        )}
+                        {gradingAttempts.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleExportGradingPdf("obj_only")}
+                            className="px-2.5 py-1 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 text-[11px] font-bold rounded-lg transition inline-flex items-center gap-1.5 active:scale-95"
+                          >
+                            <Download className="w-3 h-3 text-emerald-400" />
+                            <span>Download OBJ Score Sheet (PDF)</span>
+                          </button>
+                        )}
+                        <span className="text-xs text-slate-500">
+                          {visibleGradingAttempts.length} of {gradingAttempts.length} students
+                        </span>
+                      </div>
+                    </div>
+
+                    {visibleGradingAttempts.length === 0 ? (
                 <div className="p-12 text-center text-slate-400 text-xs space-y-2">
                   <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center mx-auto text-slate-500">
                     <ClipboardList className="w-5 h-5" />
@@ -3347,22 +3614,33 @@ export default function AdminCbtDashboardClient({
                 <>
                   {/* Mobile Grading Cards View (Visible on small screens) */}
                   <div className="md:hidden divide-y divide-slate-800">
-                    {gradingAttempts.map((att) => {
+                    {visibleGradingAttempts.map((att) => {
                       const isSaving = savingAttemptId === att.id;
                       const isSaved = saveSuccessMsg[att.id];
                       const currentTheoryInput = Number(gradingScores[att.id] ?? 0) || 0;
-                      const dynamicTotal = att.objectiveScore + currentTheoryInput;
+                      const dynamicTotal = Number(att.objectiveScore || 0) + currentTheoryInput;
+                      const isAwaiting = isAttemptAwaitingTheory(att);
 
                       return (
                         <div key={att.id} className="p-4 space-y-3">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <div className="font-bold text-white text-sm flex items-center gap-2">
+                              <div className="font-bold text-white text-sm flex items-center gap-2 flex-wrap">
                                 <span>{att.studentFullName}</span>
                                 {!att.isCompleted && (
                                   <span className="px-2 py-0.5 rounded-full bg-amber-950 border border-amber-600 text-amber-300 text-[9px] font-extrabold uppercase">
                                     Interrupted / In Progress ({att.answeredCount ?? 0} Ans)
                                   </span>
+                                )}
+                                {(att.flaggedQuestionIds?.length ?? 0) > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenAdminAttemptFlaggedModal(att)}
+                                    className="px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600 text-amber-300 text-[10px] font-bold inline-flex items-center gap-1"
+                                  >
+                                    <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                    <span>{att.flaggedQuestionIds!.length} Flagged</span>
+                                  </button>
                                 )}
                               </div>
                               <div className="text-[11px] font-mono text-yellow-400">
@@ -3448,7 +3726,7 @@ export default function AdminCbtDashboardClient({
                                 className="w-full bg-transparent text-white font-mono font-bold text-base focus:outline-none"
                                 placeholder="0"
                               />
-                              {att.theoryScore === null && (
+                              {isAwaiting && (
                                 <span className="text-[9px] text-yellow-400/90 font-medium shrink-0">
                                   Pending
                                 </span>
@@ -3509,17 +3787,29 @@ export default function AdminCbtDashboardClient({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800">
-                        {gradingAttempts.map((att) => {
+                        {visibleGradingAttempts.map((att) => {
                           const isSaving = savingAttemptId === att.id;
                           const isSaved = saveSuccessMsg[att.id];
                           const currentTheoryInput = Number(gradingScores[att.id] ?? 0) || 0;
-                          const dynamicTotal = att.objectiveScore + currentTheoryInput;
+                          const dynamicTotal = Number(att.objectiveScore || 0) + currentTheoryInput;
+                          const isAwaiting = isAttemptAwaitingTheory(att);
 
                           return (
                             <tr key={att.id} className="hover:bg-slate-900/40 transition">
                               <td className="p-3.5">
-                                <div className="font-bold text-white text-sm">
-                                  {att.studentFullName}
+                                <div className="font-bold text-white text-sm flex items-center gap-2 flex-wrap">
+                                  <span>{att.studentFullName}</span>
+                                  {(att.flaggedQuestionIds?.length ?? 0) > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenAdminAttemptFlaggedModal(att)}
+                                      className="px-2 py-0.5 rounded-full bg-amber-950/90 hover:bg-amber-900 border border-amber-600 text-amber-300 text-[10px] font-bold inline-flex items-center gap-1 transition"
+                                      title="Inspect flagged questions from this candidate"
+                                    >
+                                      <Flag className="w-2.5 h-2.5 text-amber-400" />
+                                      <span>{att.flaggedQuestionIds!.length} Flagged</span>
+                                    </button>
+                                  )}
                                 </div>
                                 <div className="text-[11px] font-mono text-yellow-400">
                                   {att.studentAdmNo}
@@ -3590,7 +3880,7 @@ export default function AdminCbtDashboardClient({
                                     }}
                                     className="w-20 px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono font-bold text-sm focus:outline-none focus:border-yellow-500 text-center"
                                   />
-                                  {att.theoryScore === null && (
+                                  {isAwaiting && (
                                     <span className="text-[10px] text-yellow-400/90 font-medium">
                                       (Pending)
                                     </span>
@@ -3679,6 +3969,9 @@ export default function AdminCbtDashboardClient({
                 </>
               )}
             </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -4031,6 +4324,17 @@ export default function AdminCbtDashboardClient({
             </div>
           </div>
         )}
+        <FlaggedQuestionsModal
+          isOpen={Boolean(flaggedModalConfig)}
+          onClose={() => setFlaggedModalConfig(null)}
+          title={flaggedModalConfig?.title}
+          subtitle={flaggedModalConfig?.subtitle}
+          items={flaggedModalConfig?.items || []}
+          highlightStudentAdmNo={flaggedModalConfig?.highlightStudentAdmNo}
+          onEditQuestion={handleAdminEditFlaggedQuestion}
+          isLoading={loadingFlaggedModal}
+        />
+
         {/* Question Diagram Lightbox Modal */}
         {lightboxImageUrl && (
           <div
