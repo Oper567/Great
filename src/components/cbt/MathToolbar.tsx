@@ -422,20 +422,24 @@ export function FloatingMathButton({
   label = "Math & Science Symbols",
   shortLabel = "Math (x²)",
   positionClassName,
+  bottomBarBreakpoint = "sm",
 }: {
   onClick: () => void;
   label?: string;
   shortLabel?: string;
   positionClassName?: string;
+  bottomBarBreakpoint?: "sm" | "md";
 }) {
+  const defaultPosition =
+    bottomBarBreakpoint === "md"
+      ? "fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 md:left-6 md:bottom-6 z-40 px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-xs shadow-[0_8px_25px_rgba(245,158,11,0.45)] flex items-center gap-1.5 sm:gap-2 transition-all hover:scale-105 active:scale-95 border-2 border-yellow-200 max-w-fit pointer-events-auto"
+      : "fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 sm:left-6 sm:bottom-6 z-40 px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-xs shadow-[0_8px_25px_rgba(245,158,11,0.45)] flex items-center gap-1.5 sm:gap-2 transition-all hover:scale-105 active:scale-95 border-2 border-yellow-200 max-w-fit pointer-events-auto";
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={
-        positionClassName ||
-        "fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-3 sm:left-auto sm:right-6 sm:bottom-6 z-40 px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black text-xs shadow-[0_8px_25px_rgba(245,158,11,0.45)] flex items-center gap-1.5 sm:gap-2 transition-all hover:scale-105 active:scale-95 border-2 border-yellow-200 max-w-fit pointer-events-auto"
-      }
+      className={positionClassName || defaultPosition}
       title="Open Floating Math & Formula Keyboard"
     >
       <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 animate-pulse shrink-0" />

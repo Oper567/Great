@@ -245,8 +245,13 @@ body {
     overflow: hidden !important;
   }
 
-  .no-print {
+  .no-print,
+  .widget-visible,
+  iframe[title*="chat" i],
+  iframe[src*="tawk.to" i],
+  div[id^="tawk-"] {
     display: none !important;
+    visibility: hidden !important;
   }
 
   .page-transition-shell {

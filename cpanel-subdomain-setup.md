@@ -63,9 +63,14 @@ Your application uses a **unified single-process architecture**:
 | `NEXT_PUBLIC_APP_URL` | `https://greatfavourmontessori.com.ng` | Main school website URL |
 | `NEXT_PUBLIC_CBT_URL` | `https://cbt.greatfavourmontessori.com.ng` | Dedicated CBT portal URL |
 | `CBT_SUBDOMAIN_PREFIX` | `cbt` | Subdomain routing prefix |
+| `UV_THREADPOOL_SIZE` | `1` | Keeps libuv worker threads minimal under CloudLinux `NPROC` limits |
+| `NODE_OPTIONS` | `--max-old-space-size=384 --v8-pool-size=1` | Caps V8 background threads & heap from startup |
+| `FORCE_PURE_PG` | `true` | Uses pure-JS PostgreSQL pool (zero Rust/Tokio threads) |
+| `PG_POOL_MAX` | `3` | Caps PostgreSQL connections per Node worker |
 | `COOKIE_DOMAIN` | *(Optional, leave blank or set to `.greatfavourmontessori.com.ng`)* | Cookie scope |
 
 4. Click **Save** and then click **Restart** to apply the new environment variables.
+   *(Tip: If upgrading on LiteSpeed/CloudLinux and old `lsnode` workers stay alive after clicking **Stop App**, run `pkill -f lsnode` in cPanel Terminal before clicking **Start App**.)*
 
 ---
 

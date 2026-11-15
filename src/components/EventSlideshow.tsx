@@ -95,8 +95,8 @@ export default function EventSlideshow() {
   const active = EVENT_SLIDES[currentSlide];
 
   return (
-    <section className="py-10 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-10">
+    <section className="py-7 sm:py-14 lg:py-18 bg-slate-50 border-b border-slate-200 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-4 sm:space-y-8">
         {/* Editorial Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up">
           <div className="space-y-1.5 sm:space-y-2 max-w-2xl">
@@ -128,7 +128,7 @@ export default function EventSlideshow() {
         >
           {/* Featured Stage (Left 8 cols) */}
           <div className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-card overflow-hidden flex flex-col justify-between reveal-init reveal-fade-left delay-100">
-            <div className="relative h-48 sm:h-96 lg:h-[420px] w-full bg-slate-900 overflow-hidden">
+            <div className="relative h-60 sm:h-80 lg:h-[380px] w-full bg-slate-900 overflow-hidden">
               {EVENT_SLIDES.map((slide, index) => (
                 <div
                   key={slide.id}

@@ -73,8 +73,8 @@ export default function DigitalCampusGateway() {
       : portals.filter((p) => p.category === activeTab);
 
   return (
-    <section className="py-10 sm:py-16 lg:py-24 bg-primary-950 text-white border-b border-primary-900">
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-10">
+    <section className="py-7 sm:py-14 lg:py-18 bg-primary-950 text-white border-b border-primary-900">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-4 sm:space-y-8">
         {/* Top Editorial Header */}
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 sm:gap-6 reveal-init reveal-fade-up">
           <div className="space-y-1.5 sm:space-y-3 max-w-2xl">
@@ -124,10 +124,10 @@ export default function DigitalCampusGateway() {
           {filteredPortals.map((portal, index) => (
             <div
               key={portal.id}
-              className="bg-primary-900/50 rounded-xl p-4 sm:p-6 border border-primary-800 hover:border-secondary-400/60 transition-all duration-300 flex flex-col justify-between group reveal-init reveal-fade-up"
+              className="bg-primary-900/50 rounded-xl p-3.5 sm:p-5 border border-primary-800 hover:border-secondary-400/60 transition-all duration-300 flex flex-col justify-between group reveal-init reveal-fade-up"
               style={{ transitionDelay: `${(index + 1) * 80}ms` }}
             >
-              <div className="space-y-2.5 sm:space-y-4">
+              <div className="space-y-2 sm:space-y-3">
                 {/* Top Row: Icon & Institutional Tag */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-primary-950 border border-primary-800 flex items-center justify-center shrink-0">

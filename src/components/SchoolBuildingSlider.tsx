@@ -190,7 +190,7 @@ export default function SchoolBuildingSlider() {
           onTouchEnd={handleTouchEnd}
         >
           {/* Visual Image Stage */}
-          <div className="relative w-full h-52 sm:h-96 md:h-[460px] lg:h-[520px] overflow-hidden bg-slate-950">
+          <div className="relative w-full h-64 sm:h-96 md:h-[480px] lg:h-[560px] overflow-hidden bg-slate-950">
             {BUILDING_SLIDES.map((slide, idx) => (
               <div
                 key={slide.id}
@@ -306,7 +306,7 @@ export default function SchoolBuildingSlider() {
                   key={slide.id}
                   type="button"
                   onClick={() => goToSlide(idx)}
-                  className={`relative shrink-0 rounded-lg overflow-hidden transition-all w-20 h-14 sm:w-24 sm:h-16 border-2 ${
+                  className={`relative shrink-0 rounded-lg overflow-hidden transition-all w-16 h-12 sm:w-20 sm:h-14 border-2 ${
                     isActive
                       ? "border-secondary-400 opacity-100"
                       : "border-transparent opacity-55 hover:opacity-90"

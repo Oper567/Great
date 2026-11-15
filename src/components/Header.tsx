@@ -68,8 +68,8 @@ export default function Header() {
 
   return (
     <>
-      {/* TOP INSTITUTIONAL UTILITY BAR */}
-      <div className="bg-primary-950 text-slate-200 text-xs border-b border-primary-900 relative z-50">
+      {/* TOP INSTITUTIONAL UTILITY BAR (Hidden on mobile view) */}
+      <div className="hidden md:block bg-primary-950 text-slate-200 text-xs border-b border-primary-900 relative z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-4">
           {/* Institutional Notice */}
           <div className="hidden md:flex items-center gap-3 min-w-0">

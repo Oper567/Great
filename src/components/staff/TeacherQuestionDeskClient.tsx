@@ -3370,9 +3370,9 @@ export default function TeacherQuestionDeskClient({
           </div>
         )}
 
-        {/* Mobile Floating Action Pill for Teacher Questions Desk */}
+        {/* Mobile Floating Action Pill for Teacher Questions Desk (bottom-left above Math button so Tawk.to stays clear on bottom-right) */}
         {activeWorkspace === "questions" && submissionType === "MANUAL" && (
-          <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] sm:bottom-5 right-4 z-40 md:hidden flex flex-col items-end gap-2 pointer-events-auto">
+          <div className="fixed bottom-[calc(7.5rem+env(safe-area-inset-bottom))] sm:bottom-20 left-3 sm:left-6 z-40 md:hidden flex flex-col items-start gap-2 pointer-events-auto">
             <button
               type="button"
               onClick={() => {

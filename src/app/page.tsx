@@ -137,15 +137,6 @@ const CORE_PILLARS = [
     icon: HeartHandshake,
     delay: "delay-300",
   },
-  {
-    title: "Accredited Examination Success",
-    subtitle: "100% Government Approved",
-    description:
-      "Structured continuous assessment (15 CA1 + 15 CA2 + 70 Exam) and intensive coaching for FLSC, BECE, WASSCE, and NECO examinations.",
-    footer: "Proven Academic Track Record",
-    icon: GraduationCap,
-    delay: "delay-400",
-  },
 ];
 
 const PARENT_TESTIMONIALS = [
@@ -198,7 +189,7 @@ export default function HomePage() {
         onMouseLeave={() => setHeroPaused(false)}
       >
         {/* Background Slides */}
-        <div className="relative min-h-[410px] sm:min-h-[600px] lg:min-h-[660px] flex items-center">
+        <div className="relative min-h-[410px] sm:min-h-[520px] lg:min-h-[580px] flex items-center">
           {HERO_SLIDES.map((slide, idx) => (
             <div
               key={slide.id}
@@ -224,7 +215,7 @@ export default function HomePage() {
           ))}
 
           {/* Hero Foreground Copy */}
-          <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 py-8 sm:py-20 lg:py-24 relative z-20 w-full">
+          <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 py-6 sm:py-16 lg:py-20 relative z-20 w-full">
             <div className="max-w-3xl space-y-3.5 sm:space-y-6 reveal-init reveal-fade-up delay-100">
               {/* Institutional Eyebrow */}
               <div className="inline-flex items-center gap-2 max-w-full bg-primary-900/90 border border-white/15 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded text-[10px] sm:text-xs font-bold uppercase tracking-wider text-secondary-400">
@@ -379,12 +370,12 @@ export default function HomePage() {
       {/* =====================================================================
           3. WELCOME & INSTITUTIONAL CHARTER SPLIT (EMERALD "WHO WE ARE" LAYOUT)
           ===================================================================== */}
-      <section className="py-10 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
+      <section className="py-7 sm:py-14 lg:py-18 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center">
             {/* Left Column: Editorial Campus Visual Composition */}
             <div className="lg:col-span-5 space-y-3 sm:space-y-4 reveal-init reveal-fade-left delay-100">
-              <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-card h-44 sm:h-auto sm:aspect-[4/3] bg-slate-100 group">
+              <div className="relative rounded-xl overflow-hidden border border-slate-200 shadow-card h-60 sm:h-auto sm:aspect-[4/3] bg-slate-100 group">
                 <Image
                   src="/assets/images/campus-courtyard.jpg"
                   alt="Great-Favour Montessori School Courtyard and Scholars"
@@ -502,8 +493,8 @@ export default function HomePage() {
       {/* =====================================================================
           4. OUR SCHOOLS, ONE SHARED VISION (EMERALD ACADEMIC DIVISIONS GRID)
           ===================================================================== */}
-      <section className="py-10 sm:py-16 lg:py-24 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
+      <section className="py-7 sm:py-14 lg:py-18 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-9">
           {/* Editorial Header */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-1.5 sm:space-y-2.5 max-w-2xl">
@@ -536,8 +527,8 @@ export default function HomePage() {
                 className={`editorial-card rounded-xl overflow-hidden flex flex-col justify-between group reveal-init reveal-fade-up ${div.delay}`}
               >
                 <div>
-                  {/* Card Image Frame — Compact h-36 on mobile */}
-                  <div className="relative h-36 sm:h-48 w-full overflow-hidden bg-slate-200">
+                  {/* Card Image Frame */}
+                  <div className="relative h-48 sm:h-48 w-full overflow-hidden bg-slate-200">
                     <Image
                       src={div.image}
                       alt={div.title}
@@ -596,7 +587,7 @@ export default function HomePage() {
       {/* =====================================================================
           5. WHY FAMILIES CHOOSE GREAT-FAVOUR (4 INSTITUTIONAL PILLARS)
           ===================================================================== */}
-      <section className="py-10 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
+      <section className="py-7 sm:py-14 lg:py-18 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
           <div className="max-w-3xl space-y-1.5 sm:space-y-2.5 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
@@ -611,8 +602,8 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* 4 Pillars Grid — Compact 2x2 Grid on Mobile, 4-Col on Desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {/* 3 Pillars Grid — Compact Stack on Mobile, 3-Col Balanced on Tablet/Desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5 lg:gap-6">
             {CORE_PILLARS.map((pillar, idx) => {
               const IconComponent = pillar.icon;
               return (
@@ -668,7 +659,7 @@ export default function HomePage() {
       {/* =====================================================================
           8. VOICES OF OUR PARENTS & ADMISSIONS INVITATION
           ===================================================================== */}
-      <section className="py-10 sm:py-16 lg:py-24 bg-white border-b border-slate-200">
+      <section className="py-7 sm:py-14 lg:py-18 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-1.5 sm:space-y-2.5 max-w-2xl">

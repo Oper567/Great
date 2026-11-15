@@ -62,11 +62,14 @@ if (!process.env.FORCE_PURE_PG) {
   process.env.FORCE_PURE_PG = 'true';
 }
 
-// Restrict Tokio thread spawning to prevent CloudLinux LVE thread exhaustion panic ('PANIC: timer has gone away')
+// Restrict Tokio/libuv/V8 thread spawning to prevent CloudLinux LVE NPROC exhaustion
 process.env.TOKIO_WORKER_THREADS = '1';
 process.env.RAYON_NUM_THREADS = '1';
 process.env.PRISMA_CLIENT_ENGINE_TYPE = 'library';
 process.env.PRISMA_CLI_QUERY_ENGINE_TYPE = 'library';
+if (!process.env.UV_THREADPOOL_SIZE) {
+  process.env.UV_THREADPOOL_SIZE = '2';
+}
 
 // Guarantee minimal connection pool to prevent CloudLinux nproc thread exhaustion
 if (process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('connection_limit=')) {
@@ -83,9 +86,16 @@ if (!process.env.PG_POOL_MAX) {
   process.env.PG_POOL_MAX = '3';
 }
 
-// Enforce max-old-space-size for CloudLinux LVE memory compliance (prevents OOM aborts under strict PMEM limits)
-if (!process.env.NODE_OPTIONS || !process.env.NODE_OPTIONS.includes('--max-old-space-size')) {
-  process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS || ''} --max-old-space-size=384`.trim();
+// Enforce heap & V8 pool defaults for any child processes (set in cPanel Env Vars for main process)
+if (!process.env.NODE_OPTIONS) {
+  process.env.NODE_OPTIONS = '--max-old-space-size=384 --v8-pool-size=1';
+} else {
+  if (!process.env.NODE_OPTIONS.includes('--max-old-space-size')) {
+    process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS} --max-old-space-size=384`.trim();
+  }
+  if (!process.env.NODE_OPTIONS.includes('--v8-pool-size')) {
+    process.env.NODE_OPTIONS = `${process.env.NODE_OPTIONS} --v8-pool-size=1`.trim();
+  }
 }
 
 // 1. Auto-normalize permissions to prevent EACCES / dlopen errors in cPanel/CloudLinux
@@ -112,9 +122,11 @@ function normalizePermissions(targetPath) {
   }
 }
 
-normalizePermissions(path.join(__dirname, 'public'));
-normalizePermissions(path.join(__dirname, '.next'));
-normalizePermissions(path.join(__dirname, '.prisma'));
+const localPrisma = path.join(__dirname, '.prisma');
+const targetPrisma = path.join(__dirname, 'node_modules', '.prisma');
+const nextDirPath = path.join(__dirname, '.next');
+const buildIdPath = path.join(nextDirPath, 'BUILD_ID');
+const bootMarkerPath = path.join(nextDirPath, '.gfms_boot_synced');
 
 // 2. Locate cPanel Node VirtualEnv lib directory safely inside user home only
 let venvLib = null;
@@ -131,61 +143,96 @@ if (venvLib) {
   const localEnv = path.join(__dirname, '.env');
   if (fs.existsSync(localEnv)) {
     try {
-      fs.copyFileSync(localEnv, venvEnv);
-      console.log('✓ Successfully synced .env to cPanel virtualenv path:', venvEnv);
+      let needsEnvSync = !fs.existsSync(venvEnv);
+      if (!needsEnvSync) {
+        const localStat = fs.statSync(localEnv);
+        const venvStat = fs.statSync(venvEnv);
+        needsEnvSync = localStat.mtimeMs > venvStat.mtimeMs || localStat.size !== venvStat.size;
+      }
+      if (needsEnvSync) {
+        fs.copyFileSync(localEnv, venvEnv);
+        console.log('✓ Successfully synced .env to cPanel virtualenv path:', venvEnv);
+      }
     } catch (_) {}
   }
 }
 
-// 2b. Auto-sync pre-bundled packages (pg, bcryptjs) into virtualenv / symlinked node_modules (Zero-Install)
-const prebundledDir = path.join(__dirname, 'prebundled_modules');
-if (fs.existsSync(prebundledDir)) {
-  // Target virtualenv node_modules first, or root symlink only if it already exists
-  const targetNm = (venvLib && fs.existsSync(path.join(venvLib, 'node_modules')))
-    ? path.join(venvLib, 'node_modules')
-    : (fs.existsSync(path.join(__dirname, 'node_modules')) ? path.join(__dirname, 'node_modules') : null);
-
-  if (targetNm && fs.existsSync(targetNm)) {
-    try {
-      const pkgs = fs.readdirSync(prebundledDir);
-      for (const pkg of pkgs) {
-        const src = path.join(prebundledDir, pkg);
-        const dest = path.join(targetNm, pkg);
-        if (!fs.existsSync(dest)) {
-          fs.cpSync(src, dest, { recursive: true });
-        }
-      }
-      console.log(`✓ Successfully synced zero-install packages (pg, bcryptjs) into ${path.relative(__dirname, targetNm)}`);
-    } catch (err) {
-      console.warn('[GFMS Server] Warning syncing prebundled packages:', err.message);
-    }
+// Compute current build stamp so recursive chmod & .prisma copies run once per deploy instead of blocking every worker cold start
+let currentBootStamp = 'no-build-id';
+try {
+  if (fs.existsSync(buildIdPath)) {
+    currentBootStamp = fs.readFileSync(buildIdPath, 'utf8').trim() || 'empty-build-id';
   }
+} catch (_) {}
+currentBootStamp = `${currentBootStamp}:${fs.existsSync(localPrisma) ? '1' : '0'}:${__dirname}`;
+
+let alreadySyncedThisBuild = false;
+try {
+  if (fs.existsSync(bootMarkerPath)) {
+    alreadySyncedThisBuild = fs.readFileSync(bootMarkerPath, 'utf8').trim() === currentBootStamp;
+  }
+} catch (_) {}
+
+const prismaTargets = [];
+if (venvLib && fs.existsSync(path.join(venvLib, 'node_modules'))) {
+  prismaTargets.push(path.join(venvLib, 'node_modules', '.prisma'));
 }
+if (fs.existsSync(path.join(__dirname, 'node_modules'))) {
+  prismaTargets.push(targetPrisma);
+}
+const missingPrismaTarget =
+  fs.existsSync(localPrisma) &&
+  prismaTargets.some((t) => !fs.existsSync(path.join(t, 'client', 'default.js')));
 
-// 3. Auto-sync pre-packaged .prisma engines into virtualenv and symlinked node_modules
-const localPrisma = path.join(__dirname, '.prisma');
-const targetPrisma = path.join(__dirname, 'node_modules', '.prisma');
-
-if (fs.existsSync(localPrisma)) {
+if (!alreadySyncedThisBuild || missingPrismaTarget) {
+  normalizePermissions(path.join(__dirname, 'public'));
+  normalizePermissions(nextDirPath);
   normalizePermissions(localPrisma);
-  const targets = [];
-  if (venvLib && fs.existsSync(path.join(venvLib, 'node_modules'))) {
-    targets.push(path.join(venvLib, 'node_modules', '.prisma'));
-  }
-  if (fs.existsSync(path.join(__dirname, 'node_modules'))) {
-    targets.push(targetPrisma);
-  }
-  for (const tPrisma of targets) {
-    try {
-      if (!fs.existsSync(tPrisma)) {
-        fs.mkdirSync(tPrisma, { recursive: true });
+
+  // 2b. Auto-sync pre-bundled packages (pg, bcryptjs) into virtualenv / symlinked node_modules (Zero-Install)
+  const prebundledDir = path.join(__dirname, 'prebundled_modules');
+  if (fs.existsSync(prebundledDir)) {
+    const targetNm = (venvLib && fs.existsSync(path.join(venvLib, 'node_modules')))
+      ? path.join(venvLib, 'node_modules')
+      : (fs.existsSync(path.join(__dirname, 'node_modules')) ? path.join(__dirname, 'node_modules') : null);
+
+    if (targetNm && fs.existsSync(targetNm)) {
+      try {
+        const pkgs = fs.readdirSync(prebundledDir);
+        for (const pkg of pkgs) {
+          const src = path.join(prebundledDir, pkg);
+          const dest = path.join(targetNm, pkg);
+          if (!fs.existsSync(dest)) {
+            fs.cpSync(src, dest, { recursive: true });
+          }
+        }
+        console.log(`✓ Successfully synced zero-install packages (pg, bcryptjs) into ${path.relative(__dirname, targetNm)}`);
+      } catch (err) {
+        console.warn('[GFMS Server] Warning syncing prebundled packages:', err.message);
       }
-      fs.cpSync(localPrisma, tPrisma, { recursive: true, force: true });
-      normalizePermissions(tPrisma);
-      console.log(`✓ Successfully synced pre-compiled Prisma client into ${path.relative(__dirname, tPrisma)}`);
-    } catch (err) {
-      console.warn('[GFMS Server] Warning syncing .prisma into target:', err.message);
     }
+  }
+
+  // 3. Auto-sync pre-packaged .prisma engines into virtualenv and symlinked node_modules
+  if (fs.existsSync(localPrisma)) {
+    for (const tPrisma of prismaTargets) {
+      try {
+        if (!fs.existsSync(tPrisma)) {
+          fs.mkdirSync(tPrisma, { recursive: true });
+        }
+        fs.cpSync(localPrisma, tPrisma, { recursive: true, force: true });
+        normalizePermissions(tPrisma);
+        console.log(`✓ Successfully synced pre-compiled Prisma client into ${path.relative(__dirname, tPrisma)}`);
+      } catch (err) {
+        console.warn('[GFMS Server] Warning syncing .prisma into target:', err.message);
+      }
+    }
+  }
+
+  if (fs.existsSync(nextDirPath)) {
+    try {
+      fs.writeFileSync(bootMarkerPath, currentBootStamp, 'utf8');
+    } catch (_) {}
   }
 }
 
@@ -376,52 +423,80 @@ app.prepare()
       }
     });
 
-    // HTTP Keep-Alive & Timeout Configuration for Shared Hosting Reverse Proxies (Passenger/Apache/LiteSpeed)
-    // Prevents 502/504 Bad Gateway race conditions under heavy load bursts
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000;
+    // HTTP Keep-Alive & Timeout Configuration for Shared Hosting Reverse Proxies (LiteSpeed/Passenger/Apache)
+    // Short keep-alive prevents stale idle proxy sockets from pinning old workers on recycle
+    server.keepAliveTimeout = 15000;
+    server.headersTimeout = 16000;
     server.requestTimeout = 30000;
+
+    // Exit cleanly on fatal socket bind errors so broken workers cannot linger as zombies
+    server.on('error', (err) => {
+      console.error('❌ [GFMS Server Socket Error]:', err);
+      if (!server.listening || err?.code === 'EADDRINUSE' || err?.code === 'EACCES') {
+        process.exit(1);
+      }
+    });
 
     // Server listening configuration
     if (isSocket) {
-      // Unix domain socket binding (Phusion Passenger on cPanel)
+      // Unix domain socket binding (Phusion Passenger / LiteSpeed LSAPI on cPanel)
       server.listen(rawPort, () => {
-        console.log(`✓ GFMS Production Server active on Passenger Unix Socket: ${rawPort}`);
+        console.log(`✓ GFMS Production Server active on Unix Socket: ${rawPort}`);
       });
     } else {
-      // Standard TCP Port binding (Local dev, standalone VPS, or TCP-mode Passenger)
+      // Standard TCP Port binding (Local dev, standalone VPS, or TCP-mode reverse proxy)
       server.listen(port, hostname, () => {
         console.log(`✓ GFMS Production Server listening at http://${hostname}:${port} (NODE_ENV: ${process.env.NODE_ENV})`);
       });
     }
 
-    // Critical Process Crash Resilience for Cheap Shared Hosting
-    // Prevents a single unhandled promise rejection or network drop from crashing the Node.js server
+    // Critical Process Crash Resilience for Shared Hosting
+    // Preserve process on transient runtime errors, but exit if the HTTP listener itself failed/died
     process.on('uncaughtException', (err) => {
-      console.error('[GFMS Critical Resilience] Intercepted uncaught exception (process preserved):', err?.message || err);
+      console.error('[GFMS Critical Resilience] Intercepted uncaught exception:', err?.message || err);
+      if (!server.listening || err?.code === 'EADDRINUSE' || err?.code === 'EACCES') {
+        process.exit(1);
+      }
     });
 
     process.on('unhandledRejection', (reason) => {
       console.error('[GFMS Critical Resilience] Intercepted unhandled rejection (process preserved):', reason);
     });
 
-    // Graceful shutdown handling for Passenger process restarts
+    // Fast, guaranteed shutdown so recycled LiteSpeed/Passenger workers never accumulate against CloudLinux NPROC limits
+    let isShuttingDown = false;
     const gracefulShutdown = (signal) => {
-      console.log(`[GFMS Server] Received ${signal}. Initiating graceful shutdown...`);
+      if (isShuttingDown) return;
+      isShuttingDown = true;
+      console.log(`[GFMS Server] Received ${signal}. Initiating fast graceful shutdown...`);
+
+      const forceExitTimer = setTimeout(() => {
+        console.warn('[GFMS Server] Closing remaining sockets on shutdown timeout.');
+        if (typeof server.closeAllConnections === 'function') {
+          server.closeAllConnections();
+        }
+        process.exit(0);
+      }, 3000);
+
+      if (typeof server.closeIdleConnections === 'function') {
+        server.closeIdleConnections();
+      }
+
+      if (global.__gfmsPgPool && typeof global.__gfmsPgPool.end === 'function') {
+        global.__gfmsPgPool.end().catch(() => {});
+      }
+
       server.close(() => {
+        clearTimeout(forceExitTimer);
         console.log('[GFMS Server] All connections closed. Exiting process.');
         process.exit(0);
       });
-
-      // Force exit if hanging connections remain after 5s
-      setTimeout(() => {
-        console.error('[GFMS Server] Force termination timeout reached.');
-        process.exit(1);
-      }, 5000).unref();
     };
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
+    process.on('disconnect', () => gracefulShutdown('IPC_DISCONNECT'));
   })
   .catch((err) => {
     console.error('❌ [GFMS Server Fatal] Failed to prepare Next.js app:', err);

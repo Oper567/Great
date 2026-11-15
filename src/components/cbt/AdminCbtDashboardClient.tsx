@@ -4064,8 +4064,14 @@ export default function AdminCbtDashboardClient({
             </div>
           </div>
         )}
-        {/* Mobile Floating Action Button (FAB) */}
-        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 md:hidden flex flex-col items-end gap-2 pointer-events-auto">
+        {/* Mobile Floating Action Button (FAB) — bottom-left so Tawk.to remains clear on bottom-right */}
+        <div
+          className={`fixed left-3 z-40 md:hidden flex flex-col items-start gap-2 pointer-events-auto ${
+            activeTab === "questions"
+              ? "bottom-[calc(7.5rem+env(safe-area-inset-bottom))]"
+              : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))]"
+          }`}
+        >
           {activeTab === "exams" && (
             <button
               type="button"
@@ -4101,6 +4107,7 @@ export default function AdminCbtDashboardClient({
               onClick={() => setIsAdminMathOpen(true)}
               label="Math &amp; Science Symbols"
               shortLabel="Math (x²)"
+              bottomBarBreakpoint="md"
             />
             <MathToolbar
               isModal

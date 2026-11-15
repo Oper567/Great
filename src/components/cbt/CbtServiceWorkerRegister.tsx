@@ -10,12 +10,12 @@ export default function CbtServiceWorkerRegister() {
 
     const registerSW = async () => {
       try {
-        // Purge any legacy v1/v2 service worker caches that could hold stale CSS hashes
+        // Purge any legacy service worker caches that could hold stale HTML/CSS hashes
         if ("caches" in window) {
           const keys = await window.caches.keys();
           await Promise.all(
             keys
-              .filter((k) => k !== "gfms-cbt-cache-v3")
+              .filter((k) => k !== "gfms-cbt-cache-v4")
               .map((k) => window.caches.delete(k))
           );
         }

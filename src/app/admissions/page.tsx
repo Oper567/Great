@@ -230,11 +230,11 @@ export default function AdmissionsPage() {
       </section>
 
       {/* INTERACTIVE AGE & CLASS PLACEMENT FINDER */}
-      <section id="class-finder" className="py-10 sm:py-14 lg:py-20 bg-slate-50 border-b border-slate-200 scroll-mt-20">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 reveal-init reveal-fade-up">
+      <section id="class-finder" className="py-7 sm:py-12 lg:py-16 bg-slate-50 border-b border-slate-200 scroll-mt-20">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-4 sm:space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-2.5 reveal-init reveal-fade-up">
             <div>
-              <div className="flex items-center gap-2.5 mb-1.5">
+              <div className="flex items-center gap-2.5 mb-1">
                 <span className="w-8 h-[2px] bg-primary-800" />
                 <span className="text-[11px] font-extrabold uppercase tracking-widest text-primary-800">
                   Interactive Placement Guide
@@ -258,7 +258,7 @@ export default function AdmissionsPage() {
                   key={div.id}
                   type="button"
                   onClick={() => setSelectedDivisionId(div.id)}
-                  className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all ${
+                  className={`p-2 sm:p-3 rounded-xl border text-left transition-all ${
                     isSelected
                       ? "bg-primary-950 text-white border-primary-950 shadow-sm"
                       : "bg-white text-slate-800 border-slate-200 hover:border-primary-300"
@@ -280,15 +280,15 @@ export default function AdmissionsPage() {
           </div>
 
           {/* Selected Division Detail Card — Compact */}
-          <div className="editorial-card p-4 sm:p-6 bg-white grid grid-cols-1 lg:grid-cols-12 gap-5 items-start reveal-init reveal-fade-up delay-150">
-            <div className="lg:col-span-7 space-y-3">
+          <div className="editorial-card p-3.5 sm:p-5 bg-white grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start reveal-init reveal-fade-up delay-150">
+            <div className="lg:col-span-7 space-y-2.5">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-secondary-50 border border-secondary-200 text-secondary-900 text-[11px] font-extrabold">
                 <GraduationCap className="w-3.5 h-3.5 text-primary-900" />
                 <span>Recommended for Ages {activePlacement.ageRange}</span>
               </div>
 
               <div>
-                <h3 className="text-lg sm:text-xl font-extrabold text-primary-950">
+                <h3 className="text-base sm:text-xl font-extrabold text-primary-950">
                   {activePlacement.divisionTitle}
                 </h3>
                 <p className="text-xs font-semibold text-primary-800 mt-0.5">
@@ -296,37 +296,37 @@ export default function AdmissionsPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
+              <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary-800 block">
-                    Entrance Assessment Format
+                    Assessment Format
                   </span>
-                  <p className="text-xs text-slate-700 leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-slate-700 leading-relaxed">
                     {activePlacement.assessment}
                   </p>
                 </div>
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
+                <div className="p-2.5 sm:p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-0.5">
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-primary-800 block">
-                    Core Curriculum Focus
+                    Curriculum Focus
                   </span>
-                  <p className="text-xs text-slate-700 leading-relaxed">
+                  <p className="text-[11px] sm:text-xs text-slate-700 leading-relaxed">
                     {activePlacement.curriculumFocus}
                   </p>
                 </div>
               </div>
 
-              <div className="pt-1 flex flex-wrap items-center gap-3">
+              <div className="pt-0.5 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() => handleSelectAndApply(activePlacement.targetClassValue)}
-                  className="inline-flex items-center gap-2 bg-primary-950 hover:bg-primary-900 text-white font-extrabold text-xs px-4 py-2.5 rounded-lg transition shadow-2xs"
+                  className="inline-flex items-center gap-2 bg-primary-950 hover:bg-primary-900 text-white font-extrabold text-xs px-3.5 py-2 rounded-lg transition shadow-2xs"
                 >
                   <span>Apply for {activePlacement.divisionTitle}</span>
                   <ArrowRight className="w-3.5 h-3.5 text-secondary-400" />
                 </button>
                 <Link
                   href="/academics"
-                  className="editorial-link text-xs font-bold text-primary-900 py-1.5"
+                  className="editorial-link text-xs font-bold text-primary-900 py-1"
                 >
                   <span>Explore Division Curriculum</span>
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -334,20 +334,20 @@ export default function AdmissionsPage() {
               </div>
             </div>
 
-            <div className="lg:col-span-5 bg-slate-50 rounded-xl p-3.5 sm:p-4 border border-slate-200 space-y-2.5">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+            <div className="lg:col-span-5 bg-slate-50 rounded-xl p-3 sm:p-4 border border-slate-200 space-y-2">
+              <div className="flex items-center gap-2 border-b border-slate-200 pb-1.5">
                 <FileCheck2 className="w-4 h-4 text-primary-800" />
                 <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-primary-950">
                   Required Registration Documents
                 </h4>
               </div>
-              <ul className="space-y-1.5 text-xs text-slate-700">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5 text-xs text-slate-700">
                 {activePlacement.documents.map((doc) => (
                   <li key={doc} className="flex items-start gap-2">
                     <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
                       <Check className="w-2.5 h-2.5" />
                     </span>
-                    <span className="font-medium">{doc}</span>
+                    <span className="font-medium text-[11px] sm:text-xs">{doc}</span>
                   </li>
                 ))}
               </ul>
@@ -357,9 +357,9 @@ export default function AdmissionsPage() {
       </section>
 
       {/* 4-STEP PROCESS & ENROLLMENT FORM */}
-      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-8 sm:space-y-10">
-          <div className="max-w-2xl space-y-1.5 reveal-init reveal-fade-up">
+      <section className="py-7 sm:py-12 lg:py-16 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-9">
+          <div className="max-w-2xl space-y-1 reveal-init reveal-fade-up">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-primary-800" />
               <span className="text-[11px] font-extrabold text-primary-800 uppercase tracking-widest">
@@ -371,7 +371,7 @@ export default function AdmissionsPage() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {[
               {
                 num: "01",
@@ -400,50 +400,72 @@ export default function AdmissionsPage() {
             ].map((step, idx) => (
               <div
                 key={step.num}
-                className="editorial-card p-3.5 sm:p-4 flex flex-col justify-between space-y-2.5 reveal-init reveal-fade-up"
+                className="editorial-card p-3 sm:p-4 flex flex-col justify-between space-y-2 reveal-init reveal-fade-up"
                 style={{ transitionDelay: `${idx * 90}ms` }}
               >
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-primary-950 text-secondary-400 font-mono text-[10px] font-extrabold">
                     STEP {step.num}
                   </span>
                   <h3 className="font-extrabold text-xs sm:text-sm text-primary-950 leading-snug">
                     {step.title}
                   </h3>
-                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed line-clamp-3 sm:line-clamp-none">
+                  <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed line-clamp-2 sm:line-clamp-none">
                     {step.desc}
                   </p>
                 </div>
-                <div className="pt-2 border-t border-slate-100 text-[10px] sm:text-[11px] text-primary-800 font-bold truncate">
+                <div className="pt-1.5 border-t border-slate-100 text-[10px] sm:text-[11px] text-primary-800 font-bold truncate">
                   {step.sub}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* ENROLLMENT FORM */}
+          {/* ENROLLMENT FORM — Compact on Mobile */}
           <div
             id="tour"
-            className="bg-primary-950 text-white rounded-2xl p-5 sm:p-8 lg:p-10 border border-primary-900 shadow-xl scroll-mt-24 reveal-init reveal-fade-up"
+            className="bg-primary-950 text-white rounded-2xl p-4 sm:p-7 lg:p-8 border border-primary-900 shadow-xl scroll-mt-24 reveal-init reveal-fade-up"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-              <div className="lg:col-span-5 space-y-4">
-                <span className="text-[11px] font-extrabold text-slate-950 uppercase tracking-widest bg-secondary-400 px-3 py-1 rounded-md inline-flex items-center gap-1.5">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center">
+              <div className="lg:col-span-5 space-y-2.5 sm:space-y-3.5">
+                <span className="text-[10px] sm:text-[11px] font-extrabold text-slate-950 uppercase tracking-widest bg-secondary-400 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-md inline-flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>Campus Tour &amp; Enrollment Desk</span>
                 </span>
-                <h3 className="text-xl sm:text-3xl font-extrabold text-white leading-snug">
+                <h3 className="text-lg sm:text-2xl lg:text-3xl font-extrabold text-white leading-snug">
                   Schedule a Campus Tour or Request Admission Placement
                 </h3>
                 <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                   Complete this form and our Admissions Officer will contact you within 24 hours to confirm your visit date and diagnostic assessment slot.
                 </p>
-                <div className="grid grid-cols-1 gap-2.5 pt-1 text-xs text-slate-200">
-                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-3 rounded-lg border border-white/10">
+
+                {/* Mobile quick-contact pills */}
+                <div className="flex flex-wrap gap-2 lg:hidden pt-0.5">
+                  <a
+                    href={`tel:${SCHOOL_CONTACT.phones[0].replace(/\s+/g, "")}`}
+                    className="inline-flex items-center gap-1.5 bg-primary-900/80 border border-white/10 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-100"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-secondary-400 shrink-0" />
+                    <span>{SCHOOL_CONTACT.phones[0]}</span>
+                  </a>
+                  <a
+                    href={SCHOOL_CONTACT.whatsappLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-primary-900/80 border border-white/10 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-100"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>WhatsApp: {SCHOOL_CONTACT.whatsapp}</span>
+                  </a>
+                </div>
+
+                {/* Desktop full contact list */}
+                <div className="hidden lg:grid grid-cols-1 gap-2 pt-1 text-xs text-slate-200">
+                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-2.5 rounded-lg border border-white/10">
                     <Phone className="w-4 h-4 text-secondary-400 shrink-0" />
                     <span>Admissions Desk: {SCHOOL_CONTACT.phoneFormatted}</span>
                   </div>
-                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-3 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-2.5 rounded-lg border border-white/10">
                     <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
                     <a
                       href={SCHOOL_CONTACT.whatsappLink}
@@ -454,11 +476,11 @@ export default function AdmissionsPage() {
                       WhatsApp Direct: {SCHOOL_CONTACT.whatsapp}
                     </a>
                   </div>
-                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-3 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-2.5 rounded-lg border border-white/10">
                     <Mail className="w-4 h-4 text-secondary-400 shrink-0" />
                     <span>{SCHOOL_CONTACT.email}</span>
                   </div>
-                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-3 rounded-lg border border-white/10">
+                  <div className="flex items-center gap-2.5 bg-primary-900/80 p-2.5 rounded-lg border border-white/10">
                     <MapPin className="w-4 h-4 text-secondary-400 shrink-0" />
                     <span>Issele-Azagba, Aniocha North LGA, Delta State</span>
                   </div>
@@ -466,13 +488,13 @@ export default function AdmissionsPage() {
               </div>
 
               {/* Form */}
-              <div className="lg:col-span-7 bg-white text-slate-900 rounded-xl p-5 sm:p-7 shadow-lg">
+              <div className="lg:col-span-7 bg-white text-slate-900 rounded-xl p-3.5 sm:p-6 shadow-lg">
                 {tourFormSubmitted ? (
-                  <div className="text-center py-8 space-y-3">
-                    <div className="w-12 h-12 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto">
-                      <Check className="w-6 h-6" />
+                  <div className="text-center py-5 sm:py-7 space-y-2.5">
+                    <div className="w-10 h-10 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto">
+                      <Check className="w-5 h-5" />
                     </div>
-                    <h4 className="text-lg font-extrabold text-primary-950">
+                    <h4 className="text-base sm:text-lg font-extrabold text-primary-950">
                       Inquiry Received by Admissions!
                     </h4>
                     <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
@@ -480,26 +502,26 @@ export default function AdmissionsPage() {
                     </p>
                     <button
                       onClick={() => setTourFormSubmitted(false)}
-                      className="text-xs text-primary-800 font-extrabold underline hover:text-primary-950 pt-2"
+                      className="text-xs text-primary-800 font-extrabold underline hover:text-primary-950 pt-1"
                     >
                       Submit another inquiry
                     </button>
                   </div>
                 ) : (
-                  <form onSubmit={handleTourSubmit} className="space-y-3.5">
-                    <div className="border-b border-slate-200 pb-3">
-                      <h4 className="font-extrabold text-base text-primary-950">
+                  <form onSubmit={handleTourSubmit} className="space-y-2.5 sm:space-y-3">
+                    <div className="border-b border-slate-200 pb-2 sm:pb-2.5">
+                      <h4 className="font-extrabold text-sm sm:text-base text-primary-950">
                         Admissions &amp; Campus Tour Request Form
                       </h4>
-                      <p className="text-xs text-slate-500">
+                      <p className="hidden sm:block text-xs text-slate-500">
                         Enter your family&apos;s details below to reserve an assessment or tour slot.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
-                          Parent / Guardian Name *
+                        <label className="text-[11px] sm:text-xs font-bold text-slate-700 block mb-1 truncate">
+                          Parent / Guardian *
                         </label>
                         <input
                           type="text"
@@ -509,12 +531,12 @@ export default function AdmissionsPage() {
                           onChange={(e) =>
                             setTourFormData({ ...tourFormData, parentName: e.target.value })
                           }
-                          className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
+                          className="w-full min-w-0 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
-                          Phone / WhatsApp Number *
+                        <label className="text-[11px] sm:text-xs font-bold text-slate-700 block mb-1 truncate">
+                          Phone / WhatsApp *
                         </label>
                         <input
                           type="tel"
@@ -524,14 +546,14 @@ export default function AdmissionsPage() {
                           onChange={(e) =>
                             setTourFormData({ ...tourFormData, phone: e.target.value })
                           }
-                          className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
+                          className="w-full min-w-0 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
+                        <label className="text-[11px] sm:text-xs font-bold text-slate-700 block mb-1 truncate">
                           Email Address
                         </label>
                         <input
@@ -541,12 +563,12 @@ export default function AdmissionsPage() {
                           onChange={(e) =>
                             setTourFormData({ ...tourFormData, email: e.target.value })
                           }
-                          className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
+                          className="w-full min-w-0 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
-                          Prospective Student Name
+                        <label className="text-[11px] sm:text-xs font-bold text-slate-700 block mb-1 truncate">
+                          Child&apos;s Full Name
                         </label>
                         <input
                           type="text"
@@ -555,22 +577,22 @@ export default function AdmissionsPage() {
                           onChange={(e) =>
                             setTourFormData({ ...tourFormData, childName: e.target.value })
                           }
-                          className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
+                          className="w-full min-w-0 text-xs sm:text-sm px-2.5 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
-                          Target Class Division *
+                        <label className="text-[11px] sm:text-xs font-bold text-slate-700 block mb-1 truncate">
+                          Target Class *
                         </label>
                         <select
                           value={tourFormData.targetClass}
                           onChange={(e) =>
                             setTourFormData({ ...tourFormData, targetClass: e.target.value })
                           }
-                          className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
+                          className="w-full min-w-0 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
                         >
                           <option value="Creche & Toddler">Creche &amp; Toddler (3m - 2y)</option>
                           <option value="Nursery 1 - 3">Montessori Nursery (2 - 5y)</option>
@@ -582,8 +604,8 @@ export default function AdmissionsPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
-                          Preferred Tour / Test Date
+                        <label className="text-[11px] sm:text-xs font-bold text-slate-700 block mb-1 truncate">
+                          Preferred Date
                         </label>
                         <input
                           type="date"
@@ -591,14 +613,14 @@ export default function AdmissionsPage() {
                           onChange={(e) =>
                             setTourFormData({ ...tourFormData, visitDate: e.target.value })
                           }
-                          className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
+                          className="w-full min-w-0 text-xs sm:text-sm px-2 py-2 sm:px-3 sm:py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-primary-800 focus:outline-none bg-slate-50"
                         />
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full font-extrabold text-xs sm:text-sm bg-primary-950 hover:bg-primary-900 text-white py-3 rounded-lg transition shadow-md flex items-center justify-center gap-2 mt-2"
+                      className="w-full font-extrabold text-xs sm:text-sm bg-primary-950 hover:bg-primary-900 text-white py-2.5 sm:py-3 rounded-lg transition shadow-md flex items-center justify-center gap-2 mt-1"
                     >
                       <span>Submit Inquiry &amp; Request Callback</span>
                       <ArrowRight className="w-4 h-4 text-secondary-400" />
@@ -612,19 +634,19 @@ export default function AdmissionsPage() {
       </section>
 
       {/* FREQUENTLY ASKED QUESTIONS (FAQ) ACCORDION */}
-      <section className="py-14 sm:py-20 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="text-center space-y-2 reveal-init reveal-fade-up">
+      <section className="py-8 sm:py-14 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-5 sm:space-y-6">
+          <div className="text-center space-y-1.5 reveal-init reveal-fade-up">
             <div className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-primary-800">
               <HelpCircle className="w-4 h-4 text-secondary-600" />
               <span>Parent Admissions FAQ</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-primary-950 tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-primary-950 tracking-tight">
               Frequently Asked Questions
             </h2>
           </div>
 
-          <div className="space-y-3 reveal-init reveal-fade-up delay-100">
+          <div className="space-y-2.5 reveal-init reveal-fade-up delay-100">
             {ADMISSIONS_FAQS.map((faq, idx) => {
               const isOpen = openFaqIdx === idx;
               return (
@@ -635,9 +657,9 @@ export default function AdmissionsPage() {
                   <button
                     type="button"
                     onClick={() => setOpenFaqIdx(isOpen ? null : idx)}
-                    className="w-full px-5 py-4 text-left flex items-center justify-between gap-4 hover:bg-slate-50/70 transition"
+                    className="w-full px-4 py-3 sm:px-5 sm:py-3.5 text-left flex items-center justify-between gap-4 hover:bg-slate-50/70 transition"
                   >
-                    <span className="font-bold text-sm sm:text-base text-primary-950">
+                    <span className="font-bold text-xs sm:text-sm text-primary-950">
                       {faq.q}
                     </span>
                     <ChevronDown
@@ -647,7 +669,7 @@ export default function AdmissionsPage() {
                     />
                   </button>
                   {isOpen && (
-                    <div className="px-5 pb-4 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100">
+                    <div className="px-4 pb-3.5 pt-1 sm:px-5 sm:pb-4 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100">
                       {faq.a}
                     </div>
                   )}

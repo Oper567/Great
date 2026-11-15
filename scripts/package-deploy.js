@@ -44,6 +44,10 @@ const traceFile = path.join(nextDir, 'trace');
 if (fs.existsSync(traceFile)) {
   try { fs.unlinkSync(traceFile); } catch (_) {}
 }
+const bootSyncMarker = path.join(nextDir, '.gfms_boot_synced');
+if (fs.existsSync(bootSyncMarker)) {
+  try { fs.unlinkSync(bootSyncMarker); } catch (_) {}
+}
 
 // 3. Remove existing deploy.zip if present
 const zipFile = path.join(rootDir, 'deploy.zip');
@@ -155,10 +159,11 @@ try {
     console.log(`\n🎉 Success! Clean deployment archive created: deploy.zip (${sizeInMB} MB)`);
     console.log('\nDeployment Checklist for Truehost cPanel / CloudLinux NodeJS Selector:');
     console.log(' 1. Upload and Extract deploy.zip into your cPanel application root (/home/mqqfpopx/gfms_app).');
-    console.log(' 2. Open cPanel "Setup Node.js App".');
+    console.log(' 2. Open cPanel "Setup Node.js App" and click "Stop App" (run `pkill -f lsnode` in Terminal if stale workers linger).');
     console.log(' 3. Set Application Startup File: server.js and Application Mode: Production.');
-    console.log(' 4. (Zero-Install) You DO NOT need to run "NPM Install" - all packages (pg, bcryptjs) are pre-bundled.');
-    console.log(' 5. Click "Restart" (or Stop, then Start) to run the application.');
+    console.log(' 4. Ensure Environment Variables include UV_THREADPOOL_SIZE=1 and NODE_OPTIONS=--max-old-space-size=384 --v8-pool-size=1.');
+    console.log(' 5. (Zero-Install) You DO NOT need to run "NPM Install" - all packages (pg, bcryptjs) are pre-bundled.');
+    console.log(' 6. Click "Save" then "Start App" to run the application.');
     console.log('======================================================\n');
   }
 } catch (err) {

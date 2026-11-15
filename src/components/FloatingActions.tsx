@@ -28,7 +28,7 @@ export default function FloatingActions() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col gap-2 items-end print:hidden">
+    <div className="fixed bottom-4 left-4 sm:bottom-6 sm:left-6 z-40 flex flex-col gap-2 items-start print:hidden">
       <Link
         href="/result"
         title="Check Termly Result"

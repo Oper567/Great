@@ -125,37 +125,37 @@ function ResultPortalContent() {
   return (
     <main className="min-h-screen bg-slate-100/90 flex flex-col items-center justify-center p-3 sm:p-6 selection:bg-yellow-200">
       {/* Centered Card */}
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden transition-all my-4">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden transition-all my-2 sm:my-4">
         {/* Royal Blue Header */}
-        <div className="bg-blue-800 text-white px-4 sm:px-6 py-4 sm:py-6 text-center relative overflow-hidden">
+        <div className="bg-blue-800 text-white px-4 sm:px-6 py-3 sm:py-5 text-center relative overflow-hidden">
           {/* Subtle Golden Glow Accent */}
           <div className="absolute top-0 right-0 w-36 h-36 bg-yellow-500/15 rounded-full blur-2xl pointer-events-none" />
 
           {/* Official School Crest Logo */}
-          <div className="w-16 h-16 mx-auto relative mb-2.5">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto relative mb-1.5 sm:mb-2">
             <Image
               src="/assets/images/school-logo.jpg"
               alt="Great-Favour Montessori School Official Crest"
-              width={64}
-              height={64}
-              className="object-contain drop-shadow-md mx-auto rounded-full bg-white p-1"
+              width={56}
+              height={56}
+              className="object-contain drop-shadow-md mx-auto rounded-full bg-white p-1 w-full h-full"
               priority
             />
           </div>
 
-          <h1 className="text-lg sm:text-2xl font-black uppercase tracking-tight text-white">
+          <h1 className="text-base sm:text-xl font-black uppercase tracking-tight text-white">
             Result Portal
           </h1>
-          <p className="text-xs text-yellow-400 font-bold uppercase tracking-wider mt-0.5">
+          <p className="text-[11px] sm:text-xs text-yellow-400 font-bold uppercase tracking-wider mt-0.5">
             {SCHOOL_NAME}
           </p>
-          <p className="text-[11px] text-blue-200 font-medium">
+          <p className="text-[10px] sm:text-[11px] text-blue-200 font-medium">
             {SCHOOL_BRAND.motto} &bull; Terminal Assessment &amp; Report Card Dossier
           </p>
         </div>
 
         {/* Card Body & Form */}
-        <div className="p-5 sm:p-7 space-y-5">
+        <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
           {/* Friendly Notification Banner if redirected due to unreleased term */}
           {isNotUploadedRedirect && (
             <div className="bg-amber-50 border-l-4 border-amber-500 p-3.5 rounded-r-xl shadow-sm space-y-2 animate-in fade-in duration-200">
@@ -205,17 +205,17 @@ function ResultPortalContent() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
             {/* Field 1: Student Full Name */}
             <div className="space-y-1">
               <label
                 htmlFor="fullName"
-                className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700"
               >
                 Student Full Name
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <User className="w-4 h-4" />
                 </div>
                 <input
@@ -227,7 +227,7 @@ function ResultPortalContent() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Okeke, Somtochukwu Grace"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-sm placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all capitalize bg-white"
+                  className="w-full pl-9 pr-3 py-2 sm:py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-xs sm:text-sm placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all capitalize bg-white"
                 />
               </div>
             </div>
@@ -237,7 +237,7 @@ function ResultPortalContent() {
               <div className="flex items-center justify-between">
                 <label
                   htmlFor="admNo"
-                  className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                  className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700"
                 >
                   Admission Number
                 </label>
@@ -249,7 +249,7 @@ function ResultPortalContent() {
                 )}
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <UserCheck className="w-4 h-4" />
                 </div>
                 <input
@@ -261,30 +261,30 @@ function ResultPortalContent() {
                   value={admNo}
                   onChange={(e) => setAdmNo(e.target.value.toUpperCase())}
                   placeholder="e.g. GFMS/2024/0501"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-sm placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all uppercase tracking-wide bg-white"
+                  className="w-full pl-9 pr-3 py-2 sm:py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-xs sm:text-sm placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all uppercase tracking-wide bg-white"
                 />
               </div>
             </div>
 
-            {/* Field 3 & 4: Session & Term (Side by Side) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Field 3 & 4: Session & Term (Side by Side on Mobile & Desktop) */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               <div className="space-y-1">
                 <label
                   htmlFor="session"
-                  className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                  className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 truncate"
                 >
                   Academic Session
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Calendar className="w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <select
                     id="session"
                     name="session"
                     value={session}
                     onChange={(e) => setSession(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all bg-white"
+                    className="w-full pl-8 sm:pl-10 pr-2 sm:pr-4 py-2 sm:py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all bg-white"
                   >
                     <option value="2025/2026">2025/2026</option>
                     <option value="2024/2025">2024/2025</option>
@@ -296,24 +296,24 @@ function ResultPortalContent() {
               <div className="space-y-1">
                 <label
                   htmlFor="term"
-                  className="block text-xs font-bold uppercase tracking-wider text-slate-700"
+                  className="block text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-700 truncate"
                 >
                   Academic Term
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Layers className="w-4 h-4" />
+                  <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </div>
                   <select
                     id="term"
                     name="term"
                     value={term}
                     onChange={(e) => setTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all bg-white"
+                    className="w-full pl-8 sm:pl-10 pr-2 sm:pr-4 py-2 sm:py-2.5 rounded-lg border border-slate-300 text-slate-900 font-semibold text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-800 focus:border-transparent transition-all bg-white"
                   >
-                    <option value="Third Term">Third Term (Current Term / Promotional)</option>
-                    <option value="Second Term">Second Term (Mid-Session)</option>
-                    <option value="First Term">First Term (Opening Assessment)</option>
+                    <option value="Third Term">Third Term (Current)</option>
+                    <option value="Second Term">Second Term</option>
+                    <option value="First Term">First Term</option>
                   </select>
                 </div>
               </div>

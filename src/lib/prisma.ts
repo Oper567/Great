@@ -64,8 +64,6 @@ export const USE_PURE_PG = process.env.FORCE_PURE_PG !== "false";
 // ----------------------------------------------------------------------------
 // 3. Pure-JavaScript PostgreSQL Client Pool (Zero Native Threads / Zero Aborts)
 // ----------------------------------------------------------------------------
-let _pgPoolInstance: any = null;
-
 function sanitizePgUrl(rawUrl: string): string {
   if (!rawUrl) return rawUrl;
   try {
@@ -81,41 +79,47 @@ function sanitizePgUrl(rawUrl: string): string {
 }
 
 export function getPgPool(): any {
-  if (!_pgPoolInstance) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { Pool } = require("pg");
-      const cleanedUrl = sanitizePgUrl(connectionString);
-      // On shared cPanel / CloudLinux starter plans, Postgres total user connections are 10-15 max.
-      // Capping pool max at 3 (clamped 2..8) prevents "FATAL: too many clients already" under Passenger bursts.
-      const poolMax = Math.min(
-        8,
-        Math.max(2, parseInt(process.env.PG_POOL_MAX || "3", 10))
-      );
-      _pgPoolInstance = new Pool({
-        connectionString: cleanedUrl,
-        ssl:
-          cleanedUrl.includes("localhost") || cleanedUrl.includes("127.0.0.1")
-            ? false
-            : { rejectUnauthorized: false },
-        max: poolMax,
-        min: 0, // Immediately release idle sockets to avoid hoarding DB connections
-        idleTimeoutMillis: 5000, // 5s idle release to free up connection slots
-        connectionTimeoutMillis: 8000, // 8s timeout queue during bursts
-        statement_timeout: 15000, // 15s max query execution
-      });
-
-      // CRITICAL: Prevent uncaughtException from crashing the Node.js process when
-      // shared hosting abruptly terminates idle client connections
-      _pgPoolInstance.on("error", (err: any) => {
-        console.warn("[GFMS PostgreSQL Pool Warning - Handled]:", err?.message || err);
-      });
-    } catch (err: any) {
-      console.warn("[GFMS Server] Note: Native 'pg' module not loaded:", err.message);
-      return null;
-    }
+  const existingPool = global.__gfmsPgPool;
+  if (existingPool && !existingPool.ending && !existingPool.ended) {
+    return existingPool;
   }
-  return _pgPoolInstance;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Pool } = require("pg");
+    const cleanedUrl = sanitizePgUrl(connectionString);
+    // On shared cPanel / CloudLinux starter plans, Postgres total user connections are 10-15 max.
+    // Capping pool max at 3 (clamped 2..8) prevents "FATAL: too many clients already" under bursts.
+    const poolMax = Math.min(
+      8,
+      Math.max(2, parseInt(process.env.PG_POOL_MAX || "3", 10))
+    );
+    const pool = new Pool({
+      connectionString: cleanedUrl,
+      ssl:
+        cleanedUrl.includes("localhost") || cleanedUrl.includes("127.0.0.1")
+          ? false
+          : { rejectUnauthorized: false },
+      max: poolMax,
+      min: 0, // Immediately release idle sockets to avoid hoarding DB connections
+      idleTimeoutMillis: 5000, // 5s idle release to free up connection slots
+      connectionTimeoutMillis: 8000, // 8s timeout queue during bursts
+      statement_timeout: 15000, // 15s max query execution
+      allowExitOnIdle: true, // Never block worker shutdown/recycle on idle pool clients
+    });
+
+    // CRITICAL: Prevent uncaughtException from crashing the Node.js process when
+    // shared hosting abruptly terminates idle client connections
+    pool.on("error", (err: any) => {
+      console.warn("[GFMS PostgreSQL Pool Warning - Handled]:", err?.message || err);
+    });
+
+    global.__gfmsPgPool = pool;
+    return pool;
+  } catch (err: any) {
+    console.warn("[GFMS Server] Note: Native 'pg' module not loaded:", err.message);
+    return null;
+  }
 }
 
 // Helper for direct parameterized SQL execution with transient retry logic for high concurrency
@@ -186,17 +190,62 @@ export async function queryRawPg<T = any>(sql: string, params: any[] = []): Prom
 // ----------------------------------------------------------------------------
 // Database Auto-Heal & Sequence Synchronization Engine
 // ----------------------------------------------------------------------------
-let _healPromise: Promise<void> | null = null;
-
 export async function ensureDatabaseHealth(): Promise<void> {
-  if (_healPromise) return _healPromise;
-  _healPromise = (async () => {
+  if (global.__gfmsHealPromise) return global.__gfmsHealPromise;
+  global.__gfmsHealPromise = (async () => {
     try {
       const pool = getPgPool();
       if (!pool) return;
 
-      // 1. Auto-heal missing columns in questions and exam_attempts tables
-      await queryRawPg(`
+      // Fast lock-free pre-check so worker restarts avoid unnecessary ACCESS EXCLUSIVE ALTER TABLE locks
+      let schemaReady = false;
+      try {
+        const rows = await queryRawPg<{ ready: boolean }>(`
+          SELECT (
+            (
+              SELECT COUNT(*) FROM information_schema.columns
+              WHERE table_schema = 'public'
+                AND (
+                  (table_name = 'students' AND column_name IN ('arm', 'gender', 'session', 'status'))
+                  OR (table_name = 'objective_questions' AND (column_name = 'image_url' OR (column_name = 'points' AND data_type = 'numeric')))
+                  OR (table_name = 'theory_questions' AND column_name = 'image_url')
+                  OR (table_name = 'teacher_question_submissions' AND column_name = 'image_url')
+                  OR (table_name = 'exams' AND column_name IN ('created_by', 'is_archived'))
+                  OR (table_name = 'exam_attempts' AND (
+                    column_name IN ('teacher_comment', 'is_transmitted_to_admin', 'graded_by_teacher_name')
+                    OR (column_name IN ('objective_score', 'total_score', 'theory_score') AND data_type = 'numeric')
+                  ))
+                  OR (table_name = 'terminal_results' AND column_name IN ('term_label', 'total_possible', 'days_present', 'days_opened', 'days_absent', 'decision', 'is_published'))
+                  OR (table_name = 'admin_users' AND column_name IN ('phone', 'assigned_class', 'assigned_subject', 'status'))
+                  OR (table_name = 'scratch_cards' AND column_name = 'maxUsage' AND column_default LIKE '%3%')
+                )
+            ) = 28
+            AND (
+              SELECT COUNT(*) FROM pg_indexes
+              WHERE schemaname = 'public'
+                AND indexname IN (
+                  'idx_students_adm_no',
+                  'idx_exam_attempts_exam_id',
+                  'idx_exam_attempts_student_exam',
+                  'idx_exam_attempts_is_completed',
+                  'idx_objective_questions_exam_id',
+                  'idx_theory_questions_exam_id',
+                  'idx_exams_is_active',
+                  'idx_terminal_results_adm_no',
+                  'idx_scratch_cards_pin'
+                )
+            ) = 9
+            AND NOT EXISTS (SELECT 1 FROM "scratch_cards" WHERE "maxUsage" = 2 LIMIT 1)
+          ) AS ready
+        `);
+        schemaReady = Boolean(rows[0]?.ready);
+      } catch {
+        schemaReady = false;
+      }
+
+      // 1. Auto-heal missing columns and performance indexes if anything is absent
+      if (!schemaReady) {
+        await queryRawPg(`
         DO $$
         BEGIN
           BEGIN
@@ -277,10 +326,11 @@ export async function ensureDatabaseHealth(): Promise<void> {
             CREATE INDEX IF NOT EXISTS "idx_exams_is_active" ON "exams"("is_active");
             CREATE INDEX IF NOT EXISTS "idx_terminal_results_adm_no" ON "terminal_results"("adm_no");
             CREATE INDEX IF NOT EXISTS "idx_scratch_cards_pin" ON "scratch_cards"("pin");
-          EXCEPTION WHEN OTHERS THEN NULL;
+            EXCEPTION WHEN OTHERS THEN NULL;
           END;
         END $$;
       `);
+      }
 
       // 2. Synchronize all autoincrement sequences to prevent P2002 id unique constraint errors
       await queryRawPg(`
@@ -317,7 +367,7 @@ export async function ensureDatabaseHealth(): Promise<void> {
       console.warn("[GFMS DB Auto-Heal] Note during database auto-heal:", e.message);
     }
   })();
-  return _healPromise;
+  return global.__gfmsHealPromise;
 }
 
 // ----------------------------------------------------------------------------
@@ -328,6 +378,10 @@ declare global {
   var prismaInstance: any | undefined;
   // eslint-disable-next-line no-var
   var rawPrisma: PrismaClient | undefined;
+  // eslint-disable-next-line no-var
+  var __gfmsPgPool: any | undefined;
+  // eslint-disable-next-line no-var
+  var __gfmsHealPromise: Promise<void> | undefined;
 }
 
 let _rawPrismaInstance: PrismaClient | null = null;

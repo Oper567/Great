@@ -58,9 +58,9 @@ export default function AcademicsPage() {
       </section>
 
       {/* ACADEMIC DIVISIONS EXPLORER */}
-      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2 reveal-init reveal-fade-up delay-100">
+      <section className="py-7 sm:py-12 lg:py-16 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-7">
+          <div className="text-center max-w-2xl mx-auto space-y-1.5 reveal-init reveal-fade-up delay-100">
             <span className="text-[11px] font-extrabold text-secondary-700 uppercase tracking-widest bg-secondary-100 px-3 py-1 rounded-full">
               Structured Learning Pathways
             </span>
@@ -84,7 +84,7 @@ export default function AcademicsPage() {
               <button
                 key={tab.value}
                 onClick={() => setActiveDivisionTab(tab.value)}
-                className={`px-3 sm:px-4 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                   activeDivisionTab === tab.value
                     ? "bg-primary-900 text-white shadow-xs"
                     : "text-slate-700 hover:text-primary-800"
@@ -96,30 +96,30 @@ export default function AcademicsPage() {
           </div>
 
           {/* Tab Content — Compact */}
-          <div className="bg-slate-50 rounded-2xl p-4 sm:p-6 lg:p-8 border border-slate-200 reveal-init reveal-fade-up delay-300">
+          <div className="bg-slate-50 rounded-2xl p-4 sm:p-6 border border-slate-200 reveal-init reveal-fade-up delay-300">
             {activeDivisionTab === "creche" && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-secondary-800 bg-secondary-100 px-3 py-1 rounded-full">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center">
+                <div className="lg:col-span-7 space-y-2.5 sm:space-y-3.5">
+                  <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold text-secondary-800 bg-secondary-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">
                     <span>Ages: 3 Months – 2 Years</span><span>&bull;</span><span>Early Childhood Haven</span>
                   </div>
-                  <h3 className="text-2xl font-extrabold text-primary-950">Creche & Infant Learning Center</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-2xl font-extrabold text-primary-950">Creche &amp; Infant Learning Center</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Our Creche offers a warm, sanitized, and sensorially stimulating environment where our infants receive compassionate attention from certified caregivers and pediatric-trained staff.
                   </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium pt-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs text-slate-700 font-medium pt-1">
                     {["Individualized feeding & nap schedules", "Motor skills & sensory development", "Loving caregiver oversight", "Safe, hygienic, supervised sleeping cots"].map((item) => (
                       <li key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-accent-green-700 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-green-700 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-2">Enroll in Creche</Link>
+                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-1">Enroll in Creche</Link>
                 </div>
-                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                  <h4 className="font-bold text-sm text-primary-950 uppercase tracking-wider">Division Highlights</h4>
-                  <div className="space-y-2 text-xs text-slate-600">
+                <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                  <h4 className="font-bold text-xs sm:text-sm text-primary-950 uppercase tracking-wider">Division Highlights</h4>
+                  <div className="space-y-1.5 text-xs text-slate-600">
                     {[{ l: "Caregiver Ratio:", v: "1 : 3 Infants" }, { l: "Operational Hours:", v: "7:00 AM – 5:30 PM" }, { l: "Nutritional Guidance:", v: "Personalized Menu" }].map((r) => (
                       <div key={r.l} className="flex justify-between py-1.5 border-b border-slate-100">
                         <span>{r.l}</span><strong className="text-primary-950">{r.v}</strong>
@@ -131,32 +131,32 @@ export default function AcademicsPage() {
             )}
 
             {activeDivisionTab === "nursery" && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-primary-800 bg-primary-100 px-3 py-1 rounded-full">
-                    <span>Ages: 2 – 5 Years</span><span>&bull;</span><span>Nursery 1, 2 & 3</span>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center">
+                <div className="lg:col-span-7 space-y-2.5 sm:space-y-3.5">
+                  <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold text-primary-800 bg-primary-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">
+                    <span>Ages: 2 – 5 Years</span><span>&bull;</span><span>Nursery 1, 2 &amp; 3</span>
                   </div>
-                  <h3 className="text-2xl font-extrabold text-primary-950">Authentic Montessori Early Childhood</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-2xl font-extrabold text-primary-950">Authentic Montessori Early Childhood</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Designed around the Maria Montessori philosophy. Children interact freely with specialized didactic learning apparatus spanning practical life, sensorial discrimination, mathematics, phonics, and cultural studies.
                   </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium pt-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs text-slate-700 font-medium pt-1">
                     {["Jolly Phonics & early reading fluency", "Sensorial geometric solids & color grading", "Practical life skills (grace, courtesy & care)", "Numeracy with golden bead mathematics"].map((item) => (
                       <li key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-accent-green-700 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-green-700 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-2">Apply for Nursery Admission</Link>
+                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-1">Apply for Nursery Admission</Link>
                 </div>
-                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                  <h4 className="font-bold text-sm text-primary-950 uppercase tracking-wider">Nursery Classes</h4>
-                  <div className="space-y-2 text-xs text-slate-600">
+                <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                  <h4 className="font-bold text-xs sm:text-sm text-primary-950 uppercase tracking-wider">Nursery Classes</h4>
+                  <div className="space-y-1.5 text-xs text-slate-600">
                     {[{ name: "Nursery 1 (Ages 2–3)", desc: "Fine motor control, sensory immersion & vocabulary" }, { name: "Nursery 2 (Ages 3–4)", desc: "Phonetic blending, numbers 1–100, creative arts" }, { name: "Nursery 3 (Ages 4–5)", desc: "Independent reading, elementary arithmetic & science" }].map((cls) => (
-                      <div key={cls.name} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                      <div key={cls.name} className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                         <strong className="text-primary-900 block">{cls.name}</strong>
-                        <span>{cls.desc}</span>
+                        <span className="text-[11px]">{cls.desc}</span>
                       </div>
                     ))}
                   </div>
@@ -165,27 +165,27 @@ export default function AcademicsPage() {
             )}
 
             {activeDivisionTab === "primary" && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-secondary-800 bg-secondary-100 px-3 py-1 rounded-full">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center">
+                <div className="lg:col-span-7 space-y-2.5 sm:space-y-3.5">
+                  <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold text-secondary-800 bg-secondary-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">
                     <span>Ages: 5 – 10 Years</span><span>&bull;</span><span>Basic 1 to Basic 5</span>
                   </div>
-                  <h3 className="text-2xl font-extrabold text-primary-950">Basic Primary Division (Elementary)</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-2xl font-extrabold text-primary-950">Basic Primary Division (Elementary)</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Our primary curriculum marries the Nigerian National Curriculum with Cambridge primary objectives. Learners delve into quantitative reasoning, verbal aptitude, science experiments, digital literacy, and leadership ethics.
                   </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium pt-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs text-slate-700 font-medium pt-1">
                     {["Advanced Mathematics & Verbal Reasoning", "Hands-on Basic Science & Technology", "National Values (Civic, Social & Security)", "Weekly Computer Lab & Coding sessions"].map((item) => (
                       <li key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-accent-green-700 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-green-700 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-2">Enroll for Basic Primary</Link>
+                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-1">Enroll for Basic Primary</Link>
                 </div>
-                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                  <h4 className="font-bold text-sm text-primary-950 uppercase tracking-wider">Primary Structure (~200 Capacity)</h4>
+                <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                  <h4 className="font-bold text-xs sm:text-sm text-primary-950 uppercase tracking-wider">Primary Structure (~200 Capacity)</h4>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {PRIMARY_CLASSES.slice(4).map((cls) => (
                       <div key={cls.id} className="p-2 bg-slate-50 rounded-lg border border-slate-100">
@@ -199,40 +199,40 @@ export default function AcademicsPage() {
             )}
 
             {activeDivisionTab === "jss" && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-primary-800 bg-primary-100 px-3 py-1 rounded-full">
-                    <span>Ages: 10 – 13 Years</span><span>&bull;</span><span>JSS 1, JSS 2 & JSS 3</span>
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center">
+                <div className="lg:col-span-7 space-y-2.5 sm:space-y-3.5">
+                  <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold text-primary-800 bg-primary-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">
+                    <span>Ages: 10 – 13 Years</span><span>&bull;</span><span>JSS 1, JSS 2 &amp; JSS 3</span>
                   </div>
-                  <h3 className="text-2xl font-extrabold text-primary-950">Junior Secondary School & BECE Excellence</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-2xl font-extrabold text-primary-950">Junior Secondary School &amp; BECE Excellence</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Designed to transition students from elementary discovery to academic discipline. Features intensive laboratory work, grouping of National Values and Pre-Vocational Studies, and 100% BECE distinction preparation.
                   </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium pt-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs text-slate-700 font-medium pt-1">
                     {["Full Cognitive Domain: 15 CA1 + 15 CA2 + 70 Exam", "Psychomotor (9 skills) & Affective (12 traits) rating", "Pre-Vocational Studies (Home Econ & Agric)", "Scratch card termly result checker access"].map((item) => (
                       <li key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-accent-green-700 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-green-700 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                  <div className="pt-3 flex items-center gap-3">
+                  <div className="pt-1 flex items-center gap-3">
                     <Link href="/admissions" className="btn-primary text-xs">Enroll in Junior Secondary</Link>
                   </div>
                 </div>
-                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                  <h4 className="font-bold text-sm text-primary-950 uppercase tracking-wider">JSS Classes (BECE Track)</h4>
-                  <div className="space-y-2 text-xs text-slate-600">
+                <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                  <h4 className="font-bold text-xs sm:text-sm text-primary-950 uppercase tracking-wider">JSS Classes (BECE Track)</h4>
+                  <div className="space-y-1.5 text-xs text-slate-600">
                     {[
                       { name: "JSS 1 (Grade 7)", cap: "~80", desc: "Foundational secondary orientation, introductory sciences & languages.", bg: "bg-primary-50/60 border-primary-100" },
                       { name: "JSS 2 (Grade 8)", cap: "~80", desc: "Intermediate sciences, business studies, ICT & critical debating.", bg: "bg-primary-50/60 border-primary-100" },
                       { name: "JSS 3 (Grade 9)", cap: "~80", desc: "Graduation year: State & NECO BECE examination mastery.", bg: "bg-secondary-50/60 border-secondary-200" },
                     ].map((cls) => (
-                      <div key={cls.name} className={`p-3 rounded-xl border ${cls.bg}`}>
+                      <div key={cls.name} className={`p-2.5 rounded-xl border ${cls.bg}`}>
                         <div className="flex justify-between font-bold text-primary-950">
                           <span>{cls.name}</span><span>Cap: {cls.cap}</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-1">{cls.desc}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{cls.desc}</p>
                       </div>
                     ))}
                   </div>
@@ -241,29 +241,29 @@ export default function AcademicsPage() {
             )}
 
             {activeDivisionTab === "sss" && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="inline-flex items-center gap-2 text-xs font-bold text-secondary-800 bg-secondary-100 px-3 py-1 rounded-full">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-center">
+                <div className="lg:col-span-7 space-y-2.5 sm:space-y-3.5">
+                  <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold text-secondary-800 bg-secondary-100 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">
                     <span>Ages: 13 – 16 Years</span><span>&bull;</span><span>SS 1, SS 2 &amp; SS 3</span>
                   </div>
-                  <h3 className="text-2xl font-extrabold text-primary-950">Senior Secondary &amp; University Prep (WAEC/NECO/JAMB)</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">
+                  <h3 className="text-lg sm:text-2xl font-extrabold text-primary-950">Senior Secondary &amp; University Prep (WAEC/NECO/JAMB)</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed">
                     Preparing leaders for top tertiary institutions in Nigeria and abroad. Dedicated Science and Art &amp; Humanities academic cohorts, supported by university counseling and leadership seminars.
                   </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700 font-medium pt-2">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 text-xs text-slate-700 font-medium pt-1">
                     {["Science Stream: Physics, Chem, Bio, Further Maths", "Commercial Stream: Accounting, Commerce, Econ", "Arts Stream: Lit-in-English, Government, History", "Intensive JAMB/UTME & WAEC mock drills"].map((item) => (
                       <li key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-accent-green-700 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent-green-700 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
                   </ul>
-                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-2">Apply for Senior Secondary</Link>
+                  <Link href="/admissions" className="btn-primary text-xs inline-flex mt-1">Apply for Senior Secondary</Link>
                 </div>
-                <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                  <h4 className="font-bold text-sm text-primary-950 uppercase tracking-wider">Senior Secondary Cohorts &amp; Streams</h4>
-                  <div className="space-y-2.5 text-xs text-slate-600">
-                    <div className="p-3 rounded-lg border bg-slate-50 border-slate-100 space-y-1">
+                <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                  <h4 className="font-bold text-xs sm:text-sm text-primary-950 uppercase tracking-wider">Senior Secondary Cohorts &amp; Streams</h4>
+                  <div className="space-y-2 text-xs text-slate-600">
+                    <div className="p-2.5 rounded-lg border bg-slate-50 border-slate-100 space-y-0.5">
                       <div className="flex justify-between font-bold text-primary-950">
                         <span>SS 1 (Stream Exploration)</span>
                         <span className="text-secondary-700 font-extrabold text-[11px]">Foundational</span>
@@ -271,40 +271,38 @@ export default function AcademicsPage() {
                       <p className="text-[11px] text-slate-500">Career counseling, stream diagnostics, and core secondary curriculum.</p>
                     </div>
 
-                    <div className="p-3 rounded-lg border bg-blue-50/50 border-blue-100 space-y-1.5">
+                    <div className="p-2.5 rounded-lg border bg-blue-50/50 border-blue-100 space-y-1">
                       <div className="flex justify-between font-bold text-primary-950">
                         <span>SS 2 (Specialized Streams)</span>
                         <span className="text-blue-800 font-black text-xs">Total: 64 Students</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-0.5">
-                        <div className="p-2 rounded-lg bg-white border border-blue-200 shadow-xs">
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-white border border-blue-200 shadow-xs">
                           <strong className="text-primary-900 block text-[11px]">Science Stream</strong>
                           <span className="text-blue-700 font-black text-xs">29 Students</span>
                         </div>
-                        <div className="p-2 rounded-lg bg-white border border-blue-200 shadow-xs">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-white border border-blue-200 shadow-xs">
                           <strong className="text-primary-900 block text-[11px]">Art &amp; Humanities</strong>
                           <span className="text-secondary-800 font-black text-xs">35 Students</span>
                         </div>
                       </div>
-                      <p className="text-[10.5px] text-slate-500">Advanced laboratory practicals, literature seminars, and JAMB UTME clinics.</p>
                     </div>
 
-                    <div className="p-3 rounded-lg border bg-secondary-50/70 border-secondary-200 space-y-1.5">
+                    <div className="p-2.5 rounded-lg border bg-secondary-50/70 border-secondary-200 space-y-1">
                       <div className="flex justify-between font-bold text-primary-950">
                         <span>SS 3 (Graduation &amp; WAEC)</span>
                         <span className="text-secondary-900 font-black text-xs">Total: 74 Students</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-[11px] pt-0.5">
-                        <div className="p-2 rounded-lg bg-white border border-secondary-300 shadow-xs">
+                      <div className="grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-white border border-secondary-300 shadow-xs">
                           <strong className="text-primary-900 block text-[11px]">Science Stream</strong>
                           <span className="text-blue-700 font-black text-xs">37 Students</span>
                         </div>
-                        <div className="p-2 rounded-lg bg-white border border-secondary-300 shadow-xs">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-white border border-secondary-300 shadow-xs">
                           <strong className="text-primary-900 block text-[11px]">Art &amp; Humanities</strong>
                           <span className="text-secondary-800 font-black text-xs">37 Students</span>
                         </div>
                       </div>
-                      <p className="text-[10.5px] text-slate-500">Intensive WAEC, NECO &amp; JAMB preparation, university placement guidance.</p>
                     </div>
                   </div>
                 </div>
@@ -315,8 +313,8 @@ export default function AcademicsPage() {
       </section>
 
       {/* ACADEMIC CALENDAR — Compact Cards */}
-      <section id="calendar" className="py-10 sm:py-14 lg:py-20 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-8">
+      <section id="calendar" className="py-7 sm:py-12 lg:py-16 bg-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-7">
           <div className="text-center max-w-2xl mx-auto space-y-2 reveal-init reveal-fade-up delay-100">
             <span className="text-[11px] font-extrabold text-primary-800 uppercase tracking-widest bg-primary-100 px-3 py-1 rounded-full">
               Calendar &amp; Daily Operations

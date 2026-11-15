@@ -5,6 +5,9 @@ import { SCHOOL_BRAND, SCHOOL_NAME } from "@/constants/school";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingActions from "@/components/FloatingActions";
+import Script from "next/script";
+import TawkToChat from "@/components/TawkToChat";
+import { buildTawkBootstrapScript, getTawkConfig } from "@/lib/tawk";
 import { ScrollRevealProvider } from "@/components/ScrollReveal";
 import { getCompiledCssText } from "@/lib/inline-css";
 
@@ -91,6 +94,17 @@ export default function RootLayout({
         </head>
         <body className="min-h-screen bg-slate-950 text-slate-100 antialiased font-sans selection:bg-yellow-500 selection:text-slate-950">
           <main>{children}</main>
+          <Script
+            id="tawkto-bootstrap"
+            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{
+              __html: buildTawkBootstrapScript(
+                getTawkConfig().propertyId,
+                getTawkConfig().widgetId
+              ),
+            }}
+          />
+          <TawkToChat />
         </body>
       </html>
     );
@@ -137,6 +151,17 @@ export default function RootLayout({
           <main>{children}</main>
           <Footer />
           <FloatingActions />
+          <Script
+            id="tawkto-bootstrap"
+            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{
+              __html: buildTawkBootstrapScript(
+                getTawkConfig().propertyId,
+                getTawkConfig().widgetId
+              ),
+            }}
+          />
+          <TawkToChat />
         </ScrollRevealProvider>
       </body>
     </html>

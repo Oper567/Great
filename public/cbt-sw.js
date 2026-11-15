@@ -4,7 +4,7 @@
  * Version: 1.0.0
  */
 
-const CACHE_NAME = 'gfms-cbt-cache-v3';
+const CACHE_NAME = 'gfms-cbt-cache-v4';
 
 // Critical static assets to pre-cache on service worker installation
 const PRECACHE_ASSETS = [
@@ -50,6 +50,11 @@ self.addEventListener('fetch', (event) => {
 
   // 1. Never cache non-GET requests (Server Actions, login, exam submissions)
   if (request.method !== 'GET') {
+    return;
+  }
+
+  // Never intercept cross-origin requests (e.g., Tawk.to embed scripts, fonts, CDNs)
+  if (url.origin !== self.location.origin) {
     return;
   }
 

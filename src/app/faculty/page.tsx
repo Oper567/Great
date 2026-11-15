@@ -149,7 +149,7 @@ export default function FacultyPage() {
   return (
     <>
       {/* EDITORIAL PAGE HERO BANNER */}
-      <section className="relative bg-primary-950 text-white py-10 sm:py-16 overflow-hidden border-b border-primary-900">
+      <section className="relative bg-primary-950 text-white py-8 sm:py-14 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
             src="/assets/images/graduation-1.jpg"
@@ -162,14 +162,14 @@ export default function FacultyPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-3">
+          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-2.5">
             <Link href="/" className="hover:text-secondary-400 transition">
               Home
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
             <span className="text-secondary-400 font-semibold">Faculty &amp; Leadership</span>
           </nav>
-          <div className="max-w-3xl space-y-3 reveal-init reveal-fade-up delay-100">
+          <div className="max-w-3xl space-y-2.5 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />
               <span className="text-[11px] sm:text-xs font-extrabold text-secondary-400 uppercase tracking-widest">
@@ -187,8 +187,8 @@ export default function FacultyPage() {
       </section>
 
       {/* HEAD TEACHER SPOTLIGHT */}
-      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-8 sm:space-y-10 relative z-10">
+      <section className="py-7 sm:py-12 lg:py-16 bg-white border-b border-slate-200 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-9 relative z-10">
           {/* Executive Leadership Heading */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4 reveal-init reveal-fade-up delay-100">
             <div className="space-y-1.5 max-w-2xl">
@@ -214,59 +214,69 @@ export default function FacultyPage() {
             </a>
           </div>
 
-          {/* HEAD TEACHER MASTER CARD — Full Box Width Portrait Maintaining Height */}
-          <div className="bg-primary-950 text-white rounded-2xl p-4 sm:p-6 shadow-xl border border-primary-900 relative overflow-hidden reveal-init reveal-fade-up delay-200">
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 items-center relative z-10">
-              <div className="md:col-span-5 lg:col-span-4 w-full">
-                <div className="relative w-full h-[230px] sm:h-[250px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
+          {/* HEAD TEACHER MASTER CARD — Compact Mobile + Uncropped 4:5 Portrait on Tablet/Desktop */}
+          <div className="bg-primary-950 text-white rounded-2xl p-4 sm:p-5 shadow-xl border border-primary-900 relative overflow-hidden reveal-init reveal-fade-up delay-200">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 sm:gap-6 items-center relative z-10">
+              <div className="hidden md:block md:col-span-4 lg:col-span-3 w-full">
+                <div className="relative w-full max-w-[215px] mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
                   <Image
                     src={KEY_PERSONNEL.headTeacher.image}
                     alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
                     fill
-                    sizes="(max-width: 768px) 100vw, 35vw"
+                    sizes="(max-width: 1024px) 33vw, 25vw"
                     className="object-cover object-top"
-                    style={{ objectPosition: "center 14%" }}
                     priority
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/85 to-transparent p-2.5 text-center">
-                    <span className="text-[11px] font-extrabold text-secondary-400 block uppercase tracking-wider">
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/85 to-transparent p-2 text-center">
+                    <span className="text-[10px] font-extrabold text-secondary-400 block uppercase tracking-wider">
                       {KEY_PERSONNEL.headTeacher.title}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="md:col-span-7 lg:col-span-8 space-y-3 text-left">
-                <span className="px-2.5 py-1 rounded text-[10px] font-extrabold bg-secondary-400 text-slate-950 tracking-wider inline-flex items-center gap-1.5">
+              <div className="md:col-span-8 lg:col-span-9 space-y-2.5 text-left">
+                <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-secondary-400 text-slate-950 tracking-wider inline-flex items-center gap-1.5">
                   <Award className="w-3.5 h-3.5" />
                   FROM THE HEAD TEACHER&apos;S DESK
                 </span>
 
-                <div>
-                  <h3 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-tight">
-                    {KEY_PERSONNEL.headTeacher.fullName}
-                  </h3>
-                  <p className="text-secondary-400 font-semibold text-xs sm:text-sm mt-0.5">
-                    {KEY_PERSONNEL.headTeacher.title} &bull; {KEY_PERSONNEL.headTeacher.portfolio}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="md:hidden relative w-20 aspect-[4/5] rounded-xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-md shrink-0">
+                    <Image
+                      src={KEY_PERSONNEL.headTeacher.image}
+                      alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
+                      fill
+                      sizes="80px"
+                      className="object-cover object-top"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-2xl lg:text-3xl font-extrabold text-white leading-tight">
+                      {KEY_PERSONNEL.headTeacher.fullName}
+                    </h3>
+                    <p className="text-secondary-400 font-semibold text-[11px] sm:text-sm mt-0.5">
+                      {KEY_PERSONNEL.headTeacher.title} &bull; {KEY_PERSONNEL.headTeacher.portfolio}
+                    </p>
+                  </div>
                 </div>
 
-                <blockquote className="text-slate-200 text-xs sm:text-sm leading-relaxed italic border-l-2 border-secondary-400 pl-3.5 bg-white/5 py-2 pr-3 rounded-r-lg">
+                <blockquote className="text-slate-200 text-xs sm:text-sm leading-relaxed italic border-l-2 border-secondary-400 pl-3 bg-white/5 py-1.5 pr-2.5 rounded-r-lg">
                   &quot;{KEY_PERSONNEL.headTeacher.deskMessage}&quot;
                 </blockquote>
 
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
                   {[
                     { title: "Montessori Discovery", desc: "Certified tactile apparatus." },
                     { title: "TRCN Certified Staff", desc: "100% degreed instructors." },
                     { title: "Science & ICT Labs", desc: "Weekly practical sessions." },
                     { title: "Character & Poise", desc: "Truthfulness & leadership." },
                   ].map((p) => (
-                    <div key={p.title} className="flex items-start gap-2 bg-white/5 border border-white/10 p-2.5 rounded-xl">
+                    <div key={p.title} className="flex items-start gap-2 bg-white/5 border border-white/10 p-2 rounded-xl">
                       <CheckCircle2 className="w-3.5 h-3.5 text-secondary-400 shrink-0 mt-0.5" />
                       <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate">{p.title}</h4>
-                        <p className="text-[11px] text-slate-300 truncate">{p.desc}</p>
+                        <h4 className="text-[11px] sm:text-xs font-bold text-white truncate">{p.title}</h4>
+                        <p className="text-[10px] sm:text-[11px] text-slate-300 truncate">{p.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -275,7 +285,7 @@ export default function FacultyPage() {
             </div>
 
             {/* Stats */}
-            <div className="pt-3 mt-3 border-t border-white/10 grid grid-cols-4 gap-2 text-center">
+            <div className="pt-2.5 mt-2.5 border-t border-white/10 grid grid-cols-4 gap-2 text-center">
               {[
                 { val: "100%", label: "Exam Success" },
                 { val: "1:15", label: "Class Ratio" },
@@ -376,63 +386,68 @@ export default function FacultyPage() {
               </div>
             )}
 
-            {/* FACULTY CARDS GRID — Single-Column Sequential Intro on Mobile, Side-by-Side on Desktop */}
+            {/* FACULTY CARDS GRID — Horizontal Full-Portrait Cards on Mobile, 2/3-Col Gallery on Tablet/Desktop */}
             {filteredStaff.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
                 {filteredStaff.map((member, idx) => (
                   <div
                     key={`${activeFacultyFilter}-${member.id}`}
-                    className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-card hover:shadow-xl hover:border-primary-300 transition-all duration-300 flex flex-col justify-between group reveal-init reveal-fade-up"
+                    className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-card hover:shadow-xl hover:border-primary-300 transition-all duration-300 flex flex-col justify-between group reveal-init reveal-fade-up"
                     style={{ transitionDelay: `${(idx % 3) * 80}ms` }}
                   >
-                    <div className="space-y-3.5">
-                      <div className="relative w-full h-[330px] sm:h-auto sm:aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-secondary-400 transition-colors shadow-xs">
+                    <div className="flex flex-row sm:flex-col items-start sm:items-stretch gap-3 sm:gap-3">
+                      <div className="relative w-28 sm:w-full aspect-[4/5] rounded-xl overflow-hidden bg-slate-100 border border-slate-200 group-hover:border-secondary-400 transition-colors shadow-xs shrink-0">
                         <Image
                           src={member.image}
                           alt={`${member.name} - ${member.role}`}
                           fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                          style={{ objectPosition: "center top" }}
+                          sizes="(max-width: 640px) 112px, (max-width: 1024px) 50vw, 33vw"
+                          className={`object-cover ${member.objectPosition || "object-top"} group-hover:scale-105 transition-transform duration-500`}
                         />
-                        <div className="absolute top-2.5 left-2.5 z-10">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-primary-950/85 text-white backdrop-blur-md shadow-xs border border-white/20 block">
+                        <div className="hidden sm:block absolute top-2.5 left-2.5 z-10">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-primary-950/85 text-white backdrop-blur-md shadow-xs border border-white/20 block">
                             {member.department}
                           </span>
                         </div>
-                        <div className="absolute bottom-2.5 right-2.5 z-10">
-                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-secondary-400 text-slate-950 shadow-xs flex items-center gap-1">
+                        <div className="hidden sm:flex absolute bottom-2.5 right-2.5 z-10">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-secondary-400 text-slate-950 shadow-xs flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
                             <span>Certified</span>
                           </span>
                         </div>
                       </div>
 
-                      <div>
-                        <h4 className="text-base sm:text-lg font-extrabold text-primary-950 group-hover:text-primary-800 transition leading-snug">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <span className="sm:hidden inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-primary-100 text-primary-900 border border-primary-200">
+                          {member.department}
+                        </span>
+                        <h4 className="text-sm sm:text-base font-extrabold text-primary-950 group-hover:text-primary-800 transition leading-snug">
                           {member.name}
                         </h4>
-                        <p className="text-primary-800 font-semibold text-xs mt-0.5">{member.role}</p>
-                        <p className="text-slate-600 text-xs leading-relaxed mt-1.5 line-clamp-3">{member.bio}</p>
+                        <p className="text-primary-800 font-semibold text-[11px] sm:text-xs">{member.role}</p>
+                        <p className="text-slate-600 text-[11px] sm:text-xs leading-relaxed line-clamp-3">{member.bio}</p>
                       </div>
                     </div>
 
-                    <div className="pt-3 mt-3.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="pt-2 mt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                       <span className="flex items-center gap-1.5 text-secondary-700 font-semibold">
                         <Star className="w-3.5 h-3.5 fill-secondary-400 text-secondary-500 shrink-0" />
                         <span>Dedicated Mentor</span>
                       </span>
-                      <span className="font-mono text-slate-400 text-[10px]">TRCN / GFMS</span>
+                      <span className="inline-flex items-center gap-1 font-mono text-slate-500 text-[10px]">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 sm:hidden" />
+                        <span>TRCN / GFMS</span>
+                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-3">
-                <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-600 mx-auto flex items-center justify-center">
-                  <Users className="w-6 h-6" />
+              <div className="text-center py-8 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2.5">
+                <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 mx-auto flex items-center justify-center">
+                  <Users className="w-5 h-5" />
                 </div>
-                <h4 className="text-base font-bold text-slate-800">No staff members found in this category</h4>
+                <h4 className="text-sm sm:text-base font-bold text-slate-800">No staff members found in this category</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   Click below to view our full academic and administrative staff.
                 </p>
@@ -449,19 +464,19 @@ export default function FacultyPage() {
           </div>
 
           {/* FACULTY STANDARDS BANNER */}
-          <div className="bg-gradient-to-r from-primary-900 to-primary-950 text-white rounded-2xl sm:rounded-3xl p-3 sm:p-8 border border-primary-800 shadow-lg">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-center">
+          <div className="bg-gradient-to-r from-primary-900 to-primary-950 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-primary-800 shadow-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-5 items-center">
               <div className="space-y-1 md:border-r md:border-white/10 md:pr-4">
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-secondary-400 block">Staff Excellence</span>
-                <h4 className="text-base sm:text-lg font-bold text-white">Our Faculty Standards</h4>
+                <h4 className="text-sm sm:text-lg font-bold text-white">Our Faculty Standards</h4>
                 <p className="text-xs text-slate-300">Every educator is thoroughly vetted and continually upskilled to ensure maximum pupil safety and learning success.</p>
               </div>
               {[
-                { icon: <ShieldCheck className="w-5 h-5 text-secondary-400 shrink-0 mt-0.5" />, title: "Child Safeguarding", desc: "Rigorous background checks and zero-tolerance safety policies." },
-                { icon: <GraduationCap className="w-5 h-5 text-secondary-400 shrink-0 mt-0.5" />, title: "TRCN Registration", desc: "100% degreed and certified by Nigeria's apex teaching council." },
-                { icon: <TrendingUp className="w-5 h-5 text-secondary-400 shrink-0 mt-0.5" />, title: "Continuous CPD", desc: "Regular pedagogical workshops in modern STEM & digital literacy." },
+                { icon: <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5 text-secondary-400 shrink-0 mt-0.5" />, title: "Child Safeguarding", desc: "Rigorous background checks and zero-tolerance safety policies." },
+                { icon: <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-secondary-400 shrink-0 mt-0.5" />, title: "TRCN Registration", desc: "100% degreed and certified by Nigeria's apex teaching council." },
+                { icon: <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5 text-secondary-400 shrink-0 mt-0.5" />, title: "Continuous CPD", desc: "Regular pedagogical workshops in modern STEM & digital literacy." },
               ].map((s) => (
-                <div key={s.title} className="flex items-start gap-3 bg-white/5 p-3 rounded-2xl border border-white/5">
+                <div key={s.title} className="flex items-start gap-2.5 bg-white/5 p-2.5 sm:p-3 rounded-xl border border-white/5">
                   {s.icon}
                   <div>
                     <h5 className="text-xs font-bold text-white">{s.title}</h5>
@@ -473,7 +488,7 @@ export default function FacultyPage() {
           </div>
 
           {/* STAFF HUB */}
-          <div className="bg-secondary-50 border-2 border-secondary-200 rounded-3xl p-4 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="bg-secondary-50 border-2 border-secondary-200 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 shadow-sm">
             <div className="space-y-1.5 text-center md:text-left">
               <span className="text-xs font-extrabold text-secondary-800 uppercase tracking-widest bg-secondary-200/80 px-3 py-0.5 rounded-full inline-block">
                 Staff Hub & Digital Workspace

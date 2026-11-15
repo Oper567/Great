@@ -16,7 +16,7 @@ export default function FacilitiesPage() {
   return (
     <>
       {/* EDITORIAL PAGE HERO BANNER */}
-      <section className="relative bg-primary-950 text-white py-10 sm:py-16 overflow-hidden border-b border-primary-900">
+      <section className="relative bg-primary-950 text-white py-8 sm:py-14 overflow-hidden border-b border-primary-900">
         <div className="absolute inset-0 z-0">
           <Image
             src="/assets/images/science-lab.jpg"
@@ -64,13 +64,13 @@ export default function FacilitiesPage() {
       <SchoolBuildingSlider />
 
       {/* FACILITIES GRID — Compact Cards & Professional Margin Spacing */}
-      <section className="py-10 sm:py-14 lg:py-20 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-6 sm:space-y-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+      <section className="py-7 sm:py-12 lg:py-16 bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 space-y-5 sm:space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
             {/* Modern ICT Center */}
             <div className="editorial-card rounded-xl overflow-hidden group reveal-init reveal-fade-up delay-100 flex flex-col justify-between">
               <div>
-                <div className="relative h-36 sm:h-44 w-full overflow-hidden">
+                <div className="relative h-56 sm:h-64 lg:h-72 w-full overflow-hidden">
                   <Image
                     src="/assets/images/ict-lab.jpg"
                     alt="Great-Favour Montessori School Modern ICT Center"
@@ -101,7 +101,7 @@ export default function FacilitiesPage() {
             {/* Science Labs */}
             <div className="editorial-card rounded-xl overflow-hidden group reveal-init reveal-fade-up delay-200 flex flex-col justify-between">
               <div>
-                <div className="relative h-36 sm:h-44 w-full overflow-hidden">
+                <div className="relative h-56 sm:h-64 lg:h-72 w-full overflow-hidden">
                   <Image
                     src="/assets/images/science-lab.jpg"
                     alt="Great-Favour Montessori School Advanced Science Laboratories"
@@ -132,7 +132,7 @@ export default function FacilitiesPage() {
             {/* Eco-Friendly Learning Environment */}
             <div className="editorial-card rounded-xl overflow-hidden group reveal-init reveal-fade-up delay-300 flex flex-col justify-between">
               <div>
-                <div className="relative h-36 sm:h-44 w-full overflow-hidden">
+                <div className="relative h-56 sm:h-64 lg:h-72 w-full overflow-hidden">
                   <Image
                     src="/assets/images/classroom.jpg"
                     alt="Great-Favour Montessori School Eco-Friendly Learning Environment"
