@@ -37,10 +37,15 @@ export function isEligibleTawkRoute(pathname: string, hostname = ""): boolean {
   return true;
 }
 
+function sanitizeTawkToken(val: string | undefined, fallback: string): string {
+  const cleaned = (val || "").trim();
+  return /^[a-zA-Z0-9_-]{4,64}$/.test(cleaned) ? cleaned : fallback;
+}
+
 export function getTawkConfig(): { propertyId: string; widgetId: string } {
   return {
-    propertyId: process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID || DEFAULT_TAWK_PROPERTY_ID,
-    widgetId: process.env.NEXT_PUBLIC_TAWK_WIDGET_ID || DEFAULT_TAWK_WIDGET_ID,
+    propertyId: sanitizeTawkToken(process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID, DEFAULT_TAWK_PROPERTY_ID),
+    widgetId: sanitizeTawkToken(process.env.NEXT_PUBLIC_TAWK_WIDGET_ID, DEFAULT_TAWK_WIDGET_ID),
   };
 }
 
@@ -49,7 +54,9 @@ export function getTawkConfig(): { propertyId: string; widgetId: string } {
  * before React hydration completes (crucial on slower shared hosting links).
  */
 export function buildTawkBootstrapScript(propertyId: string, widgetId: string): string {
-  const src = JSON.stringify(`https://embed.tawk.to/${propertyId}/${widgetId}`);
+  const safeProperty = sanitizeTawkToken(propertyId, DEFAULT_TAWK_PROPERTY_ID);
+  const safeWidget = sanitizeTawkToken(widgetId, DEFAULT_TAWK_WIDGET_ID);
+  const src = JSON.stringify(`https://embed.tawk.to/${safeProperty}/${safeWidget}`);
   const scriptId = JSON.stringify(TAWK_SCRIPT_ID);
 
   return `(function(){

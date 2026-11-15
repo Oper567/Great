@@ -51,10 +51,37 @@ if (process.env.DATABASE_URL && !process.env.DIRECT_URL) {
   process.env.DIRECT_URL = process.env.DATABASE_URL;
 }
 
-// Guarantee persistent Server Actions Encryption Key to prevent deployment skew
-// and "Failed to find Server Action" across process restarts and Passenger workers
+// Load or persist cryptographically random Server Actions & Session keys when unset in env
+// Prevents deployment skew across restarts without storing static secrets in source control
+const nodeCrypto = require('crypto');
+const runtimeSecretsPath = path.join(process.cwd(), '.gfms_runtime_secrets.json');
+let persistedSecrets = {};
+try {
+  if (fs.existsSync(runtimeSecretsPath)) {
+    persistedSecrets = JSON.parse(fs.readFileSync(runtimeSecretsPath, 'utf8') || '{}') || {};
+  }
+} catch (_) {
+  persistedSecrets = {};
+}
+let runtimeSecretsUpdated = false;
 if (!process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY) {
-  process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = 'gfms-leadership-academy-server-actions-key-2025';
+  if (!persistedSecrets.actionsKey || typeof persistedSecrets.actionsKey !== 'string') {
+    persistedSecrets.actionsKey = nodeCrypto.randomBytes(32).toString('base64');
+    runtimeSecretsUpdated = true;
+  }
+  process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY = persistedSecrets.actionsKey;
+}
+if (!process.env.SESSION_SECRET) {
+  if (!persistedSecrets.sessionSecret || typeof persistedSecrets.sessionSecret !== 'string') {
+    persistedSecrets.sessionSecret = nodeCrypto.randomBytes(32).toString('hex');
+    runtimeSecretsUpdated = true;
+  }
+  process.env.SESSION_SECRET = persistedSecrets.sessionSecret;
+}
+if (runtimeSecretsUpdated) {
+  try {
+    fs.writeFileSync(runtimeSecretsPath, JSON.stringify(persistedSecrets), { mode: 0o600 });
+  } catch (_) {}
 }
 
 // Enable Pure-JS PostgreSQL driver to prevent CloudLinux thread exhaustion / Tokio panics
@@ -83,7 +110,7 @@ if (process.env.DIRECT_URL && !process.env.DIRECT_URL.includes('connection_limit
 
 // Tailored connection pool max for starter plan hosting (prevents PostgreSQL connection exhaustion)
 if (!process.env.PG_POOL_MAX) {
-  process.env.PG_POOL_MAX = '3';
+  process.env.PG_POOL_MAX = '5';
 }
 
 // Enforce heap & V8 pool defaults for any child processes (set in cPanel Env Vars for main process)
@@ -313,6 +340,32 @@ const app = next({
 
 const handle = app.getRequestHandler();
 
+const cssDir = path.join(__dirname, '.next', 'static', 'css');
+const cachedCssFileMap = new Map();
+let cachedFallbackCssFile = null;
+
+function resolveStaticCssTarget(requestedFile) {
+  if (cachedCssFileMap.has(requestedFile)) {
+    return cachedCssFileMap.get(requestedFile);
+  }
+  const exactPath = path.join(cssDir, requestedFile);
+  if (fs.existsSync(exactPath)) {
+    cachedCssFileMap.set(requestedFile, { filePath: exactPath, exact: true });
+    return { filePath: exactPath, exact: true };
+  }
+  if (!cachedFallbackCssFile && fs.existsSync(cssDir)) {
+    const firstCss = fs.readdirSync(cssDir).find((f) => f.endsWith('.css'));
+    if (firstCss) {
+      cachedFallbackCssFile = path.join(cssDir, firstCss);
+    }
+  }
+  if (cachedFallbackCssFile) {
+    cachedCssFileMap.set(requestedFile, { filePath: cachedFallbackCssFile, exact: false });
+    return { filePath: cachedFallbackCssFile, exact: false };
+  }
+  return null;
+}
+
 app.prepare()
   .then(() => {
     const server = createServer(async (req, res) => {
@@ -368,30 +421,24 @@ app.prepare()
         // Parse request URL
         const parsedUrl = parse(req.url, true);
 
-        // Direct resilient CSS responder: serves .next/static/css/*.css directly and falls back
-        // to the active CSS bundle if a browser / Service Worker requests a stale CSS hash
+        // Direct resilient CSS responder: serves .next/static/css/*.css directly from RAM-cached path lookup
         if (
           parsedUrl.pathname &&
           parsedUrl.pathname.startsWith('/_next/static/css/') &&
           parsedUrl.pathname.endsWith('.css')
         ) {
-          const cssDir = path.join(__dirname, '.next', 'static', 'css');
           const requestedFile = path.basename(parsedUrl.pathname);
-          let targetCssPath = path.join(cssDir, requestedFile);
+          const resolvedCss = resolveStaticCssTarget(requestedFile);
 
-          if (!fs.existsSync(targetCssPath) && fs.existsSync(cssDir)) {
-            const firstCss = fs.readdirSync(cssDir).find((f) => f.endsWith('.css'));
-            if (firstCss) {
-              targetCssPath = path.join(cssDir, firstCss);
-            }
-          }
-
-          if (fs.existsSync(targetCssPath)) {
+          if (resolvedCss) {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'text/css; charset=utf-8');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
-            fs.createReadStream(targetCssPath).pipe(res);
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader(
+              'Cache-Control',
+              resolvedCss.exact ? 'public, max-age=86400, stale-while-revalidate=3600' : 'public, max-age=3600, must-revalidate'
+            );
+            fs.createReadStream(resolvedCss.filePath).pipe(res);
             return;
           }
         }
@@ -424,10 +471,11 @@ app.prepare()
     });
 
     // HTTP Keep-Alive & Timeout Configuration for Shared Hosting Reverse Proxies (LiteSpeed/Passenger/Apache)
-    // Short keep-alive prevents stale idle proxy sockets from pinning old workers on recycle
+    // Short keep-alive + socket reuse cap prevents stale idle proxy sockets or socket starvation under bursts
     server.keepAliveTimeout = 15000;
     server.headersTimeout = 16000;
     server.requestTimeout = 30000;
+    server.maxRequestsPerSocket = 100;
 
     // Exit cleanly on fatal socket bind errors so broken workers cannot linger as zombies
     server.on('error', (err) => {

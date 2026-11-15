@@ -6,39 +6,42 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🚀 Seeding Great-Favour Montessori School (GFMS) CBT Portal...");
 
-  // 1. Seed Super Admin User (Official School Gmail + Legacy Alias)
-  const adminPasswordHash = await bcrypt.hash("admin123", 10);
-  const admin = await prisma.adminUser.upsert({
-    where: { email: "greatfavourmontessorischool@gmail.com" },
-    update: {
-      fullName: "Hon Okolie Peter Isioma JP MCArb",
-      password: adminPasswordHash,
-      role: "SUPER_ADMIN",
-      phone: "+234 905 894 3474",
-    },
-    create: {
-      email: "greatfavourmontessorischool@gmail.com",
-      fullName: "Hon Okolie Peter Isioma JP MCArb",
-      password: adminPasswordHash,
-      role: "SUPER_ADMIN",
-      phone: "+234 905 894 3474",
-    },
-  });
-  await prisma.adminUser.upsert({
-    where: { email: "admin@gfms.edu.ng" },
-    update: {
-      fullName: "Hon Okolie Peter Isioma JP MCArb",
-      password: adminPasswordHash,
-      role: "SUPER_ADMIN",
-    },
-    create: {
-      email: "admin@gfms.edu.ng",
-      fullName: "Hon Okolie Peter Isioma JP MCArb",
-      password: adminPasswordHash,
-      role: "SUPER_ADMIN",
-    },
-  });
-  console.log(`✓ Seeded Super Admin: ${admin.fullName} (${admin.email}) [Password: admin123]`);
+  // 1. Seed Super Admin User (Only when INITIAL_ADMIN_PASSWORD >= 10 chars is explicitly provided; never overwrites live passwords)
+  const initialAdminPassword = (process.env.INITIAL_ADMIN_PASSWORD || "").trim();
+  if (initialAdminPassword.length >= 10) {
+    const adminPasswordHash = await bcrypt.hash(initialAdminPassword, 10);
+    const admin = await prisma.adminUser.upsert({
+      where: { email: "greatfavourmontessorischool@gmail.com" },
+      update: {
+        fullName: "Hon Okolie Peter Isioma JP MCArb",
+        role: "SUPER_ADMIN",
+        phone: "+234 905 894 3474",
+      },
+      create: {
+        email: "greatfavourmontessorischool@gmail.com",
+        fullName: "Hon Okolie Peter Isioma JP MCArb",
+        password: adminPasswordHash,
+        role: "SUPER_ADMIN",
+        phone: "+234 905 894 3474",
+      },
+    });
+    await prisma.adminUser.upsert({
+      where: { email: "admin@gfms.edu.ng" },
+      update: {
+        fullName: "Hon Okolie Peter Isioma JP MCArb",
+        role: "SUPER_ADMIN",
+      },
+      create: {
+        email: "admin@gfms.edu.ng",
+        fullName: "Hon Okolie Peter Isioma JP MCArb",
+        password: adminPasswordHash,
+        role: "SUPER_ADMIN",
+      },
+    });
+    console.log(`✓ Seeded Super Admin: ${admin.fullName} (${admin.email})`);
+  } else {
+    console.log("ℹ️ Skipping initial Super Admin password creation (set INITIAL_ADMIN_PASSWORD >= 10 chars when bootstrapping).");
+  }
 
   // 2. Seed Senior Secondary Students (SS 2: 64, SS 3: 74 Stream Breakdown)
   const studentsData = [

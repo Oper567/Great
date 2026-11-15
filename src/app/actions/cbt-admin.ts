@@ -1,9 +1,10 @@
 "use server";
 
 import prisma, { queryRawPg } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage, sanitizeMediaUrl, validateUploadedFile } from "@/lib/security";
 import { revalidatePath } from "next/cache";
 import { AttemptGradingRow } from "@/types/cbt";
-import { getAdminSession } from "@/lib/session";
 import { invalidateExamCache } from "@/lib/cbt-cache";
 import { formatClassWithArm } from "@/lib/cbt-utils";
 
@@ -42,7 +43,12 @@ export async function createExamAction(formData: FormData): Promise<{
   examId?: number;
   exam?: any;
 }> {
-  const session = await getAdminSession().catch(() => null);
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const session = auth.session;
+
   const title = (formData.get("title") as string)?.trim();
   const subject = (formData.get("subject") as string)?.trim();
   const targetClass = (formData.get("targetClass") as string)?.trim();
@@ -56,7 +62,7 @@ export async function createExamAction(formData: FormData): Promise<{
   }
 
   // Teacher subject restriction: Teachers can only create exams for their assigned subject
-  if (session?.role === "TEACHER") {
+  if (session.role === "TEACHER") {
     const assigned = session.assignedSubject?.trim() || "";
     const isAll = !assigned || assigned.toLowerCase() === "all" || assigned.toLowerCase() === "all subjects";
     const isMatch = subject.toLowerCase().includes(assigned.toLowerCase()) || assigned.toLowerCase().includes(subject.toLowerCase());
@@ -68,7 +74,7 @@ export async function createExamAction(formData: FormData): Promise<{
   try {
     const examDate = new Date(examDateStr);
     let exam;
-    const createdByEmail = session?.email || null;
+    const createdByEmail = session.email || null;
 
     try {
       exam = await prisma.exam.create({
@@ -122,8 +128,7 @@ export async function createExamAction(formData: FormData): Promise<{
       },
     };
   } catch (err: any) {
-    console.error("Create exam error:", err);
-    return { success: false, error: err?.message || "Failed to create examination record." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to create examination record.") };
   }
 }
 
@@ -132,6 +137,16 @@ export async function createExamAction(formData: FormData): Promise<{
  */
 export async function toggleExamStatusAction(examId: number, isActive: boolean): Promise<{ success: boolean; error?: string }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    if (auth.session.role === "TEACHER") {
+      if (!(await isTeacherAuthorizedForExam(examId, auth.session))) {
+        return { success: false, error: "Unauthorized: You can only toggle exams belonging to your assigned subject." };
+      }
+    }
+
     await prisma.exam.update({
       where: { id: examId },
       data: { isActive },
@@ -141,8 +156,7 @@ export async function toggleExamStatusAction(examId: number, isActive: boolean):
     revalidatePath("/cbt/dashboard");
     return { success: true };
   } catch (err) {
-    console.error("Toggle exam status error:", err);
-    return { success: false, error: "Failed to update exam status." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to update exam status.") };
   }
 }
 
@@ -153,7 +167,12 @@ export async function addObjectiveQuestionAction(formData: FormData): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const session = await getAdminSession().catch(() => null);
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const session = auth.session;
+
   const examId = parseInt((formData.get("examId") as string) || "0", 10);
   const questionText = (formData.get("questionText") as string)?.trim();
   const optA = (formData.get("optA") as string)?.trim();
@@ -173,20 +192,17 @@ export async function addObjectiveQuestionAction(formData: FormData): Promise<{
     return { success: false, error: "Correct answer must be one of A, B, C, or D." };
   }
 
-  if (!(await isTeacherAuthorizedForExam(examId, session))) {
+  if (session.role === "TEACHER" && !(await isTeacherAuthorizedForExam(examId, session))) {
     return { success: false, error: "Unauthorized: You can only upload questions to exams in your assigned subject." };
   }
 
-  let finalImageUrl: string | null = rawImageUrl;
+  let finalImageUrl: string | null = sanitizeMediaUrl(rawImageUrl);
   if (imageFile && imageFile.size > 0) {
-    try {
-      const buffer = Buffer.from(await imageFile.arrayBuffer());
-      const base64 = buffer.toString("base64");
-      const mime = imageFile.type || "image/jpeg";
-      finalImageUrl = `data:${mime};base64,${base64}`;
-    } catch (e) {
-      console.error("Failed to process question image:", e);
+    const validated = await validateUploadedFile(imageFile, { allowPdf: false, maxBytes: 5 * 1024 * 1024 });
+    if (!validated.ok) {
+      return { success: false, error: validated.error };
     }
+    finalImageUrl = validated.dataUrl;
   }
 
   try {
@@ -220,7 +236,12 @@ export async function addTheoryQuestionAction(formData: FormData): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const session = await getAdminSession().catch(() => null);
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const session = auth.session;
+
   const examId = parseInt((formData.get("examId") as string) || "0", 10);
   const questionNum = parseInt((formData.get("questionNum") as string) || "1", 10);
   const questionText = (formData.get("questionText") as string)?.trim();
@@ -233,20 +254,17 @@ export async function addTheoryQuestionAction(formData: FormData): Promise<{
     return { success: false, error: "Question prompt and valid exam selection are required." };
   }
 
-  if (!(await isTeacherAuthorizedForExam(examId, session))) {
+  if (session.role === "TEACHER" && !(await isTeacherAuthorizedForExam(examId, session))) {
     return { success: false, error: "Unauthorized: You can only upload theory questions to exams in your assigned subject." };
   }
 
-  let finalImageUrl: string | null = rawImageUrl;
+  let finalImageUrl: string | null = sanitizeMediaUrl(rawImageUrl);
   if (imageFile && imageFile.size > 0) {
-    try {
-      const buffer = Buffer.from(await imageFile.arrayBuffer());
-      const base64 = buffer.toString("base64");
-      const mime = imageFile.type || "image/jpeg";
-      finalImageUrl = `data:${mime};base64,${base64}`;
-    } catch (e) {
-      console.error("Failed to process theory question image:", e);
+    const validated = await validateUploadedFile(imageFile, { allowPdf: false, maxBytes: 5 * 1024 * 1024 });
+    if (!validated.ok) {
+      return { success: false, error: validated.error };
     }
+    finalImageUrl = validated.dataUrl;
   }
 
   try {
@@ -279,7 +297,12 @@ export async function deleteQuestionAction(
   questionId: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await getAdminSession().catch(() => null);
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
     let parentExamId: number | null = null;
     if (type === "objective") {
       const q = await prisma.objectiveQuestion.findUnique({ where: { id: questionId } });
@@ -289,8 +312,8 @@ export async function deleteQuestionAction(
       parentExamId = q?.examId || null;
     }
 
-    if (session?.role === "TEACHER") {
-      if (parentExamId && !(await isTeacherAuthorizedForExam(parentExamId, session))) {
+    if (session.role === "TEACHER") {
+      if (!parentExamId || !(await isTeacherAuthorizedForExam(parentExamId, session))) {
         return { success: false, error: "Unauthorized: You cannot delete questions from another subject's exam." };
       }
     }
@@ -306,8 +329,7 @@ export async function deleteQuestionAction(
     revalidatePath("/staff");
     return { success: true };
   } catch (err) {
-    console.error("Delete question error:", err);
-    return { success: false, error: "Failed to delete question." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to delete question.") };
   }
 }
 
@@ -319,7 +341,12 @@ export async function updateObjectiveQuestionAction(formData: FormData): Promise
   error?: string;
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
     const questionId = parseInt((formData.get("questionId") as string) || "0", 10);
     const examId = parseInt((formData.get("examId") as string) || "0", 10);
     const questionText = (formData.get("questionText") as string)?.trim();
@@ -345,22 +372,19 @@ export async function updateObjectiveQuestionAction(formData: FormData): Promise
       effectiveExamId = existing?.examId || 0;
     }
 
-    if (session?.role === "TEACHER" && effectiveExamId) {
-      if (!(await isTeacherAuthorizedForExam(effectiveExamId, session))) {
+    if (session.role === "TEACHER") {
+      if (!effectiveExamId || !(await isTeacherAuthorizedForExam(effectiveExamId, session))) {
         return { success: false, error: "Unauthorized: You can only edit questions in your assigned subject." };
       }
     }
 
-    let finalImageUrl: string | null = removeImage ? null : rawImageUrl;
+    let finalImageUrl: string | null = removeImage ? null : sanitizeMediaUrl(rawImageUrl);
     if (imageFile && imageFile.size > 0) {
-      try {
-        const buffer = Buffer.from(await imageFile.arrayBuffer());
-        const base64 = buffer.toString("base64");
-        const mime = imageFile.type || "image/jpeg";
-        finalImageUrl = `data:${mime};base64,${base64}`;
-      } catch (e) {
-        console.error("Failed to process question image:", e);
+      const validated = await validateUploadedFile(imageFile, { allowPdf: false, maxBytes: 5 * 1024 * 1024 });
+      if (!validated.ok) {
+        return { success: false, error: validated.error };
       }
+      finalImageUrl = validated.dataUrl;
     }
 
     await prisma.objectiveQuestion.update({
@@ -380,8 +404,7 @@ export async function updateObjectiveQuestionAction(formData: FormData): Promise
     revalidatePath("/staff");
     return { success: true };
   } catch (err: any) {
-    console.error("Update objective question error:", err);
-    return { success: false, error: err?.message || "Failed to update objective question." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to update objective question.") };
   }
 }
 
@@ -393,7 +416,12 @@ export async function updateTheoryQuestionAction(formData: FormData): Promise<{
   error?: string;
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
     const questionId = parseInt((formData.get("questionId") as string) || "0", 10);
     const examId = parseInt((formData.get("examId") as string) || "0", 10);
     const questionNum = parseInt((formData.get("questionNum") as string) || "1", 10);
@@ -414,22 +442,19 @@ export async function updateTheoryQuestionAction(formData: FormData): Promise<{
       effectiveExamId = existing?.examId || 0;
     }
 
-    if (session?.role === "TEACHER" && effectiveExamId) {
-      if (!(await isTeacherAuthorizedForExam(effectiveExamId, session))) {
+    if (session.role === "TEACHER") {
+      if (!effectiveExamId || !(await isTeacherAuthorizedForExam(effectiveExamId, session))) {
         return { success: false, error: "Unauthorized: You can only edit questions in your assigned subject." };
       }
     }
 
-    let finalImageUrl: string | null = removeImage ? null : rawImageUrl;
+    let finalImageUrl: string | null = removeImage ? null : sanitizeMediaUrl(rawImageUrl);
     if (imageFile && imageFile.size > 0) {
-      try {
-        const buffer = Buffer.from(await imageFile.arrayBuffer());
-        const base64 = buffer.toString("base64");
-        const mime = imageFile.type || "image/jpeg";
-        finalImageUrl = `data:${mime};base64,${base64}`;
-      } catch (e) {
-        console.error("Failed to process theory question image:", e);
+      const validated = await validateUploadedFile(imageFile, { allowPdf: false, maxBytes: 5 * 1024 * 1024 });
+      if (!validated.ok) {
+        return { success: false, error: validated.error };
       }
+      finalImageUrl = validated.dataUrl;
     }
 
     await prisma.theoryQuestion.update({
@@ -449,8 +474,7 @@ export async function updateTheoryQuestionAction(formData: FormData): Promise<{
     revalidatePath("/staff");
     return { success: true };
   } catch (err: any) {
-    console.error("Update theory question error:", err);
-    return { success: false, error: err?.message || "Failed to update theory question." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to update theory question.") };
   }
 }
 
@@ -469,8 +493,16 @@ export async function deleteExamAction(
       return { success: false, error: "Valid exam ID is required." };
     }
 
-    const session = await getAdminSession().catch(() => null);
-    if (session?.role === "TEACHER") {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
+    if (session.role === "TEACHER") {
+      if (forcePermanent) {
+        return { success: false, error: "Forbidden: Only Super Admins can permanently purge an exam with attempts." };
+      }
       if (!(await isTeacherAuthorizedForExam(examId, session))) {
         return { success: false, error: "Unauthorized: You can only delete examination courses belonging to your assigned subject." };
       }
@@ -551,8 +583,11 @@ export async function deleteExamAction(
 export async function restoreArchivedExamAction(examId: number): Promise<{ success: boolean; error?: string }> {
   try {
     if (!examId) return { success: false, error: "Valid exam ID required." };
-    const session = await getAdminSession().catch(() => null);
-    if (session?.role === "TEACHER") {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) return { success: false, error: auth.error };
+    const session = auth.session;
+
+    if (session.role === "TEACHER") {
       if (!(await isTeacherAuthorizedForExam(examId, session))) {
         return { success: false, error: "Unauthorized: You can only restore your assigned subject's exam." };
       }
@@ -570,7 +605,7 @@ export async function restoreArchivedExamAction(examId: number): Promise<{ succe
     revalidatePath("/staff");
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || "Failed to restore course." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to restore course.") };
   }
 }
 
@@ -583,8 +618,11 @@ export async function clearAllExamQuestionsAction(examId: number): Promise<{ suc
       return { success: false, error: "Valid exam ID is required." };
     }
 
-    const session = await getAdminSession().catch(() => null);
-    if (session?.role === "TEACHER") {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) return { success: false, error: auth.error };
+    const session = auth.session;
+
+    if (session.role === "TEACHER") {
       if (!(await isTeacherAuthorizedForExam(examId, session))) {
         return { success: false, error: "Unauthorized: You can only clear questions from your assigned subject's exam." };
       }
@@ -598,8 +636,7 @@ export async function clearAllExamQuestionsAction(examId: number): Promise<{ suc
     revalidatePath("/staff");
     return { success: true };
   } catch (err: any) {
-    console.error("Clear exam questions error:", err);
-    return { success: false, error: err?.message || "Failed to clear questions for this exam." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to clear questions for this exam.") };
   }
 }
 
@@ -610,10 +647,14 @@ export async function clearAllExamQuestionsAction(examId: number): Promise<{ suc
  */
 export async function getAllAdminExamsAction() {
   try {
-    const session = await getAdminSession().catch(() => null);
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, exams: [], error: auth.error };
+    }
+    const session = auth.session;
     let whereClause: any = undefined;
 
-    if (session && session.role === "TEACHER") {
+    if (session.role === "TEACHER") {
       const teacherEmail = (session.email || "").trim();
       if (!teacherEmail) {
         return { success: true, exams: [] };
@@ -649,10 +690,14 @@ export async function getAllAdminExamsAction() {
  */
 export async function getAdminExamWithQuestionsAction(examId: number) {
   try {
-    const session = await getAdminSession().catch(() => null);
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, exam: null, error: auth.error };
+    }
+    const session = auth.session;
 
-    // Gatekeeper: prevent question leakage across teachers
-    if (session && session.role === "TEACHER") {
+    // Gatekeeper: prevent question and answer key leakage across teachers
+    if (session.role === "TEACHER") {
       const isAuth = await isTeacherAuthorizedForExam(examId, session);
       if (!isAuth) {
         return {
@@ -707,6 +752,16 @@ export async function getExamGradingAttemptsAction(examId: number): Promise<{
   attempts: AttemptGradingRow[];
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, attempts: [] };
+    }
+    if (auth.session.role === "TEACHER") {
+      if (!(await isTeacherAuthorizedForExam(examId, auth.session))) {
+        return { success: false, error: "Unauthorized for this subject.", attempts: [] };
+      }
+    }
+
     const [attempts, questions] = await Promise.all([
       prisma.examAttempt.findMany({
         where: {
@@ -818,12 +873,23 @@ export async function saveTheoryScoreAction(
   }
 
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
     const attempt = await prisma.examAttempt.findUnique({
       where: { id: attemptId },
     });
 
     if (!attempt) {
       return { success: false, error: "Exam attempt record not found." };
+    }
+
+    if (auth.session.role === "TEACHER") {
+      if (!(await isTeacherAuthorizedForExam(attempt.examId, auth.session))) {
+        return { success: false, error: "Unauthorized for this subject." };
+      }
     }
 
     const totalScore = attempt.objectiveScore + theoryScore;
@@ -862,6 +928,11 @@ export async function clearExamAttemptsAction(examId: number): Promise<{
   count?: number;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
     const deleted = await prisma.examAttempt.deleteMany({
       where: { examId },
     });
@@ -883,6 +954,11 @@ export async function deleteExamAttemptAction(attemptId: number): Promise<{
   error?: string;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
     await prisma.examAttempt.delete({
       where: { id: attemptId },
     });
@@ -904,10 +980,11 @@ export async function updateExamAction(formData: FormData): Promise<{
   exam?: any;
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
-    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "TEACHER")) {
-      return { success: false, error: "Unauthorized: Admin session required." };
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
     }
+    const session = auth.session;
 
     const examId = parseInt((formData.get("examId") as string) || "0", 10);
     const title = (formData.get("title") as string)?.trim();
@@ -957,7 +1034,7 @@ export async function updateExamAction(formData: FormData): Promise<{
     return { success: true, exam: updated };
   } catch (err: any) {
     console.error("Update exam action error:", err);
-    return { success: false, error: err?.message || "Failed to update exam details." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to update exam details.") };
   }
 }
 
@@ -973,10 +1050,11 @@ export async function updateExamDurationAction(
   durationMinutes?: number;
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
-    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "TEACHER")) {
-      return { success: false, error: "Unauthorized." };
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
     }
+    const session = auth.session;
 
     if (!examId || isNaN(durationMinutes) || durationMinutes < 1) {
       return { success: false, error: "Invalid duration or exam ID." };
@@ -1007,7 +1085,7 @@ export async function updateExamDurationAction(
     return { success: true, durationMinutes: updated.durationMinutes };
   } catch (err: any) {
     console.error("Update exam duration error:", err);
-    return { success: false, error: err?.message || "Failed to update duration." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to update duration.") };
   }
 }
 
@@ -1025,10 +1103,11 @@ export async function reopenStudentExamAttemptAction(
   remainingSeconds?: number;
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
-    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "TEACHER")) {
-      return { success: false, error: "Unauthorized." };
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
     }
+    const session = auth.session;
 
     const attempt = await prisma.examAttempt.findUnique({
       where: { id: attemptId },
@@ -1084,8 +1163,7 @@ export async function reopenStudentExamAttemptAction(
 
     return { success: true, remainingSeconds: newRemainingSec };
   } catch (err: any) {
-    console.error("Reopen student exam attempt error:", err);
-    return { success: false, error: err?.message || "Failed to re-open student exam attempt." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to re-open student exam attempt.") };
   }
 }
 
@@ -1103,10 +1181,11 @@ export async function forceSubmitInterruptedAttemptAction(
   answeredCount?: number;
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
-    if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "TEACHER")) {
-      return { success: false, error: "Unauthorized." };
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
     }
+    const session = auth.session;
 
     const attempt = await prisma.examAttempt.findUnique({
       where: { id: attemptId },
@@ -1169,8 +1248,7 @@ export async function forceSubmitInterruptedAttemptAction(
       answeredCount,
     };
   } catch (err: any) {
-    console.error("Force submit interrupted attempt error:", err);
-    return { success: false, error: err?.message || "Failed to finalize interrupted attempt." };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to finalize interrupted attempt.") };
   }
 }
 

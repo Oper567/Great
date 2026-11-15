@@ -363,7 +363,7 @@ END $$;
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "phone", "status")
 VALUES (
   'greatfavourmontessorischool@gmail.com',
-  '$2a$10$3zR14Q6f7X6P7/vY.274O.k91c8.yQ6E8Wv1B7jM12N3P4Q5R6S7T',
+  '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
   'Hon Okolie Peter Isioma JP MCArb',
   'SUPER_ADMIN',
   '+234 905 894 3474',
@@ -374,7 +374,7 @@ ON CONFLICT ("email") DO NOTHING;
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "phone", "status")
 VALUES (
   'admin@gfms.edu.ng',
-  '$2a$10$3zR14Q6f7X6P7/vY.274O.k91c8.yQ6E8Wv1B7jM12N3P4Q5R6S7T',
+  '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
   'Hon Okolie Peter Isioma JP MCArb',
   'SUPER_ADMIN',
   '+234 905 894 3474',

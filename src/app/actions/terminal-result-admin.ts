@@ -20,7 +20,13 @@ import {
   normalizeSession,
   getStudentUploadedTermsFromStore,
 } from "@/lib/terminal-result-store";
-import { getAdminSession } from "@/lib/session";
+import {
+  getAdminSession,
+  getResultAccessSession,
+  requireAdminSession,
+} from "@/lib/session";
+import { findPublishedResultForLookup } from "@/lib/result-lookup";
+import { sanitizeErrorMessage } from "@/lib/security";
 import {
   parseClassAndArm,
   formatClassWithArm,
@@ -52,9 +58,9 @@ export async function saveTerminalResultAction(formData: FormData): Promise<{
   error?: string;
   resultId?: number;
 }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Staff or Administrator login required to save terminal results." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
 
   const admNo = (formData.get("admNo") as string)?.trim().toUpperCase();
@@ -391,6 +397,11 @@ export async function saveBatchTerminalResultsAction(batch: BatchResultInputItem
   results: any[];
   error?: string;
 }> {
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, savedCount: 0, results: [], error: auth.error };
+  }
+
   if (!Array.isArray(batch) || batch.length === 0) {
     return { success: false, savedCount: 0, results: [], error: "No student result records provided." };
   }
@@ -677,6 +688,11 @@ export async function autoRankCohortPositionsAction(
   forceOverrideManual = false
 ): Promise<{ success: boolean; count: number; error?: string }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, count: 0, error: auth.error };
+    }
+
     const cleanClass = formatClassWithArm(className || "").trim();
     const cleanSession = (session || "").trim().toUpperCase();
     const cleanTerm = (term || "").trim().toUpperCase();
@@ -754,6 +770,11 @@ export async function getAllTerminalResultsAction(): Promise<{
   results: any[];
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, results: [] };
+    }
+
     let dbResults: any[] = [];
     try {
       dbResults = await prisma.terminalResult.findMany({
@@ -797,6 +818,11 @@ export async function getAllTerminalResultsAction(): Promise<{
  */
 export async function deleteTerminalResultAction(resultId: number): Promise<{ success: boolean; error?: string }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
     deleteFromLocalTerminalResultsStore(resultId);
     await prisma.terminalResult.delete({
       where: { id: resultId },
@@ -821,9 +847,9 @@ export async function updateResultPositionAction(
   numberInClass: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const sessionUser = await getAdminSession().catch(() => null);
-    if (!sessionUser || (sessionUser.role !== "SUPER_ADMIN" && sessionUser.role !== "TEACHER")) {
-      return { success: false, error: "Unauthorized: Only school administrators can update student positions." };
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
     }
 
     const cleanAdmNo = admNo.trim().toUpperCase();
@@ -891,7 +917,7 @@ export async function updateResultPositionAction(
     return { success: true };
   } catch (err: any) {
     console.error("Failed to update result position:", err);
-    return { success: false, error: err?.message || "Failed to update position" };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to update position.") };
   }
 }
 
@@ -912,131 +938,31 @@ export async function getStudentPreparedResultAction(
 }> {
   try {
     const cleanAdmNo = admNo.trim().toUpperCase();
-    const targetNormTerm = normalizeTerm(term);
-    const targetNormSession = normalizeSession(session);
+    const [adminSession, resultAccess] = await Promise.all([
+      getAdminSession().catch(() => null),
+      getResultAccessSession(cleanAdmNo, session, term).catch(() => null),
+    ]);
 
-    // 1. Check local persistent store
-    const localMatch = findInLocalTerminalResultsStore(cleanAdmNo, session, term);
-
-    // Collect available terms from local store and database
-    const localUploaded = getStudentUploadedTermsFromStore(cleanAdmNo);
-    const availableTermsSet = new Set<string>(localUploaded.map((u) => u.term));
-
-    // 2. Query DB
-    let record: any = null;
-    let fallbackDbPhotoUrl: string | undefined;
-    try {
-      const allDbRecords = await prisma.terminalResult.findMany({
-        where: {
-          admNo: { equals: cleanAdmNo, mode: "insensitive" } as any,
-          isPublished: true,
-        },
-        orderBy: { updatedAt: "desc" },
-      });
-
-      for (const rec of allDbRecords) {
-        if (rec.term) availableTermsSet.add(rec.term);
-        if (!fallbackDbPhotoUrl && rec.resultPayload) {
-          try {
-            const p = JSON.parse(rec.resultPayload);
-            if (p?.studentPhotoUrl) fallbackDbPhotoUrl = p.studentPhotoUrl;
-          } catch {}
-        }
-      }
-
-      if (targetNormTerm) {
-        // Strictly match the requested term!
-        record = allDbRecords.find((r: any) => {
-          const sessMatch = targetNormSession ? normalizeSession(r.session) === targetNormSession : true;
-          const termMatch = normalizeTerm(r.term) === targetNormTerm;
-          return sessMatch && termMatch;
-        });
-      } else {
-        // No specific term requested: use latest published record
-        record = allDbRecords[0] || null;
-      }
-    } catch {
-      // Prisma offline or connection refused - localMatch serves the request
+    if (!adminSession && !resultAccess) {
+      return { success: false, result: null, availableTerms: [], source: "DATABASE" };
     }
 
-    const availableTerms = Array.from(availableTermsSet);
+    const lookup = await findPublishedResultForLookup(cleanAdmNo, session, term);
 
-    // 3. If record found in DB, parse payload and ensure completeness
-    if (record && record.resultPayload) {
-      try {
-        const payload: PreparedResultPayload = JSON.parse(record.resultPayload);
-        payload.studentName = payload.studentName || record.studentName;
-        payload.admNo = payload.admNo || record.admNo;
-        payload.className = payload.className || record.className;
-        const parsedArm = parseClassAndArm(payload.className, payload.arm).arm;
-        if (parsedArm) payload.arm = parsedArm;
-        payload.session = payload.session || record.session;
-        payload.term = payload.term || record.term;
-        payload.termLabel = payload.termLabel || record.termLabel || `${record.term} (${record.session})`;
-        payload.position = payload.position || record.position || 1;
-        payload.numberInClass = payload.numberInClass || record.numberInClass || 35;
-        payload.daysOpened = payload.daysOpened ?? record.daysOpened ?? 115;
-        payload.daysPresent = payload.daysPresent ?? record.daysPresent ?? 112;
-        payload.daysAbsent = payload.daysAbsent ?? record.daysAbsent ?? 3;
-        payload.decision = payload.decision || record.decision || "PROMOTED";
-        payload.nextClass = payload.nextClass || record.nextClass || "";
-        payload.nextTermBegins = payload.nextTermBegins || record.nextTermBegins || "Monday, 14th September 2026";
-        payload.teacherRemark = payload.teacherRemark || record.teacherRemark || "An attentive and hardworking scholar.";
-        payload.principalRemark = payload.principalRemark || record.principalRemark || "Commendable distinction. Keep up the good work!";
-        payload.formMasterName = payload.formMasterName || "Mr. Emmanuel Eze (B.Sc Ed)";
-        payload.principalName = payload.principalName || "Hon Okolie Peter Isioma JP MCArb (Director)";
-        payload.classAverage = (payload.classAverage && Math.abs(payload.classAverage - 68.5) > 0.05 && Math.abs(payload.classAverage - 68.45) > 0.05)
-          ? payload.classAverage
-          : record.average || 0;
-        payload.feeInfo = payload.feeInfo || { ...DEFAULT_PREPARED_FEE };
-        // Strip legacy dummy account number if present
-        if (payload.feeInfo && payload.feeInfo.accountNumber === "1014529088") {
-          payload.feeInfo.accountNumber = "";
-        }
-        if (payload.feeInfo && payload.feeInfo.bankName === "Zenith Bank PLC" && !payload.feeInfo.accountNumber) {
-          payload.feeInfo.bankName = "";
-        }
-        payload.skills = payload.skills || DEFAULT_PREPARED_SKILLS;
-        payload.behaviour = payload.behaviour || DEFAULT_PREPARED_BEHAVIOUR;
-        if (!payload.studentPhotoUrl) {
-          payload.studentPhotoUrl =
-            localMatch?.studentPhotoUrl ||
-            findExistingStudentPhotoInStore(cleanAdmNo) ||
-            fallbackDbPhotoUrl ||
-            undefined;
-        }
-
-        return { success: true, result: payload, availableTerms, source: "DATABASE" };
-      } catch (err) {
-        console.error("JSON parse error for terminal result:", err);
-      }
+    // Pending-only scratch-card tokens must never disclose full result dossiers
+    if (!adminSession && resultAccess?.pendingOnly) {
+      return {
+        success: true,
+        result: null,
+        availableTerms: lookup.availableTerms,
+        source: "DATABASE",
+      };
     }
 
-    // 4. Return local store match if present
-    if (localMatch) {
-      if (localMatch.feeInfo && localMatch.feeInfo.accountNumber === "1014529088") {
-        localMatch.feeInfo.accountNumber = "";
-      }
-      if (!localMatch.studentPhotoUrl) {
-        const fallbackPhoto = findExistingStudentPhotoInStore(cleanAdmNo) || fallbackDbPhotoUrl;
-        if (fallbackPhoto) {
-          localMatch.studentPhotoUrl = fallbackPhoto;
-        }
-      }
-      return { success: true, result: localMatch, availableTerms, source: "DATABASE" };
-    }
-
-    return { success: true, result: null, availableTerms, source: "DATABASE" };
+    return lookup;
   } catch (err) {
     console.error("Get student prepared result error:", err);
-    const localMatch = findInLocalTerminalResultsStore(admNo, session, term);
-    if (localMatch) {
-      if (localMatch.feeInfo && localMatch.feeInfo.accountNumber === "1014529088") {
-        localMatch.feeInfo.accountNumber = "";
-      }
-      return { success: true, result: localMatch, source: "DATABASE" };
-    }
-    return { success: false, result: null, source: "MOCK" };
+    return { success: false, result: null, source: "DATABASE" };
   }
 }
 
@@ -1089,11 +1015,12 @@ export async function getStudentAvailableTermsAction(
       }
     } catch {}
 
+    const adminSession = await getAdminSession().catch(() => null);
     return {
       success: true,
       terms: Array.from(termsMap.values()),
-      studentName,
-      className,
+      studentName: adminSession ? studentName : undefined,
+      className: adminSession ? className : undefined,
     };
   } catch (err) {
     console.error("Get student available terms error:", err);
@@ -1113,6 +1040,11 @@ export async function purgeTermTerminalResultsAction(
   message: string;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, message: auth.error };
+    }
+
     const targetTerm = normalizeTerm(term);
     const targetSession = session && session !== "ALL" ? session.trim() : null;
 
@@ -1160,6 +1092,11 @@ export async function purgeAllTerminalResultsAction(): Promise<{
   message: string;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, message: auth.error };
+    }
+
     // 1. Clear local store
     saveAllToLocalTerminalResultsStore([]);
 
@@ -1193,6 +1130,11 @@ export async function seedDefaultInstitutionalResultsAction(): Promise<{
   message?: string;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, message: auth.error };
+    }
+
     const demoProfiles = [
       {
         admNo: "GFMS/2026/0501",

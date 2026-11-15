@@ -1,7 +1,9 @@
+import { redirect } from "next/navigation";
 import ReportCardView from "@/components/ReportCardView";
 import ResultEmptyStateView from "@/components/ResultEmptyStateView";
 import { SAMPLE_JSS_REPORT_CARD } from "@/data/mock-report-card";
 import { getStudentPreparedResultAction } from "@/app/actions/terminal-result-admin";
+import { getAdminSession, getResultAccessSession } from "@/lib/session";
 import prisma from "@/lib/prisma";
 import { AcademicTermType, ReportCardData, getOrdinalSuffix } from "@/types/report-card";
 import { formatClassWithArm, parseClassAndArm } from "@/lib/cbt-utils";
@@ -20,8 +22,6 @@ interface PageProps {
     name?: string;
     session?: string;
     term?: string;
-    check?: string;
-    max?: string;
     pending?: string;
     cardPreserved?: string;
   };
@@ -31,19 +31,49 @@ export default async function StudentResultViewPage({ params, searchParams }: Pa
   const decodedAdmNo = decodeURIComponent(params.admNo).trim().toUpperCase();
   const session = searchParams?.session ? decodeURIComponent(searchParams.session) : "2025/2026";
   const term = searchParams?.term ? decodeURIComponent(searchParams.term) : "Third Term";
-  const checkCount = searchParams?.check ? parseInt(searchParams.check, 10) : undefined;
-  const maxCount = searchParams?.max ? parseInt(searchParams.max, 10) : 2;
 
-  // 1. Attempt to fetch officially uploaded & published prepared result dossier
-  const dbResult = await getStudentPreparedResultAction(decodedAdmNo, session, term).catch(() => ({
-    success: false,
-    result: null,
-    availableTerms: [] as string[],
-    source: "DATABASE" as const,
-  }));
+  // Enforce strict access authorization: either authenticated Admin/Teacher OR valid signed Scratch Card token
+  const [adminSession, resultAccess] = await Promise.all([
+    getAdminSession().catch(() => null),
+    getResultAccessSession(decodedAdmNo, session, term).catch(() => null),
+  ]);
 
-  // 2. If an official result has been uploaded by the admin for this student, display it!
-  if (dbResult?.success && dbResult.result) {
+  if (!adminSession && !resultAccess) {
+    const query = new URLSearchParams({
+      admNo: decodedAdmNo,
+      session,
+      term,
+    });
+    redirect(`/result?${query.toString()}`);
+  }
+
+  const checkCount = resultAccess && !resultAccess.pendingOnly ? resultAccess.checkCount : undefined;
+  const maxCount = resultAccess && !resultAccess.pendingOnly ? resultAccess.maxCount ?? 3 : 3;
+
+  // Fetch published dossier only when Admin OR non-pending verified scratch card token is present
+  const dbResult =
+    adminSession || (resultAccess && !resultAccess.pendingOnly)
+      ? await getStudentPreparedResultAction(decodedAdmNo, session, term).catch(() => ({
+          success: false,
+          result: null,
+          availableTerms: [] as string[],
+          source: "DATABASE" as const,
+        }))
+      : await getStudentPreparedResultAction(decodedAdmNo, session, term)
+          .then((res) => ({
+            success: false,
+            result: null,
+            availableTerms: res?.availableTerms || [],
+            source: "DATABASE" as const,
+          }))
+          .catch(() => ({
+            success: false,
+            result: null,
+            availableTerms: [] as string[],
+            source: "DATABASE" as const,
+          }));
+
+  if ((adminSession || (resultAccess && !resultAccess.pendingOnly)) && dbResult?.success && dbResult.result) {
     const res = dbResult.result;
     const totalScore = res.subjects.reduce((sum, s) => sum + (s.totalScore || 0), 0);
     const totalPossible = res.subjects.length * 100;
@@ -72,9 +102,12 @@ export default async function StudentResultViewPage({ params, searchParams }: Pa
       totalScoreObtained: totalScore,
       totalScorePossible: totalPossible,
       studentAverage,
-      classAverage: (res.classAverage && Math.abs(res.classAverage - 68.45) > 0.05 && Math.abs(res.classAverage - 68.5) > 0.05)
-        ? res.classAverage
-        : studentAverage,
+      classAverage:
+        res.classAverage &&
+        Math.abs(res.classAverage - 68.45) > 0.05 &&
+        Math.abs(res.classAverage - 68.5) > 0.05
+          ? res.classAverage
+          : studentAverage,
       decision: res.decision || "PROMOTED",
       formMasterComment: res.teacherRemark || "An attentive and hardworking scholar.",
       formMasterName: res.formMasterName || "Mr. Emmanuel Eze (B.Sc Ed)",
@@ -129,7 +162,7 @@ export default async function StudentResultViewPage({ params, searchParams }: Pa
     );
   }
 
-  // 3. Result NOT yet uploaded by admin: Show empty state (NO DUMMY RESULT!)
+  // Result NOT yet uploaded (or pending-only token): Show empty state
   let registeredStudent: any = null;
   try {
     registeredStudent = await prisma.student.findUnique({
@@ -141,7 +174,9 @@ export default async function StudentResultViewPage({ params, searchParams }: Pa
 
   const studentName = searchParams?.name
     ? decodeURIComponent(searchParams.name)
-    : registeredStudent?.fullName || undefined;
+    : adminSession
+      ? registeredStudent?.fullName || undefined
+      : undefined;
 
   const className = registeredStudent?.currentClass || undefined;
 

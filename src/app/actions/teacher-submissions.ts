@@ -2,7 +2,8 @@
 
 import prisma, { queryRawPg } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getAdminSession } from "@/lib/session";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage, sanitizeMediaUrl, validateUploadedFile } from "@/lib/security";
 
 export interface ManualQuestionItem {
   questionText: string;
@@ -24,9 +25,20 @@ export async function submitTeacherQuestionsAction(formData: FormData): Promise<
   submissionId?: number;
   isDraft?: boolean;
 }> {
-  const session = await getAdminSession().catch(() => null);
-  const teacherName = (formData.get("teacherName") as string)?.trim() || session?.fullName || "Class Teacher";
-  const teacherEmail = (formData.get("teacherEmail") as string)?.trim() || session?.email || "greatfavourmontessorischool@gmail.com";
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const session = auth.session;
+
+  const teacherName =
+    session.role === "TEACHER"
+      ? session.fullName || "Class Teacher"
+      : (formData.get("teacherName") as string)?.trim() || session.fullName || "Class Teacher";
+  const teacherEmail =
+    session.role === "TEACHER"
+      ? session.email
+      : (formData.get("teacherEmail") as string)?.trim() || session.email;
   const subject = (formData.get("subject") as string)?.trim();
   const targetClass = (formData.get("targetClass") as string)?.trim() || "SS 1";
   const submissionType = ((formData.get("submissionType") as string)?.trim().toUpperCase() || "MANUAL") as "MANUAL" | "IMAGE" | "PDF";
@@ -51,19 +63,19 @@ export async function submitTeacherQuestionsAction(formData: FormData): Promise<
     }
   }
 
-  let finalImageUrl: string | null = existingImageUrl || null;
+  const allowPdfUpload = submissionType === "PDF";
+  let finalImageUrl: string | null = sanitizeMediaUrl(existingImageUrl, { allowPdf: allowPdfUpload });
 
-  // Process image or PDF if submitted as file upload
+  // Strictly validate uploaded file magic bytes and size (blocks SVG/HTML stored XSS)
   if ((submissionType === "IMAGE" || submissionType === "PDF") && imageFile && imageFile.size > 0) {
-    try {
-      const buffer = Buffer.from(await imageFile.arrayBuffer());
-      const base64 = buffer.toString("base64");
-      const mime = imageFile.type || (submissionType === "PDF" ? "application/pdf" : "image/jpeg");
-      finalImageUrl = `data:${mime};base64,${base64}`;
-    } catch (e) {
-      console.error("File buffer error:", e);
-      return { success: false, error: "Failed to process question paper file (image or PDF)." };
+    const validated = await validateUploadedFile(imageFile, {
+      allowPdf: allowPdfUpload,
+      maxBytes: 8 * 1024 * 1024,
+    });
+    if (!validated.ok) {
+      return { success: false, error: validated.error };
     }
+    finalImageUrl = validated.dataUrl;
   }
 
   if (!isDraft) {
@@ -100,14 +112,13 @@ export async function submitTeacherQuestionsAction(formData: FormData): Promise<
     let finalSubmissionId = draftId;
 
     if (draftId && !isNaN(draftId)) {
-      // Check existing draft ownership if logged in as teacher
       const existing = await prisma.teacherQuestionSubmission.findUnique({ where: { id: draftId } });
+      if (!existing) {
+        return { success: false, error: "Question submission not found." };
+      }
       if (
-        existing &&
-        session?.role === "TEACHER" &&
-        existing.teacherEmail &&
-        session.email &&
-        existing.teacherEmail.toLowerCase() !== session.email.toLowerCase()
+        session.role === "TEACHER" &&
+        (!existing.teacherEmail || existing.teacherEmail.toLowerCase() !== session.email.toLowerCase())
       ) {
         return { success: false, error: "Unauthorized: You can only edit your own question drafts." };
       }
@@ -151,8 +162,7 @@ export async function submitTeacherQuestionsAction(formData: FormData): Promise<
     revalidatePath("/staff");
     return { success: true, submissionId: finalSubmissionId, isDraft };
   } catch (err: any) {
-    console.error("Save/submit teacher questions error:", err);
-    return { success: false, error: `Failed to save questions: ${err?.message || "Unknown error"}` };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to save teacher questions.") };
   }
 }
 
@@ -167,13 +177,14 @@ export async function getTeacherSubmissionsAction(statusFilter?: string, teacher
   submissions: any[];
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, submissions: [] };
+    }
+    const session = auth.session;
 
     // Enforce teacher privacy: a TEACHER can NEVER view submissions belonging to other teachers!
-    let effectiveEmail = teacherEmail;
-    if (session?.role === "TEACHER") {
-      effectiveEmail = session.email;
-    }
+    let effectiveEmail = session.role === "TEACHER" ? session.email : teacherEmail;
 
     const whereObj: any = {};
     if (statusFilter && statusFilter !== "ALL") {
@@ -204,6 +215,11 @@ export async function reviewTeacherSubmissionAction(
   feedback?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
     await prisma.teacherQuestionSubmission.update({
       where: { id: submissionId },
       data: {
@@ -231,6 +247,11 @@ export async function convertTeacherSubmissionToCbtExamAction(submissionId: numb
   exam?: any;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+
     const submission = await prisma.teacherQuestionSubmission.findUnique({
       where: { id: submissionId },
     });
@@ -339,8 +360,7 @@ export async function convertTeacherSubmissionToCbtExamAction(submissionId: numb
     revalidatePath("/staff");
     return { success: true, examId: exam.id, exam: fullExam };
   } catch (err: any) {
-    console.error("Convert submission error:", err);
-    return { success: false, error: `Failed to convert submission to CBT exam: ${err?.message || "Unknown error"}` };
+    return { success: false, error: sanitizeErrorMessage(err, "Failed to convert submission to CBT exam.") };
   }
 }
 
@@ -349,15 +369,18 @@ export async function convertTeacherSubmissionToCbtExamAction(submissionId: numb
  */
 export async function deleteTeacherSubmissionAction(submissionId: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await getAdminSession().catch(() => null);
-    if (session?.role === "TEACHER") {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
+    if (session.role === "TEACHER") {
       const sub = await prisma.teacherQuestionSubmission.findUnique({ where: { id: submissionId } });
-      if (
-        sub &&
-        sub.teacherEmail &&
-        session.email &&
-        sub.teacherEmail.toLowerCase() !== session.email.toLowerCase()
-      ) {
+      if (!sub) {
+        return { success: false, error: "Submission not found." };
+      }
+      if (!sub.teacherEmail || sub.teacherEmail.toLowerCase() !== session.email.toLowerCase()) {
         return { success: false, error: "Unauthorized: You can only delete your own question drafts and submissions." };
       }
     }
@@ -397,22 +420,26 @@ export async function updateTeacherSubmissionQuestionsAction(
       return { success: false, error: "Questions must be provided as an array." };
     }
 
-    const session = await getAdminSession().catch(() => null);
-    if (session?.role === "TEACHER") {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
+    if (session.role === "TEACHER") {
       const sub = await prisma.teacherQuestionSubmission.findUnique({ where: { id: submissionId } });
-      if (
-        sub &&
-        sub.teacherEmail &&
-        session.email &&
-        sub.teacherEmail.toLowerCase() !== session.email.toLowerCase()
-      ) {
+      if (!sub) {
+        return { success: false, error: "Submission not found." };
+      }
+      if (!sub.teacherEmail || sub.teacherEmail.toLowerCase() !== session.email.toLowerCase()) {
         return { success: false, error: "Unauthorized: You can only edit questions in your own drafts." };
       }
     }
 
-    // Sanitize question items to ensure valid points
+    // Sanitize question items to ensure valid points and safe image URLs
     const sanitized = questions.map((q) => ({
       ...q,
+      imageUrl: sanitizeMediaUrl(q.imageUrl),
       points: q.points != null ? Number(q.points) : (q.questionType === "theory" ? 10 : 0.5),
       maxScore: q.maxScore != null ? Number(q.maxScore) : (q.questionType === "theory" ? 10 : undefined),
     }));
@@ -467,9 +494,15 @@ export async function updateTeacherSubmissionMetadataAction(
       return { success: false, error: "Valid submission ID is required." };
     }
 
-    const session = await getAdminSession().catch(() => null);
-    if (!session) {
-      return { success: false, error: "Unauthorized: Admin session required." };
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    if (auth.session.role === "TEACHER") {
+      const sub = await prisma.teacherQuestionSubmission.findUnique({ where: { id: submissionId } });
+      if (!sub || !sub.teacherEmail || sub.teacherEmail.toLowerCase() !== auth.session.email.toLowerCase()) {
+        return { success: false, error: "Unauthorized: You can only modify your own submission metadata." };
+      }
     }
 
     const parsedDuration = parseInt(String(durationMinutes), 10);

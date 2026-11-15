@@ -14,16 +14,14 @@ process.env.RAYON_NUM_THREADS = "1";
 process.env.PRISMA_CLIENT_ENGINE_TYPE = "library";
 process.env.PRISMA_CLI_QUERY_ENGINE_TYPE = "library";
 
-// Ensure DATABASE_URL fallback if not provided in environment
-const FALLBACK_DB_URL =
-  process.env.DATABASE_URL ||
-  "postgresql://mqqfpopx_dbuser:9fUTbykrKvF4EHw@127.0.0.1:5432/mqqfpopx_gfms?schema=public";
+// Load database URL strictly from environment configuration (never hardcode credentials)
+const CONFIGURED_DB_URL = process.env.DATABASE_URL || process.env.DIRECT_URL || "";
 
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = FALLBACK_DB_URL;
+if (!process.env.DATABASE_URL && CONFIGURED_DB_URL) {
+  process.env.DATABASE_URL = CONFIGURED_DB_URL;
 }
-if (!process.env.DIRECT_URL) {
-  process.env.DIRECT_URL = FALLBACK_DB_URL;
+if (!process.env.DIRECT_URL && CONFIGURED_DB_URL) {
+  process.env.DIRECT_URL = CONFIGURED_DB_URL;
 }
 
 export function buildPrismaUrl(url: string): string {
@@ -35,7 +33,7 @@ export function buildPrismaUrl(url: string): string {
   return url;
 }
 
-const connectionString = process.env.DATABASE_URL || FALLBACK_DB_URL;
+const connectionString = process.env.DATABASE_URL || CONFIGURED_DB_URL;
 
 // ----------------------------------------------------------------------------
 // 2. Linux / CloudLinux RHEL Query Engine Detection (Optional Local Fallback)
@@ -88,11 +86,11 @@ export function getPgPool(): any {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Pool } = require("pg");
     const cleanedUrl = sanitizePgUrl(connectionString);
-    // On shared cPanel / CloudLinux starter plans, Postgres total user connections are 10-15 max.
-    // Capping pool max at 3 (clamped 2..8) prevents "FATAL: too many clients already" under bursts.
+    // On shared cPanel / CloudLinux plans, Postgres max connections are typically 15-25.
+    // Default 5 sockets per single-process worker handles heavy concurrent bursts cleanly while leaving headroom.
     const poolMax = Math.min(
-      8,
-      Math.max(2, parseInt(process.env.PG_POOL_MAX || "3", 10))
+      10,
+      Math.max(2, parseInt(process.env.PG_POOL_MAX || "5", 10))
     );
     const pool = new Pool({
       connectionString: cleanedUrl,
@@ -101,10 +99,13 @@ export function getPgPool(): any {
           ? false
           : { rejectUnauthorized: false },
       max: poolMax,
-      min: 0, // Immediately release idle sockets to avoid hoarding DB connections
-      idleTimeoutMillis: 5000, // 5s idle release to free up connection slots
-      connectionTimeoutMillis: 8000, // 8s timeout queue during bursts
-      statement_timeout: 15000, // 15s max query execution
+      min: 0, // Release idle sockets when idle so DB connection slots stay available
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 10000,
+      query_timeout: 15000,
+      statement_timeout: 15000,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
       allowExitOnIdle: true, // Never block worker shutdown/recycle on idle pool clients
     });
 
@@ -130,7 +131,7 @@ export async function queryRawPg<T = any>(sql: string, params: any[] = []): Prom
   }
 
   let attempts = 0;
-  const maxAttempts = 3;
+  const maxAttempts = 2;
   let lastError: any = null;
 
   while (attempts < maxAttempts) {
@@ -166,8 +167,12 @@ export async function queryRawPg<T = any>(sql: string, params: any[] = []): Prom
         errMsg.includes("too many clients") ||
         errMsg.includes("remaining connection slots");
 
-      if (isTransient && attempts < maxAttempts) {
-        const backoffMs = attempts * 150 + Math.floor(Math.random() * 100);
+      const isOverloaded =
+        (errMsg.includes("timeout") || errMsg.includes("too many clients")) &&
+        (pool.waitingCount || 0) > 8;
+
+      if (isTransient && !isOverloaded && attempts < maxAttempts) {
+        const backoffMs = attempts * 120 + Math.floor(Math.random() * 100);
         console.warn(`[queryRawPg] Transient DB load spike (${errMsg}). Retrying attempt ${attempts + 1}/${maxAttempts} in ${backoffMs}ms...`);
         await new Promise((resolve) => setTimeout(resolve, backoffMs));
         continue;
@@ -2574,8 +2579,8 @@ export async function executePgFallbackSafe(model: string, method: string, args:
 // 6. Fail-Safe Prisma Proxy Engine (Zero Tokio Panic / Zero Native Aborts)
 // ----------------------------------------------------------------------------
 function createPrismaProxy(targetProvider: () => PrismaClient): any {
-  // Defer database auto-heal by 3.5s so initial cold-start HTTP requests are served immediately without catalog locks
-  if (typeof setTimeout !== "undefined") {
+  // Defer database auto-heal by 3.5s at runtime (skip during `next build` static generation workers)
+  if (typeof setTimeout !== "undefined" && process.env.NEXT_PHASE !== "phase-production-build") {
     setTimeout(() => {
       ensureDatabaseHealth().catch(() => {});
     }, 3500).unref?.();

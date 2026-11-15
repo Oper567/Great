@@ -178,11 +178,11 @@ CREATE TABLE "teacher_question_submissions" (
 -- SEED DATA (Institutional Credentials & Faculty Setup)
 -- ============================================================================
 
--- Primary Super Admin (Official School Gmail | Password: admin123)
+-- Primary Super Admin (Official School Gmail)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'greatfavourmontessorischool@gmail.com',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Hon Okolie Peter Isioma JP MCArb',
     'SUPER_ADMIN',
     'All Classes',
@@ -191,11 +191,11 @@ VALUES (
     NOW()
 );
 
--- Legacy Admin Alias (Password: admin123)
+-- Legacy Admin Alias (Locked by default — set credentials securely after setup)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'admin@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Hon Okolie Peter Isioma JP MCArb',
     'SUPER_ADMIN',
     'All Classes',
@@ -204,11 +204,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 1: Mr. Jude Godstime (HOD ICT & Computer Education) | Password: admin123
+-- Faculty 1: Mr. Jude Godstime (HOD ICT & Computer Education)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'jude@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Jude Godstime',
     'TEACHER',
     'SS 1 - SS 3',
@@ -217,11 +217,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 2: Mr. Abraham Akozor (HOD Science Management) | Password: admin123
+-- Faculty 2: Mr. Abraham Akozor (HOD Science Management)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'abraham.akozo@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Abraham Akozor',
     'TEACHER',
     'SS 2 (Science)',
@@ -230,11 +230,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 3: Teacher Omoile Stanley Henry (HOD Pure Science & Laboratories) | Password: admin123
+-- Faculty 3: Teacher Omoile Stanley Henry (HOD Pure Science & Laboratories)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'stanley@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Teacher Omoile Stanley Henry',
     'TEACHER',
     'All Secondary',
@@ -243,11 +243,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 4: Mr. Paul Uyokei (Bursary / Admission Officer) | Password: admin123
+-- Faculty 4: Mr. Paul Uyokei (Bursary / Admission Officer)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'paul@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Paul Uyokei',
     'BURSAR',
     'All',
@@ -256,11 +256,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 5: Ms. Gift Itakpe (HOD Examinations & Academic Standards) | Password: admin123
+-- Faculty 5: Ms. Gift Itakpe (HOD Examinations & Academic Standards)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'gift@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Ms. Gift Itakpe',
     'TEACHER',
     'All',
@@ -269,11 +269,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 6: Mrs. Chiedu Eno (HOD Guardian and Counseling) | Password: admin123
+-- Faculty 6: Mrs. Chiedu Eno (HOD Guardian and Counseling)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'chiedu@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mrs. Chiedu Eno',
     'TEACHER',
     'All',
@@ -282,11 +282,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 7: Mrs. Philo Mordi (HOD Nursery Pupils) | Password: admin123
+-- Faculty 7: Mrs. Philo Mordi (HOD Nursery Pupils)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'philo@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mrs. Philo Mordi',
     'TEACHER',
     'Play Class - Nursery 3',
@@ -295,11 +295,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 8: Miss Grace Edechi (School Secretary - Primary Session) | Password: admin123
+-- Faculty 8: Miss Grace Edechi (School Secretary - Primary Session)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'grace@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Miss Grace Edechi',
     'ADMIN',
     'Primary 1 - 5',
@@ -308,11 +308,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 9: Insp. James Ukpere (Chief Security Officer) | Password: admin123
+-- Faculty 9: Insp. James Ukpere (Chief Security Officer)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'james@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Insp. James Ukpere (Rtd Police Officer)',
     'ADMIN',
     'All',
@@ -321,11 +321,11 @@ VALUES (
     NOW()
 );
 
--- Faculty 10: Mr. Odogwu Victor (School Bus Manager) | Password: admin123
+-- Faculty 10: Mr. Odogwu Victor (School Bus Manager)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'victor@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Odogwu Victor',
     'ADMIN',
     'All',
@@ -334,11 +334,11 @@ VALUES (
     NOW()
 );
 
--- Generic Teacher Account (Password: admin123)
+-- Generic Teacher Account (Locked by default — set credentials securely after setup)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'teacher@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Senior Subject Educator',
     'TEACHER',
     'SS 2 (Science)',

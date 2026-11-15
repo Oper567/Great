@@ -17,7 +17,8 @@ import {
   saveAllToLocalTerminalResultsStore,
 } from "@/lib/terminal-result-store";
 import { autoRankCohortPositionsAction } from "@/app/actions/terminal-result-admin";
-import { getAdminSession } from "@/lib/session";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage } from "@/lib/security";
 import {
   parseClassAndArm,
   formatClassWithArm,
@@ -256,11 +257,16 @@ export async function getTeacherUploadedCoursesAction(
   error?: string;
 }> {
   try {
-    const session = await getAdminSession();
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, courses: [], error: auth.error };
+    }
+    const session = auth.session;
+
     const effectiveEmail = (
-      session?.role === "TEACHER"
+      session.role === "TEACHER"
         ? session.email
-        : teacherEmailParam || session?.email || ""
+        : teacherEmailParam || session.email || ""
     )
       .trim()
       .toLowerCase();
@@ -352,7 +358,7 @@ export async function getTeacherUploadedCoursesAction(
     return {
       success: false,
       courses: [],
-      error: err?.message || "Failed to load teacher uploaded courses.",
+      error: sanitizeErrorMessage(err, "Failed to load teacher uploaded courses."),
     };
   }
 }
@@ -365,14 +371,33 @@ export async function getTeacherUploadedCoursesAction(
 async function verifyTeacherCourseOwnership(
   subjectName: string,
   className: string,
-  fallbackTeacherEmail?: string
-): Promise<{ allowed: boolean; isSuperAdmin: boolean; error?: string }> {
-  const session = await getAdminSession();
-  if (session?.role === "SUPER_ADMIN") {
-    return { allowed: true, isSuperAdmin: true };
+  _fallbackTeacherEmail?: string
+): Promise<{
+  allowed: boolean;
+  isSuperAdmin: boolean;
+  sessionEmail?: string;
+  sessionName?: string;
+  error?: string;
+}> {
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return {
+      allowed: false,
+      isSuperAdmin: false,
+      error: "Unauthorized: Please sign in with your Staff or Administrator credentials.",
+    };
+  }
+  const session = auth.session;
+  if (session.role === "SUPER_ADMIN") {
+    return {
+      allowed: true,
+      isSuperAdmin: true,
+      sessionEmail: session.email,
+      sessionName: session.fullName,
+    };
   }
 
-  const teacherEmail = (session?.email || fallbackTeacherEmail || "").trim().toLowerCase();
+  const teacherEmail = (session.email || "").trim().toLowerCase();
   if (!teacherEmail) {
     return {
       allowed: false,
@@ -399,7 +424,12 @@ async function verifyTeacherCourseOwnership(
     };
   }
 
-  return { allowed: true, isSuperAdmin: false };
+  return {
+    allowed: true,
+    isSuperAdmin: false,
+    sessionEmail: teacherEmail,
+    sessionName: session.fullName,
+  };
 }
 
 /**
@@ -807,14 +837,21 @@ export async function saveTeacherSubjectDraftAction(
       pendingExamCount > 0 ? "CA_DRAFT_PENDING_EXAM" : "DRAFT_PENDING_ADMIN";
     const nowIso = new Date().toISOString();
 
+    const verifiedTeacherEmail = ownership.isSuperAdmin
+      ? teacherEmail || ownership.sessionEmail
+      : ownership.sessionEmail;
+    const verifiedTeacherName = ownership.isSuperAdmin
+      ? teacherName || ownership.sessionName
+      : ownership.sessionName;
+
     const record: StoredSubjectDraftRecord = {
       draftKey,
       className: cleanClassName,
       subjectName: cleanSubjectName,
       session: cleanSession,
       term: cleanTerm,
-      teacherEmail,
-      teacherName,
+      teacherEmail: verifiedTeacherEmail,
+      teacherName: verifiedTeacherName,
       status,
       scores: normalizedScores,
       updatedAt: nowIso,
@@ -846,8 +883,8 @@ export async function saveTeacherSubjectDraftAction(
         cleanSubjectName,
         cleanSession,
         cleanTerm,
-        teacherEmail || null,
-        teacherName || null,
+        verifiedTeacherEmail || null,
+        verifiedTeacherName || null,
         status,
         JSON.stringify(normalizedScores)
       );
@@ -885,7 +922,7 @@ export async function saveTeacherSubjectDraftAction(
       success: false,
       savedCount: 0,
       pendingExamCount: 0,
-      error: `Failed to save draft: ${err?.message || "Unknown error"}`,
+      error: sanitizeErrorMessage(err, "Failed to save draft."),
     };
   }
 }
@@ -919,6 +956,11 @@ export async function getTeacherSubjectDraftOrPublishedScoresAction(params: {
 
     if (!cleanClassName || !cleanSubjectName) {
       return { success: true, hasDraft: false, status: "NONE", scores: [] };
+    }
+
+    const ownership = await verifyTeacherCourseOwnership(cleanSubjectName, cleanClassName);
+    if (!ownership.allowed) {
+      return { success: false, hasDraft: false, status: "NONE", scores: [] };
     }
 
     const draftKey = buildDraftKey(cleanClassName, cleanSubjectName, cleanSession, cleanTerm);
@@ -1135,14 +1177,21 @@ export async function syncTeacherSubjectScoresAction(
       ? "CA_DRAFT_PENDING_EXAM"
       : "DRAFT_PENDING_ADMIN";
 
+    const verifiedTeacherEmail = ownership.isSuperAdmin
+      ? payload.teacherEmail || ownership.sessionEmail
+      : ownership.sessionEmail;
+    const verifiedTeacherName = ownership.isSuperAdmin
+      ? payload.teacherName || ownership.sessionName
+      : ownership.sessionName;
+
     const draftRecord: StoredSubjectDraftRecord = {
       draftKey,
       className: cleanClassName,
       subjectName: cleanSubjectName,
       session: cleanSession,
       term: cleanTerm,
-      teacherEmail: payload.teacherEmail,
-      teacherName: payload.teacherName,
+      teacherEmail: verifiedTeacherEmail,
+      teacherName: verifiedTeacherName,
       status: newStatus,
       scores: normalizedScores,
       updatedAt: new Date().toISOString(),
@@ -1167,8 +1216,8 @@ export async function syncTeacherSubjectScoresAction(
         cleanSubjectName,
         cleanSession,
         cleanTerm,
-        payload.teacherEmail || null,
-        payload.teacherName || null,
+        verifiedTeacherEmail || null,
+        verifiedTeacherName || null,
         newStatus,
         JSON.stringify(normalizedScores)
       );
@@ -1193,7 +1242,7 @@ export async function syncTeacherSubjectScoresAction(
     return {
       success: false,
       updatedCount: 0,
-      error: `Failed to sync scores: ${err?.message || "Unknown error"}`,
+      error: sanitizeErrorMessage(err, "Failed to sync scores."),
     };
   }
 }
@@ -1217,6 +1266,11 @@ export async function getAllTeacherCourseDraftsForAdminAction(params?: {
   >;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, drafts: [] };
+    }
+
     await ensureDraftTableExists();
     const map = new Map<string, StoredSubjectDraftRecord>();
 
@@ -1301,6 +1355,11 @@ export async function finalizeAndPublishClassDraftResultsAction(params: {
   error?: string;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, publishedCount: 0, error: auth.error };
+    }
+
     const cleanClass = params.className && params.className !== "ALL" ? params.className.trim() : "";
     const cleanSession = (params.session || "2025/2026").trim();
     const cleanTerm = (params.term || "Third Term").trim();
@@ -1432,7 +1491,7 @@ export async function finalizeAndPublishClassDraftResultsAction(params: {
     return {
       success: false,
       publishedCount: 0,
-      error: err?.message || "Failed to finalize and publish draft results.",
+      error: sanitizeErrorMessage(err, "Failed to finalize and publish draft results."),
     };
   }
 }
@@ -1447,6 +1506,11 @@ export async function getClassStudentsForDelegationAction(
   students: Array<{ admNo: string; fullName: string; currentClass: string; arm?: string; gender?: string }>;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, students: [] };
+    }
+
     const cleanClass = (className || "").trim();
     const parsedTarget = parseClassAndArm(cleanClass);
     const allStudents = await prisma.student.findMany({
@@ -1531,6 +1595,16 @@ export async function fetchCbtExamAttemptsForSubjectAction(params: {
     const parsedTarget = parseClassAndArm(cleanClass);
     const baseLevelToken = parsedTarget.baseLevel || cleanClass;
     const cleanSubject = (params.subjectName || "").trim().toLowerCase();
+
+    const ownership = await verifyTeacherCourseOwnership(params.subjectName || "", cleanClass);
+    if (!ownership.allowed) {
+      return {
+        success: false,
+        exams: [],
+        attempts: [],
+        error: ownership.error,
+      };
+    }
 
     const candidateExams = await prisma.exam.findMany({
       where:

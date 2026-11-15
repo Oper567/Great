@@ -39,7 +39,7 @@ export default function StaffManagementTab({ initialTeachers }: Props) {
   // Form State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("teacher123");
+  const [password, setPassword] = useState("");
   const [assignedSubject, setAssignedSubject] = useState("Mathematics");
   const [assignedClass, setAssignedClass] = useState("SS 1");
   const [phone, setPhone] = useState("");
@@ -52,7 +52,7 @@ export default function StaffManagementTab({ initialTeachers }: Props) {
   const openAddModal = () => {
     setFullName("");
     setEmail("");
-    setPassword("teacher123");
+    setPassword("");
     setAssignedSubject("Mathematics");
     setAssignedClass("SS 1");
     setPhone("");

@@ -86,66 +86,50 @@ export default function AboutPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
-            {/* Director Card — Compact Mobile + Uncropped Portrait on Tablet/Desktop */}
-            <div className="lg:col-span-7 bg-primary-950 text-white rounded-2xl p-4 sm:p-5 shadow-xl border border-primary-900 flex flex-col justify-between reveal-init reveal-fade-left delay-200">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5 sm:gap-5 items-center">
-                <div className="hidden md:block md:col-span-5 w-full">
-                  <div className="relative w-full max-w-[220px] mx-auto aspect-[4/5] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
+            {/* Director Card — Compact on Mobile, Tall Uncropped Portrait on Tablet & Desktop */}
+            <div className="lg:col-span-7 bg-primary-950 text-white rounded-2xl p-3.5 sm:p-6 shadow-xl border border-primary-900 flex flex-col justify-between reveal-init reveal-fade-left delay-200">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-6 items-center flex-1">
+                <div className="md:col-span-6 w-full">
+                  <div className="relative w-full max-w-[215px] sm:max-w-[260px] md:max-w-none mx-auto aspect-[3/4] lg:min-h-[390px] rounded-2xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-xl">
                     <Image
                       src={KEY_PERSONNEL.director.image}
                       alt={`${KEY_PERSONNEL.director.fullName} - ${KEY_PERSONNEL.director.title}`}
                       fill
-                      sizes="(max-width: 1024px) 40vw, 25vw"
-                      className="object-cover object-top"
+                      sizes="(max-width: 640px) 215px, (max-width: 768px) 260px, (max-width: 1280px) 34vw, 340px"
+                      className="object-cover object-center"
                       priority
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-primary-950 via-primary-950/85 to-transparent p-2 text-center">
-                      <span className="text-[10px] font-extrabold text-secondary-400 block uppercase tracking-wider">
-                        Director &amp; Proprietor
-                      </span>
-                    </div>
                   </div>
                 </div>
 
-                <div className="md:col-span-7 space-y-2.5 text-left">
-                  <span className="px-2.5 py-0.5 rounded text-[10px] font-extrabold bg-secondary-400 text-slate-950 tracking-wider inline-block">
+                <div className="md:col-span-6 space-y-2 sm:space-y-3 text-left">
+                  <span className="px-2.5 py-0.5 sm:py-1 rounded text-[10px] font-extrabold bg-secondary-400 text-slate-950 tracking-wider inline-block">
                     DIRECTOR&apos;S WELCOME ADDRESS
                   </span>
 
-                  <div className="flex items-center gap-3">
-                    <div className="md:hidden relative w-20 aspect-[4/5] rounded-xl overflow-hidden bg-slate-900 border-2 border-secondary-400/80 shadow-md shrink-0">
-                      <Image
-                        src={KEY_PERSONNEL.director.image}
-                        alt={`${KEY_PERSONNEL.director.fullName} - ${KEY_PERSONNEL.director.title}`}
-                        fill
-                        sizes="80px"
-                        className="object-cover object-top"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-base sm:text-xl font-extrabold text-white leading-tight">
-                        {KEY_PERSONNEL.director.fullName}
-                      </h3>
-                      <p className="text-secondary-400 font-semibold text-[11px] sm:text-xs mt-0.5">
-                        {KEY_PERSONNEL.director.title} &bull; Educationist &amp; Philanthropist
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-xl font-extrabold text-white leading-tight">
+                      {KEY_PERSONNEL.director.fullName}
+                    </h3>
+                    <p className="text-secondary-400 font-semibold text-[11px] sm:text-xs mt-0.5 sm:mt-1">
+                      {KEY_PERSONNEL.director.title} &bull; Educationist &amp; Philanthropist
+                    </p>
                   </div>
 
-                  <blockquote className="text-slate-200 text-xs leading-relaxed italic border-l-2 border-secondary-400 pl-3 bg-white/5 py-1.5 pr-2.5 rounded-r-lg">
-                    &quot;When my wife and I started Great-Favour in September 2014, our prayer was simple: to build a school where every child feels loved, safe, and excited to learn. We help our boys and girls build real confidence, sound morals, and the courage to become honest leaders.&quot;
+                  <blockquote className="text-slate-200 text-[11px] sm:text-[13px] leading-snug sm:leading-relaxed italic border-l-2 border-secondary-400 pl-2.5 sm:pl-3 bg-white/5 py-1.5 sm:py-2 pr-2.5 sm:pr-3 rounded-r-lg">
+                    &quot;Since September 2014, our prayer has been simple: to build a safe school where every child learns with joy, sound morals, and the courage to become an honest leader.&quot;
                   </blockquote>
 
-                  <p className="text-slate-300 text-xs leading-relaxed">
+                  <p className="hidden sm:block text-slate-300 text-xs leading-relaxed">
                     Under Hon. Okolie&apos;s guidance, Great-Favour has grown into a thriving school family in Issele-Azagba, graduating bright, respectful scholars every year.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-2.5 mt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-slate-300">
+              <div className="pt-2.5 mt-3 sm:pt-3 sm:mt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-300">
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-secondary-400 shrink-0" />
-                  <span>Over 700 scholars across Nursery, Primary &amp; Secondary</span>
+                  <span>700+ scholars across Nursery, Primary &amp; Secondary</span>
                 </div>
                 <span className="font-semibold text-secondary-400">12+ Years of Impact</span>
               </div>

@@ -1091,7 +1091,7 @@ export default function AdminCbtDashboardClient({
                 type="email"
                 name="email"
                 required
-                defaultValue="admin@gfms.edu.ng"
+                placeholder="Enter administrator email"
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm text-white focus:outline-none focus:border-yellow-500"
               />
             </div>
@@ -1104,7 +1104,7 @@ export default function AdminCbtDashboardClient({
                 type="password"
                 name="password"
                 required
-                defaultValue="admin123"
+                placeholder="Enter administrator password"
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-base sm:text-sm text-white focus:outline-none focus:border-yellow-500"
               />
             </div>

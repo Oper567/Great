@@ -109,6 +109,9 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const isSyncingRef = useRef(false);
+  const lastSyncedSignatureRef = useRef<string>("");
+  const lastSyncedAtMsRef = useRef<number>(0);
   const [submissionReason, setSubmissionReason] = useState<"manual" | "time_expired" | "tab_switch_violation">("manual");
   const [submissionResult, setSubmissionResult] = useState<{
     objectiveScore: number;
@@ -544,8 +547,8 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
     }
   }, [currentIndex, currentIndexStorageKey]);
 
-  const syncProgressToServer = useCallback(async () => {
-    if (isLoading || !payload || submissionResult || isSubmittingRef.current) return;
+  const syncProgressToServer = useCallback(async (force = false) => {
+    if (isLoading || !payload || submissionResult || isSubmittingRef.current || isSyncingRef.current) return;
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
 
     const mapToSave: Record<string, string> = {};
@@ -558,37 +561,51 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
       .map(([k]) => Number(k))
       .filter((n) => !isNaN(n));
 
+    const signature = JSON.stringify({ mapToSave, flaggedIds, idx: currentIndexRef.current });
+    const elapsedSinceSync = Date.now() - lastSyncedAtMsRef.current;
+    if (!force && signature === lastSyncedSignatureRef.current && elapsedSinceSync < 35000) {
+      return;
+    }
+
     const questionOrder =
       shuffledObjectiveQuestions.length > 0
         ? shuffledObjectiveQuestions.map((q) => q.id)
         : undefined;
 
-    const res = await saveExamProgressCheckpointAction(examId, mapToSave, {
-      attemptId: payload.attemptId,
-      remainingSeconds: lastTickSecRef.current > 0 ? lastTickSecRef.current : undefined,
-      currentIndex: currentIndexRef.current,
-      flaggedIds,
-      questionOrder,
-    }).catch(() => ({ success: false }));
+    isSyncingRef.current = true;
+    try {
+      const res = await saveExamProgressCheckpointAction(examId, mapToSave, {
+        attemptId: payload.attemptId,
+        remainingSeconds: lastTickSecRef.current > 0 ? lastTickSecRef.current : undefined,
+        currentIndex: currentIndexRef.current,
+        flaggedIds,
+        questionOrder,
+      }).catch(() => ({ success: false }));
 
-    if (res?.success) {
-      setLastSyncedAt(Date.now());
+      if (res?.success) {
+        const now = Date.now();
+        lastSyncedSignatureRef.current = signature;
+        lastSyncedAtMsRef.current = now;
+        setLastSyncedAt(now);
+      }
+    } finally {
+      isSyncingRef.current = false;
     }
   }, [isLoading, payload, submissionResult, flagged, shuffledObjectiveQuestions, examId]);
 
   useEffect(() => {
     if (isLoading || !payload || submissionResult || isSubmitting) return;
     const debounceTimer = setTimeout(() => {
-      syncProgressToServer();
-    }, 1500);
+      syncProgressToServer(false);
+    }, 2500);
     return () => clearTimeout(debounceTimer);
   }, [answers, flagged, isLoading, payload, submissionResult, isSubmitting, syncProgressToServer]);
 
   useEffect(() => {
     if (isLoading || !payload || submissionResult || isSubmitting) return;
-    const jitteredIntervalMs = 20000 + Math.floor(Math.random() * 5000);
+    const jitteredIntervalMs = 45000 + Math.floor(Math.random() * 10000);
     const heartbeat = setInterval(() => {
-      syncProgressToServer();
+      syncProgressToServer(true);
     }, jitteredIntervalMs);
     return () => clearInterval(heartbeat);
   }, [isLoading, payload, submissionResult, isSubmitting, syncProgressToServer]);

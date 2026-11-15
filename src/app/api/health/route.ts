@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import net from "net";
+import { constantTimeEqual } from "@/lib/security";
+import { getAdminSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +41,30 @@ function testTcpPort(host: string, port: number, timeoutMs = 3000): Promise<{ op
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const secret = searchParams.get("secret");
-  const validSecret = process.env.SETUP_SECRET || "gfms2025";
-  const isAuthorizedDiagnostic = secret === validSecret;
+  const secret = searchParams.get("secret") || "";
+  const configuredSecret = process.env.SETUP_SECRET || "";
+  const adminSession = await getAdminSession().catch(() => null);
+  const isAuthorizedDiagnostic =
+    adminSession?.role === "SUPER_ADMIN" ||
+    (configuredSecret.length >= 16 && secret.length > 0 && constantTimeEqual(secret, configuredSecret));
+
+  let dbSuccess = false;
+  let adminCount = 0;
+  let dbError: string | null = null;
+
+  try {
+    adminCount = await prisma.adminUser.count();
+    dbSuccess = true;
+  } catch (err: any) {
+    dbError = err?.message || String(err);
+  }
+
+  if (!isAuthorizedDiagnostic) {
+    return NextResponse.json({
+      status: dbSuccess ? "healthy" : "degraded",
+      timestamp: new Date().toISOString(),
+    });
+  }
 
   let targetHost = "localhost";
   let targetPort = 5432;
@@ -60,32 +83,10 @@ export async function GET(request: Request) {
     }
   }
 
-  // 1. Test Network Port to Target Database Host
   const portReachable = await testTcpPort(targetHost, targetPort, 3000);
-
-  // 2. Test Prisma Database Execution
-  let dbSuccess = false;
-  let adminCount = 0;
-  let dbError: string | null = null;
-
-  try {
-    adminCount = await prisma.adminUser.count();
-    dbSuccess = true;
-  } catch (err: any) {
-    dbError = err?.message || String(err);
-  }
-
-  // 3. Masked Database URL
   const maskedUrl = process.env.DATABASE_URL
     ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ":***@")
     : "NOT_SET";
-
-  if (!isAuthorizedDiagnostic) {
-    return NextResponse.json({
-      status: dbSuccess ? "healthy" : "degraded",
-      timestamp: new Date().toISOString(),
-    });
-  }
 
   return NextResponse.json({
     status: dbSuccess ? "healthy" : "unhealthy",

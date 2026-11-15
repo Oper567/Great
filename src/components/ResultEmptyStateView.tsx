@@ -116,7 +116,7 @@ export default function ResultEmptyStateView({
                 {otherUploadedTerms.map((t) => (
                   <Link
                     key={t}
-                    href={`/result/${encodeURIComponent(admNo)}?name=${encodeURIComponent(
+                    href={`/result?admNo=${encodeURIComponent(admNo)}&name=${encodeURIComponent(
                       displayName
                     )}&session=${encodeURIComponent(session)}&term=${encodeURIComponent(t)}`}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold shadow transition active:scale-95"

@@ -44,3 +44,6 @@ deploy.zip
 /.prisma/
 /prebundled_modules/
 /deploy_staging/
+
+# Runtime auto-generated cryptographic secrets (never commit)
+.gfms_runtime_secrets.json

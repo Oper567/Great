@@ -3,7 +3,8 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { parseClassAndArm } from "@/lib/cbt-utils";
-import { getAdminSession } from "@/lib/session";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage } from "@/lib/security";
 
 /**
  * Super Admin: Create a single student with generated or custom RegNo
@@ -13,9 +14,9 @@ export async function createStudentAction(formData: FormData): Promise<{
   error?: string;
   student?: any;
 }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
 
   const customAdmNo = (formData.get("admNo") as string)?.trim().toUpperCase();
@@ -83,7 +84,7 @@ export async function createStudentAction(formData: FormData): Promise<{
     console.error("Create student error:", err);
     return {
       success: false,
-      error: `Failed to create student: ${err?.message || "Unknown error"}`,
+      error: sanitizeErrorMessage(err, "Failed to create student. Please verify the admission number and try again."),
     };
   }
 }
@@ -97,9 +98,9 @@ export async function generateBatchStudentsAction(formData: FormData): Promise<{
   count?: number;
   students?: any[];
 }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
 
   const rawCurrentClass = (formData.get("currentClass") as string)?.trim();
@@ -158,7 +159,7 @@ export async function generateBatchStudentsAction(formData: FormData): Promise<{
     console.error("Batch generate students error:", err);
     return {
       success: false,
-      error: `Failed to batch generate students: ${err?.message || "Unknown error"}`,
+      error: sanitizeErrorMessage(err, "Failed to batch generate students."),
     };
   }
 }
@@ -171,6 +172,11 @@ export async function getAllStudentsAction(): Promise<{
   error?: string;
   students: any[];
 }> {
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error, students: [] };
+  }
+
   try {
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "students" ADD COLUMN IF NOT EXISTS "arm" TEXT DEFAULT '';
@@ -202,9 +208,9 @@ export async function updateStudentAction(formData: FormData): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
 
   const studentId = parseInt((formData.get("studentId") as string) || "0", 10);
@@ -251,9 +257,9 @@ export async function deleteStudentAction(studentId: number): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Staff or Administrator login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
   try {
     await prisma.student.delete({

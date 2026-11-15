@@ -9,8 +9,15 @@ import {
   formatClassWithArm,
 } from "@/lib/cbt-utils";
 import { ClientExamPayload, ClientObjectiveQuestion, ClientTheoryQuestion } from "@/types/cbt";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage } from "@/lib/security";
 
-import { getCachedExamPayload, setCachedExamPayload } from "@/lib/cbt-cache";
+import {
+  getCachedExamPayload,
+  getOrLoadExamPayload,
+  getCachedActiveExamList,
+  setCachedActiveExamList,
+} from "@/lib/cbt-cache";
 
 /**
  * Single Payload Exam Engine:
@@ -40,8 +47,15 @@ export async function getSinglePayloadExamAction(examId: number): Promise<{
     try {
       const dbStudent = await prisma.student.findUnique({
         where: { admNo: student.admNo },
+        select: { id: true, currentClass: true, arm: true, status: true },
       });
       if (dbStudent) {
+        if ((dbStudent as any).status && (dbStudent as any).status !== "ACTIVE") {
+          return {
+            success: false,
+            error: "Your CBT profile is currently inactive. Please contact the Examination Office.",
+          };
+        }
         actualStudentId = dbStudent.id;
         effectiveClass = dbStudent.currentClass || effectiveClass;
         effectiveArm = (dbStudent as any).arm ?? effectiveArm;
@@ -51,18 +65,15 @@ export async function getSinglePayloadExamAction(examId: number): Promise<{
     }
 
     // Class Gatekeeper check
-    if (!isSeniorSecondaryClass(effectiveClass) && !student.admNo?.toUpperCase().startsWith("GFMS")) {
+    if (!isSeniorSecondaryClass(effectiveClass)) {
       return {
         success: false,
         error: "Access Denied: The CBT portal is restricted to registered Secondary students.",
       };
     }
 
-    // 1. Check in-memory cache first to avoid heavy multi-join DB queries under heavy concurrent load
-    let cached = getCachedExamPayload(examId);
-
-    if (!cached) {
-      // Fetch Exam from database once
+    // 1. Single-flight + in-memory cache to prevent DB thundering herd when 100+ students start simultaneously
+    const cached = await getOrLoadExamPayload(examId, async () => {
       const exam: any = await prisma.exam.findUnique({
         where: { id: examId },
         include: {
@@ -75,11 +86,10 @@ export async function getSinglePayloadExamAction(examId: number): Promise<{
         },
       });
 
-      if (!exam || !exam.isActive) {
-        return { success: false, error: "This examination is currently unavailable or inactive." };
+      if (!exam || !exam.isActive || exam.isArchived) {
+        return null;
       }
 
-      // Sanitize objective questions (Omit correctAnswer from client payload)
       const answerKey: Record<number, { correctAnswer: string; points: number }> = {};
       let totalPoints = 0;
 
@@ -113,7 +123,6 @@ export async function getSinglePayloadExamAction(examId: number): Promise<{
         };
       });
 
-      // Sanitize theory questions
       const sanitizedTheoryQuestions: ClientTheoryQuestion[] = (exam.theoryQuestions || []).map((t: any) => ({
         id: t.id,
         questionNum: t.questionNum,
@@ -127,7 +136,7 @@ export async function getSinglePayloadExamAction(examId: number): Promise<{
         ? (exam.examDate instanceof Date ? exam.examDate.toISOString() : new Date(exam.examDate).toISOString())
         : new Date().toISOString();
 
-      cached = {
+      return {
         exam: {
           id: exam.id,
           title: exam.title,
@@ -143,14 +152,10 @@ export async function getSinglePayloadExamAction(examId: number): Promise<{
         answerKey,
         totalPossiblePoints: totalPoints,
         totalQuestions: sanitizedObjectiveQuestions.length,
-        cachedAt: Date.now(),
       };
+    });
 
-      // Store in RAM cache for subsequent student requests
-      setCachedExamPayload(examId, cached);
-    }
-
-    if (!cached.exam.isActive) {
+    if (!cached || !cached.exam.isActive) {
       return { success: false, error: "This examination is currently unavailable or inactive." };
     }
 
@@ -366,42 +371,125 @@ export async function saveExamProgressCheckpointAction(
 ): Promise<{ success: boolean }> {
   try {
     const student = await getStudentSession();
-    if (!student || !examId || !answers) return { success: false };
+    if (!student || !examId || !answers || typeof answers !== "object") {
+      return { success: false };
+    }
+
+    const actualStudentId = Number(student.studentId);
+    if (!Number.isInteger(actualStudentId) || actualStudentId <= 0) {
+      return { success: false };
+    }
+
+    // Use cached exam duration when warm to avoid an extra JOIN on every autosave checkpoint
+    const cachedExam = getCachedExamPayload(examId);
+    let attemptRow:
+      | {
+          id: number;
+          started_at: Date | string | null;
+          is_completed: boolean;
+          student_answers: string | null;
+          duration_minutes?: number | null;
+        }
+      | undefined;
+
+    if (cachedExam) {
+      const rows = await queryRawPg<{
+        id: number;
+        started_at: Date | string | null;
+        is_completed: boolean;
+        student_answers: string | null;
+      }>(
+        "SELECT id, started_at, is_completed, student_answers FROM exam_attempts WHERE student_id = $1 AND exam_id = $2 LIMIT 1",
+        [actualStudentId, examId]
+      );
+      attemptRow = rows[0];
+    } else {
+      const rows = await queryRawPg<{
+        id: number;
+        started_at: Date | string | null;
+        is_completed: boolean;
+        student_answers: string | null;
+        duration_minutes: number | null;
+      }>(
+        `SELECT ea.id, ea.started_at, ea.is_completed, ea.student_answers, e.duration_minutes
+         FROM exam_attempts ea
+         INNER JOIN exams e ON e.id = ea.exam_id
+         WHERE ea.student_id = $1 AND ea.exam_id = $2
+         LIMIT 1`,
+        [actualStudentId, examId]
+      );
+      attemptRow = rows[0];
+    }
+
+    if (!attemptRow || attemptRow.is_completed) {
+      return { success: false };
+    }
+
+    const durationMinutes =
+      cachedExam?.exam.durationMinutes ?? attemptRow.duration_minutes ?? 60;
+    const durationSeconds = Math.max(1, Number(durationMinutes) || 60) * 60;
+    const serverNowMs = Date.now();
+    const startedAtMs = attemptRow.started_at ? new Date(attemptRow.started_at).getTime() : serverNowMs;
+
+    // Parse prior server-stored checkpoint timing so client cannot tamper with remainingSeconds
+    let prevRemainingSec: number | null = null;
+    let prevHeartbeatMs: number | null = null;
+    try {
+      const prevParsed = JSON.parse(attemptRow.student_answers || "{}");
+      if (typeof prevParsed?.__meta_remainingSec === "number") {
+        prevRemainingSec = prevParsed.__meta_remainingSec;
+      }
+      if (typeof prevParsed?.__meta_heartbeatMs === "number") {
+        prevHeartbeatMs = prevParsed.__meta_heartbeatMs;
+      }
+    } catch {}
+
+    let authoritativeRemainingSec: number;
+    if (
+      prevRemainingSec !== null &&
+      prevHeartbeatMs !== null &&
+      serverNowMs >= prevHeartbeatMs &&
+      serverNowMs - prevHeartbeatMs <= 120000
+    ) {
+      const deltaSec = Math.floor((serverNowMs - prevHeartbeatMs) / 1000);
+      authoritativeRemainingSec = Math.max(0, Math.min(durationSeconds, prevRemainingSec - deltaSec));
+    } else {
+      const elapsedSec = Math.max(0, Math.floor((serverNowMs - startedAtMs) / 1000));
+      authoritativeRemainingSec = Math.max(0, Math.min(durationSeconds, durationSeconds - elapsedSec));
+    }
 
     const cleanPayload: Record<string, any> = {};
     for (const [k, v] of Object.entries(answers)) {
-      if (!k.startsWith("__meta_") && typeof v === "string") {
+      if (!k.startsWith("__meta_") && /^\d+$/.test(k) && typeof v === "string" && v.length <= 32) {
         cleanPayload[k] = v;
       }
     }
 
-    cleanPayload.__meta_heartbeatMs = Date.now();
-    if (meta?.remainingSeconds != null && meta.remainingSeconds > 0) {
-      cleanPayload.__meta_remainingSec = Math.round(meta.remainingSeconds);
-    }
-    if (meta?.currentIndex != null && meta.currentIndex >= 0) {
+    cleanPayload.__meta_heartbeatMs = serverNowMs;
+    cleanPayload.__meta_remainingSec = authoritativeRemainingSec;
+
+    if (meta?.currentIndex != null && Number.isInteger(meta.currentIndex) && meta.currentIndex >= 0) {
       cleanPayload.__meta_currentIndex = meta.currentIndex;
     }
     if (Array.isArray(meta?.flaggedIds) && meta.flaggedIds.length > 0) {
-      cleanPayload.__meta_flagged = meta.flaggedIds;
+      cleanPayload.__meta_flagged = meta.flaggedIds
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0)
+        .slice(0, 500);
     }
     if (Array.isArray(meta?.questionOrder) && meta.questionOrder.length > 0) {
-      cleanPayload.__meta_qOrder = meta.questionOrder;
+      cleanPayload.__meta_qOrder = meta.questionOrder
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n > 0)
+        .slice(0, 500);
     }
 
     const serializedPayload = JSON.stringify(cleanPayload);
 
-    if (meta?.attemptId && Number(meta.attemptId) > 0) {
-      await queryRawPg(
-        "UPDATE exam_attempts SET student_answers = $1 WHERE id = $2 AND is_completed = false",
-        [serializedPayload, Number(meta.attemptId)]
-      );
-    } else {
-      await queryRawPg(
-        "UPDATE exam_attempts SET student_answers = $1 WHERE exam_id = $2 AND is_completed = false AND (student_id = $3 OR student_id = (SELECT id FROM students WHERE adm_no = $4 LIMIT 1))",
-        [serializedPayload, examId, student.studentId || 0, student.admNo]
-      );
-    }
+    await queryRawPg(
+      "UPDATE exam_attempts SET student_answers = $1 WHERE id = $2 AND student_id = $3 AND is_completed = false",
+      [serializedPayload, attemptRow.id, actualStudentId]
+    );
 
     return { success: true };
   } catch {
@@ -609,46 +697,61 @@ export async function getStudentDashboardExamsAction(): Promise<{
       // fallback
     }
 
-    const parsedStudent = parseClassAndArm(effectiveClass, effectiveArm);
-    const classToken = parsedStudent.baseLevel || "SS 1";
-    const divisionPrefix = classToken.startsWith("JSS") ? "JSS" : "SS";
-
-    // Fetch active non-archived exams for this division/level, then strictly filter by Class + Arm/Stream
-    const rawExams = await prisma.exam.findMany({
-      where: {
-        isActive: true,
-        isArchived: false,
-        OR: [
-          { targetClass: { contains: classToken } },
-          { targetClass: { contains: divisionPrefix } },
-          { targetClass: { contains: "All" } },
-        ],
-      },
-      include: {
-        _count: {
-          select: {
-            objectiveQuestions: true,
-            theoryQuestions: true,
+    // Share short-TTL RAM cache of active exams + counts across concurrent student logins
+    let activeExams = getCachedActiveExamList();
+    if (!activeExams) {
+      const rawExams = await prisma.exam.findMany({
+        where: {
+          isActive: true,
+          isArchived: false,
+        },
+        include: {
+          _count: {
+            select: {
+              objectiveQuestions: true,
+              theoryQuestions: true,
+            },
           },
         },
-        attempts: {
-          where: {
-            studentId: actualStudentId,
-          },
-        },
-      },
-      orderBy: { examDate: "asc" },
-    });
+        orderBy: { examDate: "asc" },
+      });
 
-    const exams = rawExams.filter((e: any) =>
+      activeExams = (rawExams || []).map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        subject: e.subject,
+        targetClass: e.targetClass,
+        durationMinutes: e.durationMinutes,
+        hasTheory: Boolean(e.hasTheory),
+        examDate: e.examDate,
+        objectiveCount: e?._count?.objectiveQuestions ?? 0,
+        theoryCount: e?._count?.theoryQuestions ?? 0,
+      }));
+      setCachedActiveExamList(activeExams);
+    }
+
+    const studentAttempts = await queryRawPg<{
+      exam_id: number;
+      is_completed: boolean;
+      objective_score: number | null;
+      theory_score: number | null;
+      total_score: number | null;
+    }>(
+      "SELECT exam_id, is_completed, objective_score, theory_score, total_score FROM exam_attempts WHERE student_id = $1",
+      [actualStudentId]
+    );
+
+    const attemptsByExamId = new Map<number, (typeof studentAttempts)[number]>();
+    for (const att of studentAttempts || []) {
+      attemptsByExamId.set(Number(att.exam_id), att);
+    }
+
+    const exams = activeExams.filter((e) =>
       doesExamTargetMatchStudent(e.targetClass, effectiveClass, effectiveArm)
     );
 
-    const formatted = exams.map((e: any) => {
-      const attemptsList = Array.isArray(e?.attempts) ? e.attempts : [];
-      const studentAttempt = attemptsList[0] || null;
-      const objCount = e?._count?.objectiveQuestions ?? (Array.isArray(e?.objectiveQuestions) ? e.objectiveQuestions.length : 0);
-      const theoryCount = e?._count?.theoryQuestions ?? (Array.isArray(e?.theoryQuestions) ? e.theoryQuestions.length : 0);
+    const formatted = exams.map((e) => {
+      const studentAttempt = attemptsByExamId.get(e.id) || null;
       return {
         id: e.id,
         title: e.title,
@@ -657,14 +760,14 @@ export async function getStudentDashboardExamsAction(): Promise<{
         durationMinutes: e.durationMinutes,
         hasTheory: e.hasTheory,
         examDate: e.examDate,
-        objectiveCount: objCount,
-        theoryCount: theoryCount,
+        objectiveCount: e.objectiveCount,
+        theoryCount: e.theoryCount,
         attempt: studentAttempt
           ? {
-              isCompleted: Boolean(studentAttempt.isCompleted),
-              objectiveScore: studentAttempt.objectiveScore ?? 0,
-              theoryScore: studentAttempt.theoryScore ?? 0,
-              totalScore: studentAttempt.totalScore ?? 0,
+              isCompleted: Boolean(studentAttempt.is_completed),
+              objectiveScore: Number(studentAttempt.objective_score ?? 0),
+              theoryScore: studentAttempt.theory_score != null ? Number(studentAttempt.theory_score) : null,
+              totalScore: Number(studentAttempt.total_score ?? 0),
             }
           : null,
       };
@@ -691,6 +794,11 @@ export async function getStudentDashboardExamsAction(): Promise<{
  */
 export async function clearAllSeedDataAction(): Promise<{ success: boolean; message: string }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, message: auth.error };
+    }
+
     // 1. Clear local terminal results store & RAM cache
     try {
       const { saveAllToLocalTerminalResultsStore } = await import("@/lib/terminal-result-store");
@@ -729,8 +837,7 @@ export async function clearAllSeedDataAction(): Promise<{ success: boolean; mess
 
     return { success: true, message: "All seed records and demo stores have been successfully cleared." };
   } catch (err: any) {
-    console.error("Clear seeds error:", err);
-    return { success: false, message: `Failed to clear seeds: ${err?.message || "Unknown error"}` };
+    return { success: false, message: sanitizeErrorMessage(err, "Failed to clear seed records.") };
   }
 }
 

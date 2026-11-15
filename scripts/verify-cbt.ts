@@ -69,8 +69,16 @@ async function runVerification() {
     where: { email: "admin@gfms.edu.ng" },
   }));
   assert(!!admin, "Admin user exists");
-  const isPasswordValid = await bcrypt.compare("admin123", admin?.password || "");
-  assert(isPasswordValid, "Bcrypt verifies 'admin123' password");
+  const verifyPass = process.env.VERIFY_ADMIN_PASSWORD;
+  if (verifyPass) {
+    const isPasswordValid = await bcrypt.compare(verifyPass, admin?.password || "");
+    assert(isPasswordValid, "Bcrypt verifies VERIFY_ADMIN_PASSWORD against stored hash");
+  } else {
+    assert(
+      typeof admin?.password === "string" && admin.password.startsWith("$2"),
+      "Admin password is stored as a bcrypt hash (set VERIFY_ADMIN_PASSWORD to test match)"
+    );
+  }
 
   // --------------------------------------------------------------------------
   // TEST 4: Single Payload Security & Exam Structure

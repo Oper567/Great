@@ -4,12 +4,12 @@
 -- 100% Aligned with Prisma Schema & 2025/2026 Academic Structure
 -- ============================================================================
 
--- 1. Seed Super Admin Users (Password: admin123)
+-- 1. Seed Super Admin Users (Locked by default — set credentials securely after setup)
 -- Primary Official School Gmail
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'greatfavourmontessorischool@gmail.com',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Hon Okolie Peter Isioma JP MCArb',
     'SUPER_ADMIN',
     'All Classes',
@@ -19,17 +19,16 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject",
     "phone" = EXCLUDED."phone";
 
--- Legacy Admin Alias (Password: admin123)
+-- Legacy Admin Alias (Locked by default — set credentials securely after setup)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'admin@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Hon Okolie Peter Isioma JP MCArb',
     'SUPER_ADMIN',
     'All Classes',
@@ -42,12 +41,12 @@ ON CONFLICT ("email") DO UPDATE SET
     "password" = EXCLUDED."password",
     "role" = EXCLUDED."role";
 
--- 2. Seed Faculty Members (Password: admin123)
+-- 2. Seed Faculty Members (Locked by default — set credentials securely after setup)
 -- Mr. Jude Godstime (HOD ICT & Computer Education)
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'jude@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Jude Godstime',
     'TEACHER',
     'SS 1 - SS 3',
@@ -57,7 +56,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -66,7 +64,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'abraham.akozo@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Abraham Akozor',
     'TEACHER',
     'SS 2 (Science)',
@@ -76,7 +74,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -85,7 +82,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'stanley@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Teacher Omoile Stanley Henry',
     'TEACHER',
     'All Secondary',
@@ -95,7 +92,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -104,7 +100,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'deputydirector@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mrs Jane Ekene Okolie',
     'ADMIN',
     'All',
@@ -114,7 +110,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -123,7 +118,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'paul@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Paul Uyokei',
     'BURSAR',
     'All',
@@ -133,7 +128,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -142,7 +136,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'gift@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Ms. Gift Itakpe',
     'TEACHER',
     'All',
@@ -152,7 +146,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -161,7 +154,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'chiedu@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mrs. Chiedu Eno',
     'TEACHER',
     'All',
@@ -171,7 +164,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -180,7 +172,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'philo@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mrs. Philo Mordi',
     'TEACHER',
     'Play Class - Nursery 3',
@@ -190,7 +182,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -199,7 +190,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'grace@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Miss Grace Edechi',
     'ADMIN',
     'Primary 1 - 5',
@@ -209,7 +200,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -218,7 +208,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'james@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Insp. James Ukpere (Rtd Police Officer)',
     'ADMIN',
     'All',
@@ -228,7 +218,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -237,7 +226,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'victor@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Mr. Odogwu Victor',
     'ADMIN',
     'All',
@@ -247,7 +236,6 @@ VALUES (
 )
 ON CONFLICT ("email") DO UPDATE SET
     "full_name" = EXCLUDED."full_name",
-    "password" = EXCLUDED."password",
     "role" = EXCLUDED."role",
     "assigned_class" = EXCLUDED."assigned_class",
     "assigned_subject" = EXCLUDED."assigned_subject";
@@ -256,7 +244,7 @@ ON CONFLICT ("email") DO UPDATE SET
 INSERT INTO "admin_users" ("email", "password", "full_name", "role", "assigned_class", "assigned_subject", "phone", "created_at")
 VALUES (
     'teacher@gfms.edu.ng',
-    '$2b$10$l55hVPS0QW7KJQk5GsszzecbhWvk6a7X6iaP8iWgs6z/9tZTha.G6',
+    '$2b$12$LOCKED_ACCOUNT_SET_PASSWORD_VIA_INITIAL_ADMIN_PASSWORD_ENV',
     'Senior Subject Educator',
     'TEACHER',
     'SS 2 (Science)',

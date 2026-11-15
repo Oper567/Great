@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import CbtServiceWorkerRegister from "@/components/cbt/CbtServiceWorkerRegister";
 import CbtOfflineIndicator from "@/components/cbt/CbtOfflineIndicator";
-import { getCompiledCssText } from "@/lib/inline-css";
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -45,16 +44,8 @@ export default function CbtLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const compiledCss = getCompiledCssText();
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-yellow-500 selection:text-slate-950">
-      {compiledCss ? (
-        <style
-          id="gfms-cbt-inline-css"
-          dangerouslySetInnerHTML={{ __html: compiledCss }}
-        />
-      ) : null}
       <CbtServiceWorkerRegister />
       <CbtOfflineIndicator />
       <div className="flex-1 flex flex-col">{children}</div>

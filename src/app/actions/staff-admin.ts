@@ -3,7 +3,8 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { getAdminSession } from "@/lib/session";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage } from "@/lib/security";
 
 /**
  * Super Admin: Create a new teacher or staff account
@@ -13,8 +14,8 @@ export async function createTeacherAccountAction(formData: FormData): Promise<{
   error?: string;
   teacher?: any;
 }> {
-  const session = await getAdminSession().catch(() => null);
-  if (!session || session.role === "TEACHER") {
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
     return {
       success: false,
       error: "Unauthorized: Super Admin privileges are required to create staff accounts.",
@@ -33,6 +34,13 @@ export async function createTeacherAccountAction(formData: FormData): Promise<{
     return {
       success: false,
       error: "Staff Full Name, Institutional Email, and Password are required.",
+    };
+  }
+
+  if (rawPassword.length < 8) {
+    return {
+      success: false,
+      error: "Password must be at least 8 characters long.",
     };
   }
 
@@ -88,10 +96,9 @@ export async function createTeacherAccountAction(formData: FormData): Promise<{
       },
     };
   } catch (err: any) {
-    console.error("Create teacher error:", err);
     return {
       success: false,
-      error: `Failed to create teacher account: ${err?.message || "Unknown error"}`,
+      error: sanitizeErrorMessage(err, "Failed to create teacher account."),
     };
   }
 }
@@ -105,6 +112,11 @@ export async function getAllTeachersAction(): Promise<{
   teachers: any[];
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, teachers: [] };
+    }
+
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "admin_users" ADD COLUMN IF NOT EXISTS "assigned_class" TEXT;
       ALTER TABLE "admin_users" ADD COLUMN IF NOT EXISTS "assigned_subject" TEXT;
@@ -141,11 +153,17 @@ export async function deleteTeacherAccountAction(teacherId: number): Promise<{
   success: boolean;
   error?: string;
 }> {
-  const session = await getAdminSession().catch(() => null);
-  if (!session || session.role === "TEACHER") {
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
     return {
       success: false,
       error: "Unauthorized: Super Admin privileges are required to delete staff accounts.",
+    };
+  }
+  if (auth.session.adminId === teacherId) {
+    return {
+      success: false,
+      error: "You cannot delete your own active administrator account.",
     };
   }
   try {

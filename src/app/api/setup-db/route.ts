@@ -2,21 +2,35 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+import { constantTimeEqual } from "@/lib/security";
+import { getAdminSession } from "@/lib/session";
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const secret = searchParams.get("secret");
+  const secret = searchParams.get("secret") || "";
+  const seedDemo = searchParams.get("seedDemo") === "true";
 
-  // Basic security check: must provide secret key
-  const validSecret = process.env.SETUP_SECRET || "gfms2025";
-  if (secret !== validSecret) {
+  // Must either hold an authenticated SUPER_ADMIN session OR enable SETUP_DB + strong SETUP_SECRET
+  const adminSession = await getAdminSession().catch(() => null);
+  const isSuperAdmin = adminSession?.role === "SUPER_ADMIN";
+
+  const configuredSecret = process.env.SETUP_SECRET || "";
+  const setupEnabled = process.env.ENABLE_SETUP_DB === "true";
+  const hasValidSecret =
+    setupEnabled &&
+    configuredSecret.length >= 16 &&
+    secret.length > 0 &&
+    constantTimeEqual(secret, configuredSecret);
+
+  if (!isSuperAdmin && !hasValidSecret) {
     return NextResponse.json(
       {
         error: "Unauthorized",
-        message: "Invalid or missing 'secret' query parameter. Append '?secret=gfms2025' to the URL.",
+        message: "Database setup endpoint is disabled or unauthorized.",
       },
-      { status: 401 }
+      { status: isSuperAdmin ? 403 : 401 }
     );
   }
 
@@ -212,178 +226,162 @@ export async function GET(request: Request) {
     `);
     logs.push("Table 'teacher_question_submissions' verified.");
 
-    // 9. Seed Super Admin
-    const adminPassword = await bcrypt.hash("admin123", 10);
-    const admin = await prisma.adminUser.upsert({
-      where: { email: "greatfavourmontessorischool@gmail.com" },
-      update: {
-        fullName: "Hon Okolie Peter Isioma JP MCArb",
-        password: adminPassword,
-        role: "SUPER_ADMIN",
-        phone: "+234 905 894 3474",
-      },
-      create: {
-        email: "greatfavourmontessorischool@gmail.com",
-        fullName: "Hon Okolie Peter Isioma JP MCArb",
-        password: adminPassword,
-        role: "SUPER_ADMIN",
-        phone: "+234 905 894 3474",
-      },
-    });
-    // Also ensure legacy admin alias
-    await prisma.adminUser.upsert({
-      where: { email: "admin@gfms.edu.ng" },
-      update: {
-        fullName: "Hon Okolie Peter Isioma JP MCArb",
-        password: adminPassword,
-        role: "SUPER_ADMIN",
-      },
-      create: {
-        email: "admin@gfms.edu.ng",
-        fullName: "Hon Okolie Peter Isioma JP MCArb",
-        password: adminPassword,
-        role: "SUPER_ADMIN",
-      },
-    });
-    logs.push(`Super Admin ready: ${admin.email}`);
-
-    // 10. Seed Demo Students
-    const students = [
-      { admNo: "GFMS/SS/2024/001", surname: "Okeke", fullName: "Somtochukwu Grace Okeke", currentClass: "SS 2 (Science)" },
-      { admNo: "GFMS/SS/2024/002", surname: "Eze", fullName: "Chidubem Emmanuel Eze", currentClass: "SS 2 (Art)" },
-      { admNo: "GFMS/SS/2024/003", surname: "Bello", fullName: "Aisha Fatima Bello", currentClass: "SS 3 (Science)" },
-      { admNo: "GFMS/JSS/2024/088", surname: "Okafor", fullName: "Kamsiyochukwu David Okafor", currentClass: "JSS 2 Diamond" },
-    ];
-    for (const s of students) {
-      await prisma.student.upsert({
-        where: { admNo: s.admNo },
-        update: s,
-        create: s,
+    // 9. Bootstrap Super Admin ONLY when INITIAL_ADMIN_PASSWORD is explicitly configured (never reset existing passwords!)
+    const initialPassword = process.env.INITIAL_ADMIN_PASSWORD || "";
+    if (initialPassword.length >= 10) {
+      const adminPassword = await bcrypt.hash(initialPassword, 12);
+      const existingPrimary = await prisma.adminUser.findUnique({
+        where: { email: "greatfavourmontessorischool@gmail.com" },
       });
-    }
-    logs.push(`Seeded ${students.length} students.`);
+      if (!existingPrimary) {
+        await prisma.adminUser.create({
+          data: {
+            email: "greatfavourmontessorischool@gmail.com",
+            fullName: "Hon Okolie Peter Isioma JP MCArb",
+            password: adminPassword,
+            role: "SUPER_ADMIN",
+            phone: "+234 905 894 3474",
+          },
+        });
+        logs.push("Created initial primary Super Admin account.");
+      } else {
+        logs.push("Primary Super Admin already exists (existing password preserved).");
+      }
 
-    // 11. Seed Scratch Cards (Strictly 3 Checks Allowed)
-    const cards = [
-      { id: "cuid_card_01", pin: "GFMS-8492-1049", serialNumber: "SN-GFMS-2026-001" },
-      { id: "cuid_card_02", pin: "GFMS-1122-3344", serialNumber: "SN-GFMS-2026-002" },
-      { id: "cuid_card_03", pin: "GFMS-9988-7766", serialNumber: "SN-GFMS-2026-003" },
-    ];
-    for (const c of cards) {
-      await prisma.scratchCard.upsert({
-        where: { pin: c.pin },
-        update: { maxUsage: 3 },
+      const existingAlias = await prisma.adminUser.findUnique({
+        where: { email: "admin@gfms.edu.ng" },
+      });
+      if (!existingAlias) {
+        await prisma.adminUser.create({
+          data: {
+            email: "admin@gfms.edu.ng",
+            fullName: "Hon Okolie Peter Isioma JP MCArb",
+            password: adminPassword,
+            role: "SUPER_ADMIN",
+          },
+        });
+        logs.push("Created initial alias Super Admin account.");
+      }
+    } else {
+      logs.push("Skipped Super Admin password bootstrap (INITIAL_ADMIN_PASSWORD not configured; existing passwords untouched).");
+    }
+
+    // Optional Demo Seeding — strictly disabled unless '?seedDemo=true' is explicitly requested
+    if (seedDemo) {
+      // 10. Seed Demo Students
+      const students = [
+        { admNo: "GFMS/SS/2024/001", surname: "Okeke", fullName: "Somtochukwu Grace Okeke", currentClass: "SS 2 (Science)" },
+        { admNo: "GFMS/SS/2024/002", surname: "Eze", fullName: "Chidubem Emmanuel Eze", currentClass: "SS 2 (Art)" },
+        { admNo: "GFMS/SS/2024/003", surname: "Bello", fullName: "Aisha Fatima Bello", currentClass: "SS 3 (Science)" },
+        { admNo: "GFMS/JSS/2024/088", surname: "Okafor", fullName: "Kamsiyochukwu David Okafor", currentClass: "JSS 2 Diamond" },
+      ];
+      for (const s of students) {
+        await prisma.student.upsert({
+          where: { admNo: s.admNo },
+          update: s,
+          create: s,
+        });
+      }
+      logs.push(`Seeded ${students.length} students.`);
+
+      // 11. Seed Sample Exams
+      await prisma.exam.upsert({
+        where: { id: 1 },
+        update: {
+          title: "First Term Examination 2024/2025",
+          subject: "Mathematics",
+          targetClass: "SS 2",
+          isActive: true,
+          hasTheory: true,
+        },
         create: {
-          id: c.id,
-          pin: c.pin,
-          serialNumber: c.serialNumber,
-          usageCount: 0,
-          maxUsage: 3,
-          status: "active",
-          session: "2025/2026",
-          term: "THIRD_TERM",
+          id: 1,
+          title: "First Term Examination 2024/2025",
+          subject: "Mathematics",
+          targetClass: "SS 2",
+          examDate: new Date(),
+          durationMinutes: 60,
+          isActive: true,
+          hasTheory: true,
         },
       });
-    }
-    logs.push(`Seeded ${cards.length} scratch cards.`);
 
-    // 12. Seed Sample Exams
-    const exam1 = await prisma.exam.upsert({
-      where: { id: 1 },
-      update: {
-        title: "First Term Examination 2024/2025",
-        subject: "Mathematics",
-        targetClass: "SS 2",
-        isActive: true,
-        hasTheory: true,
-      },
-      create: {
-        id: 1,
-        title: "First Term Examination 2024/2025",
-        subject: "Mathematics",
-        targetClass: "SS 2",
-        examDate: new Date(),
-        durationMinutes: 60,
-        isActive: true,
-        hasTheory: true,
-      },
-    });
-
-    const exam2 = await prisma.exam.upsert({
-      where: { id: 2 },
-      update: {
-        title: "First Term Examination 2024/2025",
-        subject: "English Language",
-        targetClass: "SS 1",
-        isActive: true,
-        hasTheory: false,
-      },
-      create: {
-        id: 2,
-        title: "First Term Examination 2024/2025",
-        subject: "English Language",
-        targetClass: "SS 1",
-        examDate: new Date(),
-        durationMinutes: 60,
-        isActive: true,
-        hasTheory: false,
-      },
-    });
-    logs.push("Seeded sample exams.");
-
-    // 13. Seed Objective Questions for Exam 1
-    const objCount = await prisma.objectiveQuestion.count({ where: { examId: 1 } });
-    if (objCount === 0) {
-      await prisma.objectiveQuestion.createMany({
-        data: [
-          {
-            examId: 1,
-            questionText: "Solve for x: 2x + 5 = 15",
-            options: '["3", "5", "7", "10"]',
-            correctAnswer: "B",
-            points: 1,
-          },
-          {
-            examId: 1,
-            questionText: "What is the value of pi (π) approximately?",
-            options: '["3.142", "2.178", "1.414", "0.577"]',
-            correctAnswer: "A",
-            points: 1,
-          },
-          {
-            examId: 1,
-            questionText: "Find the slope of the line y = 3x - 4",
-            options: '["-4", "3", "4", "1/3"]',
-            correctAnswer: "B",
-            points: 1,
-          },
-        ],
+      await prisma.exam.upsert({
+        where: { id: 2 },
+        update: {
+          title: "First Term Examination 2024/2025",
+          subject: "English Language",
+          targetClass: "SS 1",
+          isActive: true,
+          hasTheory: false,
+        },
+        create: {
+          id: 2,
+          title: "First Term Examination 2024/2025",
+          subject: "English Language",
+          targetClass: "SS 1",
+          examDate: new Date(),
+          durationMinutes: 60,
+          isActive: true,
+          hasTheory: false,
+        },
       });
-      logs.push("Seeded objective questions for Exam 1.");
-    }
+      logs.push("Seeded sample exams.");
 
-    // 14. Seed Theory Questions for Exam 1
-    const theoryCount = await prisma.theoryQuestion.count({ where: { examId: 1 } });
-    if (theoryCount === 0) {
-      await prisma.theoryQuestion.createMany({
-        data: [
-          {
-            examId: 1,
-            questionNum: 1,
-            questionText: "Prove that the sum of the interior angles of a triangle equals 180 degrees.",
-            maxScore: 10,
-            instructions: "Write out the full geometric proof clearly.",
-          },
-          {
-            examId: 1,
-            questionNum: 2,
-            questionText: "Given quadratic equation 2x^2 + 5x - 3 = 0, solve using the quadratic formula.",
-            maxScore: 10,
-            instructions: "Show all working steps.",
-          },
-        ],
-      });
-      logs.push("Seeded theory questions for Exam 1.");
+      const objCount = await prisma.objectiveQuestion.count({ where: { examId: 1 } });
+      if (objCount === 0) {
+        await prisma.objectiveQuestion.createMany({
+          data: [
+            {
+              examId: 1,
+              questionText: "Solve for x: 2x + 5 = 15",
+              options: '["3", "5", "7", "10"]',
+              correctAnswer: "B",
+              points: 1,
+            },
+            {
+              examId: 1,
+              questionText: "What is the value of pi (π) approximately?",
+              options: '["3.142", "2.178", "1.414", "0.577"]',
+              correctAnswer: "A",
+              points: 1,
+            },
+            {
+              examId: 1,
+              questionText: "Find the slope of the line y = 3x - 4",
+              options: '["-4", "3", "4", "1/3"]',
+              correctAnswer: "B",
+              points: 1,
+            },
+          ],
+        });
+        logs.push("Seeded objective questions for Exam 1.");
+      }
+
+      const theoryCount = await prisma.theoryQuestion.count({ where: { examId: 1 } });
+      if (theoryCount === 0) {
+        await prisma.theoryQuestion.createMany({
+          data: [
+            {
+              examId: 1,
+              questionNum: 1,
+              questionText: "Prove that the sum of the interior angles of a triangle equals 180 degrees.",
+              maxScore: 10,
+              instructions: "Write out the full geometric proof clearly.",
+            },
+            {
+              examId: 1,
+              questionNum: 2,
+              questionText: "Given quadratic equation 2x^2 + 5x - 3 = 0, solve using the quadratic formula.",
+              maxScore: 10,
+              instructions: "Show all working steps.",
+            },
+          ],
+        });
+        logs.push("Seeded theory questions for Exam 1.");
+      }
+    } else {
+      logs.push("Skipped demo data seeding (pass ?seedDemo=true only for initial testing).");
     }
 
     // 15. Synchronize All Autoincrement Sequences to prevent P2002 duplicate key errors

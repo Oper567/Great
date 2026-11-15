@@ -1,24 +1,25 @@
 import fs from "fs";
 import path from "path";
 
-let cachedCssContent: string | null = null;
+declare global {
+  // eslint-disable-next-line no-var
+  var __gfmsCompiledCssCache: { value: string; loadedAt: number } | undefined;
+}
 
 /**
  * Reads the compiled Tailwind / global CSS bundle from `.next/static/css`
- * so it can be inlined directly into the document `<head>` / layout.
- * This guarantees that CBT and subdomain routes never render unstyled
- * even if a reverse proxy, cPanel subdomain folder, or service worker
- * blocks or misroutes `/_next/static/css/*.css`.
+ * once in production and caches it across SSR invocations to avoid repeated synchronous disk I/O.
  */
 export function getCompiledCssText(): string {
-  if (process.env.NODE_ENV === "production" && cachedCssContent) {
-    return cachedCssContent;
+  const isProd = process.env.NODE_ENV === "production";
+  if (isProd && global.__gfmsCompiledCssCache) {
+    return global.__gfmsCompiledCssCache.value;
   }
 
   try {
     const cssDir = path.join(process.cwd(), ".next", "static", "css");
     if (fs.existsSync(cssDir)) {
-      const cssFiles = fs 
+      const cssFiles = fs
         .readdirSync(cssDir)
         .filter((file) => file.endsWith(".css"));
 
@@ -28,7 +29,9 @@ export function getCompiledCssText(): string {
           .join("\n");
 
         if (combined.trim().length > 0) {
-          cachedCssContent = combined;
+          if (isProd) {
+            global.__gfmsCompiledCssCache = { value: combined, loadedAt: Date.now() };
+          }
           return combined;
         }
       }
@@ -37,5 +40,8 @@ export function getCompiledCssText(): string {
     // Non-fatal fallback: rely on standard Next.js stylesheet link
   }
 
+  if (isProd && !global.__gfmsCompiledCssCache) {
+    global.__gfmsCompiledCssCache = { value: "", loadedAt: Date.now() };
+  }
   return "";
 }

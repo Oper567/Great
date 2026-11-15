@@ -3,7 +3,8 @@
 import crypto from "crypto";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getAdminSession } from "@/lib/session";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage } from "@/lib/security";
 import {
   saveToLocalScratchCardsStore,
   getLocalScratchCardsStore,
@@ -20,9 +21,9 @@ export async function generateScratchCardsAction(formData: FormData): Promise<{
   count?: number;
   cards?: any[];
 }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Administrator or Bursary login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
 
   const quantity = Math.min(Math.max(parseInt((formData.get("quantity") as string) || "5", 10), 1), 100);
@@ -104,10 +105,9 @@ export async function generateScratchCardsAction(formData: FormData): Promise<{
     revalidatePath("/result");
     return { success: true, count: generatedCards.length, cards: generatedCards };
   } catch (err: any) {
-    console.error("Generate scratch cards error:", err);
     return {
       success: false,
-      error: `Failed to generate scratch cards: ${err?.message || "Unknown error"}`,
+      error: sanitizeErrorMessage(err, "Failed to generate scratch cards."),
     };
   }
 }
@@ -127,6 +127,11 @@ export async function getAllScratchCardsAction(): Promise<{
   };
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, cards: [] };
+    }
+
     // 1. Fetch from PostgreSQL
     let dbCards: any[] = [];
     try {
@@ -178,9 +183,9 @@ export async function getAllScratchCardsAction(): Promise<{
  * Super Admin: Delete a Scratch Card
  */
 export async function deleteScratchCardAction(cardId: string): Promise<{ success: boolean; error?: string }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Administrator login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
   try {
     deleteFromLocalScratchCardsStore(cardId);
@@ -200,9 +205,9 @@ export async function deleteScratchCardAction(cardId: string): Promise<{ success
  * Super Admin: Reset a Scratch Card (clears lock & usageCount back to 0)
  */
 export async function resetScratchCardAction(cardId: string): Promise<{ success: boolean; error?: string }> {
-  const sessionInfo = await getAdminSession().catch(() => null);
-  if (!sessionInfo) {
-    return { success: false, error: "Unauthorized: Administrator login required." };
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
   try {
     updateInLocalScratchCardsStore(cardId, {

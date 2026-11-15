@@ -2,7 +2,8 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getAdminSession } from "@/lib/session";
+import { requireAdminSession } from "@/lib/session";
+import { sanitizeErrorMessage } from "@/lib/security";
 
 export interface TeacherGradingRow {
   id: number;
@@ -40,11 +41,13 @@ export async function getTeacherGradingAttemptsAction(
   attempts: TeacherGradingRow[];
 }> {
   try {
-    const session = await getAdminSession().catch(() => null);
-    let effectiveEmail = teacherEmail;
-    if (session?.role === "TEACHER") {
-      effectiveEmail = session.email;
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error, attempts: [] };
     }
+    const session = auth.session;
+
+    let effectiveEmail = session.role === "TEACHER" ? session.email : teacherEmail;
 
     // Auto-heal table columns if missing
     await prisma.$executeRawUnsafe(`
@@ -138,6 +141,16 @@ export async function saveAndTransmitTheoryScoreAction(
   updatedAttempt?: TeacherGradingRow;
 }> {
   try {
+    const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+    if (!auth.ok) {
+      return { success: false, error: auth.error };
+    }
+    const session = auth.session;
+
+    if (typeof theoryScore !== "number" || isNaN(theoryScore) || theoryScore < 0) {
+      return { success: false, error: "Theory score must be a valid non-negative number." };
+    }
+
     const attempt = await prisma.examAttempt.findUnique({
       where: { id: attemptId },
       include: { exam: true, student: true },
@@ -145,6 +158,25 @@ export async function saveAndTransmitTheoryScoreAction(
 
     if (!attempt) {
       return { success: false, error: "Exam attempt record not found." };
+    }
+
+    // Ownership check for TEACHER role: can only grade/transmit exams created by or assigned to them
+    if (session.role === "TEACHER") {
+      const createdBy = (attempt.exam?.createdBy || "").trim().toLowerCase();
+      const teacherEmail = (session.email || "").trim().toLowerCase();
+      const ownsByCreator = Boolean(createdBy && teacherEmail && createdBy === teacherEmail);
+      const assignedSub = (session.assignedSubject || "").trim().toLowerCase();
+      const examSub = (attempt.exam?.subject || "").trim().toLowerCase();
+      const ownsBySubject =
+        Boolean(assignedSub) &&
+        (assignedSub === "all" ||
+          assignedSub === "all subjects" ||
+          examSub.includes(assignedSub) ||
+          assignedSub.includes(examSub));
+
+      if (!ownsByCreator && (!createdBy ? !ownsBySubject : true)) {
+        return { success: false, error: "Unauthorized: You can only grade attempts belonging to your assigned subject or uploaded exam." };
+      }
     }
 
     const validatedTheoryScore = Math.max(0, theoryScore);

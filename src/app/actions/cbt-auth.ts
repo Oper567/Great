@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
 import { StudentSession, AdminSession } from "@/types/cbt";
 import { isSeniorSecondaryClass } from "@/lib/cbt-utils";
+import { checkRateLimit, getClientIp, isHttpsRequest, sanitizeErrorMessage } from "@/lib/security";
 
 import {
   STUDENT_COOKIE_NAME,
@@ -20,7 +21,7 @@ export { getStudentSession, getAdminSession };
  * Student Login Server Action
  * Inputs: admNo and surname
  * Matching: Match admNo strictly and surname case-insensitively.
- * Gatekeeper: Rejects students outside SS 1, SS 2, SS 3.
+ * Gatekeeper: Strictly restricts access to active Secondary (JSS 1-3 & SS 1-3) students.
  */
 export async function studentLoginAction(formData: FormData): Promise<{
   success: boolean;
@@ -40,37 +41,42 @@ export async function studentLoginAction(formData: FormData): Promise<{
     };
   }
 
+  // Sliding-window rate limiting to prevent admission-number/surname enumeration
+  const ip = getClientIp();
+  const rl = checkRateLimit(`stu-login:${ip}:${inputAdmNo.toUpperCase()}`, 20, 10 * 60 * 1000);
+  if (!rl.allowed) {
+    return {
+      success: false,
+      error: `Too many login attempts. Please wait ${Math.ceil(rl.retryAfterSec / 60)} minute(s) and try again.`,
+    };
+  }
+
   try {
-    // 1. Fetch student by admNo strictly
     const student = await prisma.student.findUnique({
       where: { admNo: inputAdmNo },
     });
 
-    if (!student) {
+    if (!student || student.surname.trim().toLowerCase() !== inputSurname.toLowerCase()) {
       return {
         success: false,
-        error: "Student record not found. Please verify your Admission Number.",
+        error: "Invalid Admission Number or Surname. Please verify your credentials.",
       };
     }
 
-    // 2. Match surname case-insensitively
-    if (student.surname.trim().toLowerCase() !== inputSurname.toLowerCase()) {
+    if (student.status && student.status.toUpperCase() !== "ACTIVE") {
       return {
         success: false,
-        error: "Surname does not match our records for this Admission Number.",
+        error: "Student account is currently inactive. Please contact the school administration.",
       };
     }
 
-    // 3. Class Gatekeeper: Validate that currentClass contains JSS or SS
-    const isEligibleClass = /(JSS|SS)\s*[1-3]/i.test(student.currentClass) || student.admNo.startsWith("GFMS");
-    if (!isEligibleClass) {
+    if (!isSeniorSecondaryClass(student.currentClass)) {
       return {
         success: false,
         error: "Access Denied: The CBT portal is restricted to registered Secondary students.",
       };
     }
 
-    // 4. Set secure HTTP-only session cookie
     const sessionData: StudentSession = {
       studentId: student.id,
       admNo: student.admNo,
@@ -80,23 +86,22 @@ export async function studentLoginAction(formData: FormData): Promise<{
       arm: (student as any).arm || "",
     };
 
-    const sessionStr = serializeSignedSession(sessionData);
+    const sessionStr = serializeSignedSession(sessionData, "student", 60 * 60 * 12);
     const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+    const secureFlag = isHttpsRequest();
 
-    // Set primary session cookie (with domain coverage if configured)
     cookies().set(STUDENT_COOKIE_NAME, sessionStr, {
       httpOnly: true,
-      secure: false,
+      secure: secureFlag,
       sameSite: "lax",
       path: "/",
       domain: cookieDomain,
-      maxAge: 60 * 60 * 12, // 12 hours active exam window
+      maxAge: 60 * 60 * 12,
     });
 
-    // Set fallback host-only session cookie (guarantees host binding on cbt. subdomain)
     cookies().set(`${STUDENT_COOKIE_NAME}_host`, sessionStr, {
       httpOnly: true,
-      secure: false,
+      secure: secureFlag,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 12,
@@ -107,18 +112,16 @@ export async function studentLoginAction(formData: FormData): Promise<{
       student: sessionData,
     };
   } catch (err: any) {
-    console.error("Student login error:", err);
     const detail = err?.message || String(err);
-    let userMsg = `Authentication error: ${detail}`;
     if (detail.includes("Can't reach database server") || detail.includes("ETIMEDOUT") || detail.includes("ECONNREFUSED")) {
-      userMsg = "Database Connection Failed: The hosting server cannot reach the PostgreSQL database server. Please check port 5432/6543 outbound access.";
-    } else if (detail.includes("Query engine") || detail.includes(".prisma")) {
-      const firstLine = detail.split("\n")[0] || detail;
-      userMsg = `Prisma Engine Error: The database query engine is missing on the server (${firstLine}). Please ensure pre-compiled .prisma is deployed.`;
+      return {
+        success: false,
+        error: "Service temporarily unavailable: Could not connect to the academic database.",
+      };
     }
     return {
       success: false,
-      error: userMsg,
+      error: sanitizeErrorMessage(err, "Authentication failed. Please try again later."),
     };
   }
 }
@@ -140,9 +143,9 @@ export async function studentLogoutAction(): Promise<{ success: boolean }> {
   return { success: true };
 }
 
-
 /**
- * Super Admin Login Server Action
+ * Staff & Administrator Login Server Action
+ * Strictly authenticates against hashed bcrypt passwords in the database (zero hardcoded credentials).
  */
 export async function adminLoginAction(formData: FormData): Promise<{
   success: boolean;
@@ -162,179 +165,69 @@ export async function adminLoginAction(formData: FormData): Promise<{
     };
   }
 
+  // Rate limiting against brute-force attacks
+  const ip = getClientIp();
+  const rl = checkRateLimit(`adm-login:${ip}:${email}`, 10, 15 * 60 * 1000);
+  if (!rl.allowed) {
+    return {
+      success: false,
+      error: `Too many failed login attempts. Please wait ${Math.ceil(rl.retryAfterSec / 60)} minute(s) before trying again.`,
+    };
+  }
+
   try {
-    let admin: any = null;
-    try {
-      admin = await prisma.adminUser.findUnique({
-        where: { email },
-      });
-    } catch {
-      // Prisma offline or connection refused
+    const admin = await prisma.adminUser.findUnique({
+      where: { email },
+    });
+
+    if (!admin || !admin.password) {
+      return {
+        success: false,
+        error: "Invalid administrator credentials.",
+      };
     }
 
-    if (!admin) {
-      // Allow default credentials during local development or offline mode
-      if ((email === "greatfavourmontessorischool@gmail.com" || email === "admin@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 1,
-          email: "greatfavourmontessorischool@gmail.com",
-          password: "",
-          fullName: "Hon Okolie Peter Isioma JP MCArb",
-          role: "SUPER_ADMIN",
-        };
-      } else if (email === "jude@gfms.edu.ng" && password === "admin123") {
-        admin = {
-          id: 2,
-          email: "jude@gfms.edu.ng",
-          password: "",
-          fullName: "Mr. Jude Godstime",
-          role: "TEACHER",
-          assignedClass: "SS 1 - SS 3",
-          assignedSubject: "ICT & Computer Studies",
-        };
-      } else if ((email === "abraham.akozor@gfms.edu.ng" || email === "abraham.akozo@gfms.edu.ng" || email === "abraham@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 3,
-          email: email,
-          password: "",
-          fullName: "Mr. Abraham Akozor",
-          role: "TEACHER",
-          assignedClass: "SS 2 (Science)",
-          assignedSubject: "Physics & Science Management",
-        };
-      } else if (email === "stanley@gfms.edu.ng" && password === "admin123") {
-        admin = {
-          id: 4,
-          email: "stanley@gfms.edu.ng",
-          password: "",
-          fullName: "Teacher Omoile Stanley Henry",
-          role: "TEACHER",
-          assignedClass: "All Secondary",
-          assignedSubject: "Physical & Health Education",
-        };
-      } else if ((email === "jane@gfms.edu.ng" || email === "deputydirector@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 9,
-          email: email,
-          password: "",
-          fullName: "Mrs Jane Ekene Okolie",
-          role: "ADMIN",
-          assignedClass: "All",
-          assignedSubject: "Deputy Director Administration & Montessori Administrator",
-        };
-      } else if ((email === "paul@gfms.edu.ng" || email === "bursar@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 6,
-          email: email,
-          password: "",
-          fullName: "Mr. Paul Uyokei",
-          role: "BURSAR",
-          assignedClass: "All",
-          assignedSubject: "Bursary & Admissions",
-        };
-      } else if ((email === "gift@gfms.edu.ng" || email === "exams@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 7,
-          email: email,
-          password: "",
-          fullName: "Ms. Gift Itakpe",
-          role: "TEACHER",
-          assignedClass: "All",
-          assignedSubject: "Examinations & Standards",
-        };
-      } else if ((email === "philo@gfms.edu.ng" || email === "nursery@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 10,
-          email: email,
-          password: "",
-          fullName: "Mrs. Philo Mordi",
-          role: "TEACHER",
-          assignedClass: "Play Class - Nursery 3",
-          assignedSubject: "Early Years & Nursery Section",
-        };
-      } else if ((email === "grace@gfms.edu.ng" || email === "secretary@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 11,
-          email: email,
-          password: "",
-          fullName: "Miss Grace Edechi",
-          role: "ADMIN",
-          assignedClass: "Primary 1 - 5",
-          assignedSubject: "Primary Administration & Records",
-        };
-      } else if ((email === "james@gfms.edu.ng" || email === "security@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 12,
-          email: email,
-          password: "",
-          fullName: "Insp. James Ukpere (Rtd Police Officer)",
-          role: "ADMIN",
-          assignedClass: "All",
-          assignedSubject: "Campus Safety & Security",
-        };
-      } else if ((email === "victor@gfms.edu.ng" || email === "transport@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 13,
-          email: email,
-          password: "",
-          fullName: "Mr. Odogwu Victor",
-          role: "ADMIN",
-          assignedClass: "All",
-          assignedSubject: "Transport & Logistics",
-        };
-      } else if ((email === "chiedu@gfms.edu.ng" || email === "counseling@gfms.edu.ng" || email === "guidance@gfms.edu.ng") && password === "admin123") {
-        admin = {
-          id: 8,
-          email: email,
-          password: "",
-          fullName: "Mrs. Chiedu Eno",
-          role: "TEACHER",
-          assignedClass: "All",
-          assignedSubject: "Guardian & Counseling",
-        };
-      } else if (email === "teacher@gfms.edu.ng" && password === "admin123") {
-        admin = {
-          id: 5,
-          email: "teacher@gfms.edu.ng",
-          password: "",
-          fullName: "Senior Subject Educator (HOD)",
-          role: "TEACHER",
-          assignedClass: "SS 2 (Science)",
-          assignedSubject: "Mathematics",
-        };
-      } else {
-        return {
-          success: false,
-          error: "Invalid administrator credentials.",
-        };
-      }
-    } else {
-      const isMatch = await bcrypt.compare(password, admin.password);
-      if (!isMatch) {
-        return {
-          success: false,
-          error: "Invalid administrator credentials.",
-        };
-      }
+    if (admin.status && admin.status.toUpperCase() !== "ACTIVE") {
+      return {
+        success: false,
+        error: "This staff account is inactive. Please contact the Super Administrator.",
+      };
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return {
+        success: false,
+        error: "Invalid administrator credentials.",
+      };
+    }
+
+    const normalizedRole = admin.role === "SUPER_ADMIN" || admin.role === "TEACHER" ? admin.role : null;
+    if (!normalizedRole) {
+      return {
+        success: false,
+        error: "Account role configuration is invalid. Contact the Super Administrator.",
+      };
     }
 
     const sessionData: AdminSession = {
       adminId: admin.id,
       email: admin.email,
       fullName: admin.fullName,
-      role: admin.role as "SUPER_ADMIN" | "TEACHER",
+      role: normalizedRole,
       assignedClass: (admin as any).assignedClass || null,
       assignedSubject: (admin as any).assignedSubject || null,
     };
 
-    const signedAdminCookie = serializeSignedSession(sessionData);
+    const signedAdminCookie = serializeSignedSession(sessionData, "admin", 60 * 60 * 12);
+    const secureFlag = isHttpsRequest();
 
     cookies().set(ADMIN_COOKIE_NAME, signedAdminCookie, {
       httpOnly: true,
-      secure: false, // cPanel/Passenger proxies internally over HTTP; secure:true blocks cookie transmission
+      secure: secureFlag,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 12,
     });
 
     return {
@@ -342,18 +235,16 @@ export async function adminLoginAction(formData: FormData): Promise<{
       admin: sessionData,
     };
   } catch (err: any) {
-    console.error("Admin login error:", err);
     const detail = err?.message || String(err);
-    let userMsg = `Authentication error: ${detail}`;
     if (detail.includes("Can't reach database server") || detail.includes("ETIMEDOUT") || detail.includes("ECONNREFUSED")) {
-      userMsg = "Database Connection Failed: The hosting server cannot reach the PostgreSQL database server. Please check port 5432/6543 outbound access.";
-    } else if (detail.includes("Query engine") || detail.includes(".prisma")) {
-      const firstLine = detail.split("\n")[0] || detail;
-      userMsg = `Prisma Engine Error: The database query engine is missing on the server (${firstLine}). Please ensure pre-compiled .prisma is deployed.`;
+      return {
+        success: false,
+        error: "Service temporarily unavailable: Could not connect to the academic database.",
+      };
     }
     return {
       success: false,
-      error: userMsg,
+      error: sanitizeErrorMessage(err, "Authentication error. Please try again later."),
     };
   }
 }
@@ -365,4 +256,3 @@ export async function adminLogoutAction(): Promise<{ success: boolean }> {
   cookies().delete(ADMIN_COOKIE_NAME);
   return { success: true };
 }
-
