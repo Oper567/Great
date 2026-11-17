@@ -16,7 +16,6 @@ import {
   TrendingUp,
   Users,
   KeyRound,
-  ChevronRight,
   ChevronLeft,
   ChevronDown,
   Sparkles,
@@ -164,13 +163,6 @@ export default function FacultyPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-2.5">
-            <Link href="/" className="hover:text-secondary-400 transition">
-              Home
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-secondary-400 font-semibold">Faculty &amp; Leadership</span>
-          </nav>
           <div className="max-w-3xl space-y-2.5 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />
@@ -248,11 +240,12 @@ export default function FacultyPage() {
                     <Image
                       src={KEY_PERSONNEL.headTeacher.image}
                       alt={`${KEY_PERSONNEL.headTeacher.fullName} - ${KEY_PERSONNEL.headTeacher.title}`}
-                      fill
+                      width={320}
+                      height={400}
                       loading="lazy"
                       decoding="async"
                       sizes="80px"
-                      className="object-cover object-top"
+                      className="absolute inset-0 w-full h-full object-cover object-top"
                     />
                   </div>
                   <div className="min-w-0">
@@ -404,11 +397,12 @@ export default function FacultyPage() {
                         <Image
                           src={member.image}
                           alt={`${member.name} - ${member.role}`}
-                          fill
+                          width={400}
+                          height={500}
                           loading="lazy"
                           decoding="async"
                           sizes="(max-width: 640px) 112px, (max-width: 1024px) 50vw, 33vw"
-                          className={`object-cover ${member.objectPosition || "object-top"} group-hover:scale-105 transition-transform duration-500`}
+                          className={`absolute inset-0 w-full h-full object-cover ${member.objectPosition || "object-top"} group-hover:scale-105 transition-transform duration-500`}
                         />
                         <div className="hidden sm:block absolute top-2.5 left-2.5 z-10">
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-primary-950/85 text-white backdrop-blur-md shadow-xs border border-white/20 block">

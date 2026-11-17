@@ -66,6 +66,7 @@ import { MathToolbar, FloatingMathButton } from "@/components/cbt/MathToolbar";
 import { FormattedMathText } from "@/components/cbt/FormattedMathText";
 import { FlaggedQuestionsModal } from "@/components/cbt/FlaggedQuestionsModal";
 import DelegatedSubjectScoreUploader from "@/components/results/DelegatedSubjectScoreUploader";
+import { ToastBanner, ToastFeedbackState } from "@/components/ui/ToastBanner";
 
 interface Props {
   teacher: AdminSession | null;
@@ -170,6 +171,15 @@ export default function TeacherQuestionDeskClient({
   // Status & Feedback
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [actionToast, setActionToast] = useState<ToastFeedbackState | null>(null);
+  const showActionToast = (type: "success" | "error", text: string, durationMs = 3600) => {
+    setActionToast({ type, text });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setActionToast((prev) => (prev?.text === text ? null : prev));
+      }, durationMs);
+    }
+  };
 
   // Preview modal for submissions
   const [previewItem, setPreviewItem] = useState<any | null>(null);
@@ -437,10 +447,13 @@ export default function TeacherQuestionDeskClient({
         const res = await submitTeacherQuestionsAction(formData);
         setIsDraftSaving(false);
         if (!res || !res.success) {
-          setFormError(res?.error || "Failed to save draft.");
+          const errMsg = res?.error || "Failed to save draft.";
+          setFormError(errMsg);
+          showActionToast("error", errMsg);
         } else {
           const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
           setLastDraftSavedAt(nowStr);
+          showActionToast("success", `Saved! Question draft saved at ${nowStr}.`);
           const newDraftId = res.submissionId || editingDraftId;
           setEditingDraftId(newDraftId);
           setFormSuccess(`Draft saved successfully at ${nowStr}! You can safely close or resume editing later.`);
@@ -550,12 +563,14 @@ export default function TeacherQuestionDeskClient({
       try {
         const res = await submitTeacherQuestionsAction(formData);
         if (!res || !res.success) {
-          setFormError(
+          const errMsg =
             res?.error ||
-              "Submission was rejected by the server. If you attached a large file, please ensure ModSecurity is disabled in cPanel or try uploading a smaller image."
-          );
+            "Submission was rejected by the server. If you attached a large file, please ensure ModSecurity is disabled in cPanel or try uploading a smaller image.";
+          setFormError(errMsg);
+          showActionToast("error", errMsg);
         } else {
           setFormSuccess("Question paper submitted successfully! Super Admin will review and import into CBT.");
+          showActionToast("success", "Created! Question paper submitted for Super Admin review.");
           const submittedId = res.submissionId || editingDraftId;
           setEditingDraftId(null);
           setLastDraftSavedAt(null);
@@ -679,8 +694,11 @@ export default function TeacherQuestionDeskClient({
           handleCancelEditingDraft();
         }
         setFormSuccess("Draft/submission deleted successfully.");
+        showActionToast("success", "Deleted! Question draft/submission removed.");
       } else {
-        setFormError(res.error || "Failed to delete submission.");
+        const errMsg = res.error || "Failed to delete submission.";
+        setFormError(errMsg);
+        showActionToast("error", errMsg);
       }
     });
   };
@@ -715,8 +733,9 @@ export default function TeacherQuestionDeskClient({
       if (res.success) {
         setSelectedExamForModal((prev: any) => (prev ? { ...prev, durationMinutes: safeMin } : prev));
         setMyExams((prev) => prev.map((e) => (e.id === selectedExamForModal.id ? { ...e, durationMinutes: safeMin } : e)));
+        showActionToast("success", `Updated! Exam duration set to ${safeMin} minutes.`);
       } else {
-        alert(res.error || "Failed to update exam duration.");
+        showActionToast("error", res.error || "Failed to update exam duration.");
       }
     });
   };
@@ -765,8 +784,9 @@ export default function TeacherQuestionDeskClient({
           };
         });
         setEditingModalObjQ(null);
+        showActionToast("success", "Updated! Question saved.");
       } else {
-        alert(res.error || "Failed to save question changes.");
+        showActionToast("error", res.error || "Failed to save question changes.");
       }
     });
   };
@@ -816,15 +836,16 @@ export default function TeacherQuestionDeskClient({
             prev.map((a) => (a.id === attemptId ? { ...a, ...res.updatedAttempt! } : a))
           );
           setTransmitSuccess((prev) => ({ ...prev, [attemptId]: true }));
+          showActionToast("success", "Transmitted! Theory score saved & sent to Super Admin.");
           setTimeout(() => {
             setTransmitSuccess((prev) => ({ ...prev, [attemptId]: false }));
           }, 3000);
         } else {
-          alert(res?.error || "Failed to transmit score to Super Admin.");
+          showActionToast("error", res?.error || "Failed to transmit score to Super Admin.");
         }
       } catch (err: any) {
         setSavingAttemptId(null);
-        alert(err?.message || "Failed to transmit score due to a connection error.");
+        showActionToast("error", err?.message || "Failed to transmit score due to a connection error.");
       }
     });
   };
@@ -1039,8 +1060,9 @@ export default function TeacherQuestionDeskClient({
       const res = await forceSubmitInterruptedAttemptAction(attemptId);
       if (res.success) {
         await handleRefreshAttempts();
+        showActionToast("success", "Finalized! Interrupted CBT attempt graded.");
       } else {
-        alert(res.error || "Could not finalize interrupted CBT attempt.");
+        showActionToast("error", res.error || "Could not finalize interrupted CBT attempt.");
       }
     } finally {
       setRecoveringAttemptId(null);
@@ -3841,6 +3863,7 @@ export default function TeacherQuestionDeskClient({
           </>
         )}
       </main>
+      <ToastBanner toast={actionToast} onDismiss={() => setActionToast(null)} />
     </div>
   );
 }

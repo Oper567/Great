@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { AdminSession } from "@/types/cbt";
 import { adminLoginAction, adminLogoutAction } from "@/app/actions/cbt-auth";
+import { PortalDashboardSkeleton } from "@/components/ui/Skeleton";
 
 interface Props {
   initialAdmin: AdminSession | null;
@@ -36,6 +37,10 @@ export default function StaffLoginClient({ initialAdmin }: Props) {
   const router = useRouter();
   const [admin, setAdmin] = useState<AdminSession | null>(initialAdmin);
   const [isPending, startTransition] = useTransition();
+  const [isRedirecting, setIsRedirecting] = useState(Boolean(initialAdmin));
+  const [redirectRole, setRedirectRole] = useState<"TEACHER" | "SUPER_ADMIN">(
+    initialAdmin?.role === "TEACHER" ? "TEACHER" : "SUPER_ADMIN"
+  );
 
   // Form State
   const [email, setEmail] = useState("");
@@ -44,20 +49,18 @@ export default function StaffLoginClient({ initialAdmin }: Props) {
   const [rememberDevice, setRememberDevice] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // Auto redirect if already authenticated
+  // If SSR somehow rendered with active session, redirect once cleanly
   useEffect(() => {
-    if (admin) {
-      if (admin.role === "TEACHER") {
-        window.location.href = "/staff";
-      } else {
-        window.location.href = "/admin/cbt";
-      }
+    if (initialAdmin) {
+      const target = initialAdmin.role === "TEACHER" ? "/staff" : "/admin/cbt";
+      window.location.replace(target);
     }
-  }, [admin]);
+  }, [initialAdmin]);
 
   // Submit Login
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isRedirecting) return;
     setLoginError(null);
 
     const formData = new FormData();
@@ -70,18 +73,30 @@ export default function StaffLoginClient({ initialAdmin }: Props) {
         if (!res || !res.success) {
           setLoginError(res?.error || "Authentication failed. Please verify your credentials or server connection.");
         } else {
+          const targetRole = res.admin?.role === "TEACHER" ? "TEACHER" : "SUPER_ADMIN";
+          const targetPath = targetRole === "TEACHER" ? "/staff" : "/admin/cbt";
+          setRedirectRole(targetRole);
           setAdmin(res.admin || null);
-          if (res.admin?.role === "TEACHER") {
-            window.location.href = "/staff";
-          } else {
-            window.location.href = "/admin/cbt";
-          }
+          setIsRedirecting(true);
+          window.location.replace(targetPath);
         }
       } catch (err: any) {
         setLoginError(err?.message || "Connection error during login. Please try again.");
       }
     });
   };
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <div className="bg-emerald-950/90 border-b border-emerald-700/60 px-4 py-2 text-center text-xs font-bold text-emerald-300">
+          ✓ Signed in{admin?.fullName ? ` as ${admin.fullName}` : ""}! Opening your{" "}
+          {redirectRole === "TEACHER" ? "Teacher Console" : "Super Admin Command Center"}...
+        </div>
+        <PortalDashboardSkeleton variant={redirectRole === "TEACHER" ? "staff" : "admin"} />
+      </div>
+    );
+  }
 
   // Sign Out
   const handleLogout = () => {

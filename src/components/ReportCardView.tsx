@@ -289,6 +289,9 @@ export default function ReportCardView({ data, scratchCardCheckInfo }: ReportCar
                     <img
                       src={data.student.avatarUrl}
                       alt={data.student.fullName}
+                      width={54}
+                      height={64}
+                      decoding="async"
                       className="w-full h-full object-cover object-top"
                     />
                   ) : (

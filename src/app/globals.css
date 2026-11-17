@@ -212,12 +212,36 @@ body {
 .delay-550 { transition-delay: 550ms; }
 .delay-600 { transition-delay: 600ms; }
 
+/* Skeleton Shimmer Surface (Light & Dark Portals) */
+@keyframes gfms-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.gfms-skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: gfms-shimmer 1.5s infinite linear;
+}
+
+.gfms-skeleton-dark {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: gfms-shimmer 1.5s infinite linear;
+}
+
 /* Respect Reduced Motion Preferences */
 @media (prefers-reduced-motion: reduce) {
   .reveal-init,
   .page-transition-shell,
   .editorial-img-zoom,
-  .editorial-card {
+  .editorial-card,
+  .gfms-skeleton,
+  .gfms-skeleton-dark {
     transition: none !important;
     animation: none !important;
     opacity: 1 !important;

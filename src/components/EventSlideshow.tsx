@@ -142,11 +142,12 @@ export default function EventSlideshow() {
                     src={slide.image}
                     alt=""
                     aria-hidden="true"
-                    fill
+                    width={1200}
+                    height={800}
                     loading="lazy"
                     decoding="async"
                     sizes="(max-width: 1024px) 100vw, 66vw"
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/20 to-transparent" />
                 </div>

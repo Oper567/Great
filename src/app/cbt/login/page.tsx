@@ -21,10 +21,12 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { studentLoginAction } from "@/app/actions/cbt-auth";
+import { PortalDashboardSkeleton } from "@/components/ui/Skeleton";
 
 export default function StudentLoginPage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -34,6 +36,7 @@ export default function StudentLoginPage() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isRedirecting) return;
     setErrorMessage(null);
     setSuccessMessage(null);
 
@@ -48,6 +51,7 @@ export default function StudentLoginPage() {
           setErrorMessage(result?.error || "Authentication failed. Please check your credentials.");
         } else {
           setSuccessMessage(`Welcome back, ${result.student?.fullName}! Launching CBT Portal...`);
+          setIsRedirecting(true);
           try {
             for (let i = localStorage.length - 1; i >= 0; i--) {
               const key = localStorage.key(i);
@@ -64,15 +68,24 @@ export default function StudentLoginPage() {
           } catch {
             // ignore
           }
-          setTimeout(() => {
-            window.location.href = "/cbt/dashboard";
-          }, 500);
+          window.location.replace("/cbt/dashboard");
         }
       } catch (err: any) {
         setErrorMessage(err?.message || "Connection error. Please try again.");
       }
     });
   };
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        <div className="bg-emerald-950/90 border-b border-emerald-700/60 px-4 py-2 text-center text-xs font-bold text-emerald-300">
+          ✓ {successMessage || "Verified! Launching CBT Examination Dashboard..."}
+        </div>
+        <PortalDashboardSkeleton variant="student" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between relative overflow-hidden selection:bg-yellow-500 selection:text-slate-950 font-sans">

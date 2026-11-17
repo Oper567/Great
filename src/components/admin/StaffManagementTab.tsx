@@ -22,6 +22,7 @@ import {
   createTeacherAccountAction,
   deleteTeacherAccountAction,
 } from "@/app/actions/staff-admin";
+import { ToastBanner, ToastFeedbackState } from "@/components/ui/ToastBanner";
 
 interface Props {
   initialTeachers: any[];
@@ -35,6 +36,15 @@ export default function StaffManagementTab({ initialTeachers }: Props) {
   }, [initialTeachers]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [actionToast, setActionToast] = useState<ToastFeedbackState | null>(null);
+  const showToast = (type: "success" | "error", text: string, durationMs = 3600) => {
+    setActionToast({ type, text });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setActionToast((prev) => (prev?.text === text ? null : prev));
+      }, durationMs);
+    }
+  };
 
   // Form State
   const [fullName, setFullName] = useState("");
@@ -77,12 +87,16 @@ export default function StaffManagementTab({ initialTeachers }: Props) {
     startTransition(async () => {
       const res = await createTeacherAccountAction(formData);
       if (!res.success) {
-        setFeedback({ type: "error", text: res.error || "Failed to create teacher account." });
+        const errMsg = res.error || "Failed to create teacher account.";
+        setFeedback({ type: "error", text: errMsg });
+        showToast("error", errMsg);
       } else {
+        const okMsg = `Created! Account ready for ${res.teacher.fullName}. They can now log in at /staff/login.`;
         setFeedback({
           type: "success",
-          text: `Account created for ${res.teacher.fullName}! They can now log in at /staff/login.`,
+          text: okMsg,
         });
+        showToast("success", `Created! Staff account ready for ${res.teacher.fullName}.`);
         setTeachers((prev) => [res.teacher, ...prev]);
         setTimeout(() => {
           setIsAddModalOpen(false);
@@ -98,8 +112,9 @@ export default function StaffManagementTab({ initialTeachers }: Props) {
       const res = await deleteTeacherAccountAction(id);
       if (res.success) {
         setTeachers((prev) => prev.filter((t) => t.id !== id));
+        showToast("success", "Removed! Staff account deleted.");
       } else {
-        alert(res.error || "Failed to delete staff member.");
+        showToast("error", res.error || "Failed to delete staff member.");
       }
     });
   };
@@ -122,6 +137,7 @@ export default function StaffManagementTab({ initialTeachers }: Props) {
 
   return (
     <div className="space-y-6">
+      <ToastBanner toast={actionToast} onDismiss={() => setActionToast(null)} />
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-lg">
         <div>

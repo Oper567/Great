@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Clock,
   Calendar,
-  ChevronRight,
 } from "lucide-react";
 
 export default function AcademicsPage() {
@@ -35,13 +34,6 @@ export default function AcademicsPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-3">
-            <Link href="/" className="hover:text-secondary-400 transition">
-              Home
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-secondary-400 font-semibold">Academic Divisions &amp; Calendar</span>
-          </nav>
           <div className="max-w-3xl space-y-3 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />

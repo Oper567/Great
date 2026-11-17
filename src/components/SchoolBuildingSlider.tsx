@@ -204,11 +204,12 @@ export default function SchoolBuildingSlider() {
                   src={slide.image}
                   alt=""
                   aria-hidden="true"
-                  fill
+                  width={1280}
+                  height={720}
                   loading="lazy"
                   decoding="async"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
-                  className="object-cover object-center"
+                  className="absolute inset-0 w-full h-full object-cover object-center"
                 />
                 <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-transparent" />
               </div>
@@ -317,11 +318,12 @@ export default function SchoolBuildingSlider() {
                   <Image
                     src={slide.image}
                     alt={slide.title}
-                    fill
+                    width={96}
+                    height={72}
                     loading="lazy"
                     decoding="async"
                     sizes="96px"
-                    className="object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 </button>
               );

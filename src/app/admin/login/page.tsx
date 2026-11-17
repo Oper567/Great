@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/session";
 import StaffLoginClient from "@/components/staff/StaffLoginClient";
 
@@ -12,10 +13,16 @@ export const metadata = {
 };
 
 export default async function AdminLoginPage() {
+  let adminSession = null;
   try {
-    const adminSession = await getAdminSession().catch(() => null);
-    return <StaffLoginClient initialAdmin={adminSession} />;
+    adminSession = await getAdminSession().catch(() => null);
   } catch {
-    return <StaffLoginClient initialAdmin={null} />;
+    adminSession = null;
   }
+
+  if (adminSession) {
+    redirect(adminSession.role === "TEACHER" ? "/staff" : "/admin/cbt");
+  }
+
+  return <StaffLoginClient initialAdmin={null} />;
 }

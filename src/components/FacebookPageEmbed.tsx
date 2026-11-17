@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { SCHOOL_CONTACT } from "@/constants/school";
+import { SkeletonBlock } from "@/components/ui/Skeleton";
 
 const FACEBOOK_TABS = "timeline";
 const DEFAULT_PLUGIN_HEIGHT = 460;
@@ -16,6 +17,7 @@ const DEFAULT_PLUGIN_HEIGHT = 460;
 export default function FacebookPageEmbed() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [pluginWidth, setPluginWidth] = useState<number>(340);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -150,13 +152,36 @@ export default function FacebookPageEmbed() {
 
               <div
                 ref={containerRef}
-                className="w-full flex justify-center overflow-hidden rounded-xl bg-slate-50 border border-slate-100 min-h-[460px]"
+                className="relative w-full flex justify-center overflow-hidden rounded-xl bg-slate-50 border border-slate-100 min-h-[460px]"
               >
+                {!iframeLoaded && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 z-10 bg-white p-4 space-y-4"
+                  >
+                    <SkeletonBlock className="h-32 w-full rounded-xl" />
+                    <div className="flex items-center gap-3">
+                      <SkeletonBlock className="w-11 h-11 rounded-full shrink-0" />
+                      <div className="space-y-2 flex-1">
+                        <SkeletonBlock className="h-4 w-44" />
+                        <SkeletonBlock className="h-3 w-28" />
+                      </div>
+                    </div>
+                    {[1, 2].map((post) => (
+                      <div key={post} className="space-y-2 pt-2 border-t border-slate-100">
+                        <SkeletonBlock className="h-3.5 w-full" />
+                        <SkeletonBlock className="h-3.5 w-4/5" />
+                        <SkeletonBlock className="h-24 w-full rounded-xl" />
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <iframe
                   title="Great-Favour Montessori School Official Facebook Feed"
                   src={pluginSrc}
                   width={pluginWidth}
                   height={DEFAULT_PLUGIN_HEIGHT}
+                  onLoad={() => setIframeLoaded(true)}
                   style={{
                     border: "none",
                     overflow: "hidden",

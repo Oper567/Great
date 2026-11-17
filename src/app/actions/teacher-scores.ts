@@ -25,6 +25,8 @@ import {
   doesStudentMatchClassFilter,
   doesExamTargetMatchStudent,
 } from "@/lib/cbt-utils";
+import { resolvePerformanceRemark } from "@/lib/remark-templates";
+import { getServerRemarkTemplates } from "@/lib/remark-template-store";
 
 export interface DelegatedScoreRow {
   admNo: string;
@@ -478,6 +480,7 @@ async function mergeCourseScoresIntoStudentDossiers(
   const touchedStudentClasses = new Set<string>([cleanClassName]);
 
   const localStore = getLocalTerminalResultsStore();
+  const activeRemarkTemplates = await getServerRemarkTemplates();
   let updatedCount = 0;
   let totalSubmittedSum = 0;
 
@@ -601,6 +604,11 @@ async function mergeCourseScoresIntoStudentDossiers(
             : "PASSED"
           : "ADVISED TO REPEAT";
 
+      const fallbackRemarks = resolvePerformanceRemark(average, activeRemarkTemplates, {
+        studentName,
+        className: resolvedStudentClassName,
+      });
+
       const updatedPayload: PreparedResultPayload = {
         ...existingPayload,
         studentName: studentName || existingPayload.studentName,
@@ -608,6 +616,8 @@ async function mergeCourseScoresIntoStudentDossiers(
         arm: resolvedArm || existingPayload.arm || undefined,
         subjects,
         decision: existingPayload.decision || decision,
+        teacherRemark: existingPayload.teacherRemark || fallbackRemarks.teacherRemark,
+        principalRemark: existingPayload.principalRemark || fallbackRemarks.principalRemark,
       };
 
       saveToLocalTerminalResultsStore(updatedPayload, { isPublished: targetIsPublished });
@@ -646,8 +656,8 @@ async function mergeCourseScoresIntoStudentDossiers(
             nextClass: existingPayload.nextClass || "Next Class",
             nextTermBegins: existingPayload.nextTermBegins || "Monday, 14th September 2026",
             decision,
-            teacherRemark: existingPayload.teacherRemark || "Commendable dedication.",
-            principalRemark: existingPayload.principalRemark || "Promoted with distinction.",
+            teacherRemark: updatedPayload.teacherRemark,
+            principalRemark: updatedPayload.principalRemark,
             resultPayload: JSON.stringify(updatedPayload),
             isPublished: targetIsPublished,
           },
@@ -661,6 +671,10 @@ async function mergeCourseScoresIntoStudentDossiers(
       const totalPossible = 100;
       const average = subTotal;
       const decision = average >= 50 ? (isThirdTerm ? "PROMOTED" : "PASSED") : "ADVISED TO REPEAT";
+      const initialRemarks = resolvePerformanceRemark(average, activeRemarkTemplates, {
+        studentName,
+        className: resolvedStudentClassName,
+      });
 
       const initialPayload: PreparedResultPayload = {
         studentName,
@@ -680,8 +694,8 @@ async function mergeCourseScoresIntoStudentDossiers(
         decision,
         nextClass: "Next Class",
         nextTermBegins: "Monday, 14th September 2026",
-        teacherRemark: "Good performance in continuous assessments and exams.",
-        principalRemark: "Commendable academic effort. Keep it up!",
+        teacherRemark: initialRemarks.teacherRemark,
+        principalRemark: initialRemarks.principalRemark,
         formMasterName: payload.teacherName || "Subject Teacher",
         principalName: "Hon Okolie Peter Isioma JP MCArb (Director)",
         skills: DEFAULT_PREPARED_SKILLS,

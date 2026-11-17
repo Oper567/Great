@@ -37,6 +37,14 @@ import {
   formatClassWithArm,
   doesStudentMatchClassFilter,
 } from "@/lib/cbt-utils";
+import {
+  PerformanceRemarkTemplateTier,
+  resolvePerformanceRemark,
+} from "@/lib/remark-templates";
+import {
+  getServerRemarkTemplates,
+  saveServerRemarkTemplates,
+} from "@/lib/remark-template-store";
 
 function findExistingStudentPhotoInStore(targetAdmNo: string): string | undefined {
   if (!targetAdmNo) return undefined;
@@ -87,8 +95,8 @@ export async function saveTerminalResultAction(formData: FormData): Promise<{
   const decision = (formData.get("decision") as string)?.trim() || "PROMOTED";
   const nextClass = (formData.get("nextClass") as string)?.trim() || "";
   const nextTermBegins = (formData.get("nextTermBegins") as string)?.trim() || "Monday, 14th September 2026";
-  const teacherRemark = (formData.get("teacherRemark") as string)?.trim() || "An attentive scholar with admirable character.";
-  const principalRemark = (formData.get("principalRemark") as string)?.trim() || "Commendable academic distinction. Keep it up!";
+  const rawTeacherRemark = (formData.get("teacherRemark") as string)?.trim() || "";
+  const rawPrincipalRemark = (formData.get("principalRemark") as string)?.trim() || "";
   const formMasterName = (formData.get("formMasterName") as string)?.trim() || "Mr. Emmanuel Eze (B.Sc Ed)";
   const principalName = (formData.get("principalName") as string)?.trim() || "Hon Okolie Peter Isioma JP MCArb (Director)";
   const gender = ((formData.get("gender") as string)?.trim() || "FEMALE") as "MALE" | "FEMALE";
@@ -186,6 +194,18 @@ export async function saveTerminalResultAction(formData: FormData): Promise<{
   const average = subjects.length > 0
     ? parseFloat(((hasCumulative ? cumulativeTotal : totalScore) / subjects.length).toFixed(2))
     : 0;
+
+  let teacherRemark = rawTeacherRemark;
+  let principalRemark = rawPrincipalRemark;
+  if (!teacherRemark || !principalRemark) {
+    const activeTemplates = await getServerRemarkTemplates();
+    const resolvedRemarks = resolvePerformanceRemark(average, activeTemplates, {
+      studentName,
+      className,
+    });
+    if (!teacherRemark) teacherRemark = resolvedRemarks.teacherRemark;
+    if (!principalRemark) principalRemark = resolvedRemarks.principalRemark;
+  }
 
   // Dynamically calculate class average across cohort if not explicitly provided or legacy dummy
   let finalClassAverage = classAvgInput;
@@ -413,6 +433,7 @@ export async function saveBatchTerminalResultsAction(batch: BatchResultInputItem
 
   const savedList: any[] = [];
   const errors: string[] = [];
+  const activeRemarkTemplates = await getServerRemarkTemplates();
 
   for (const item of batch) {
     const admNo = (item.admNo || "").trim().toUpperCase();
@@ -536,8 +557,12 @@ export async function saveBatchTerminalResultsAction(batch: BatchResultInputItem
     const nextClass = item.nextClass || (isThirdTerm ? (className.includes("JSS 1") ? "JSS 2 Diamond" : className.includes("JSS 2") ? "JSS 3 Platinum" : className.includes("SS 1") ? "SS 2" : className.includes("SS 2") ? "SS 3" : "GRADUATED") : "");
     const nextTermBegins = item.nextTermBegins || "Monday, 14th September 2026";
 
-    const teacherRemark = item.teacherRemark || (average >= 75 ? "An exceptionally diligent scholar with commendable character." : average >= 60 ? "Good academic progress shown this term." : "Needs more disciplined focus in core subjects.");
-    const principalRemark = item.principalRemark || (average >= 75 ? "Distinguished academic performance. Keep soaring higher!" : average >= 60 ? "Very commendable result. Maintain this momentum." : "Can achieve much higher grades with sustained diligence.");
+    const resolvedRemarks = resolvePerformanceRemark(average, activeRemarkTemplates, {
+      studentName,
+      className,
+    });
+    const teacherRemark = (item.teacherRemark || "").trim() || resolvedRemarks.teacherRemark;
+    const principalRemark = (item.principalRemark || "").trim() || resolvedRemarks.principalRemark;
 
     const formMasterName = item.formMasterName || "Mr. Emmanuel Eze (B.Sc Ed)";
     const principalName = item.principalName || "Hon Okolie Peter Isioma JP MCArb (Director)";
@@ -1353,5 +1378,48 @@ export async function seedDefaultInstitutionalResultsAction(): Promise<{
   } catch (err: any) {
     console.error("Seed default results error:", err);
     return { success: false, message: `Failed to seed results: ${err?.message || "Unknown error"}` };
+  }
+}
+
+/**
+ * Staff / Super Admin: Fetch Performance Remark Templates (Excellent Result, Very Good, Good, Fair, Pass).
+ */
+export async function getRemarkTemplatesAction(): Promise<{
+  success: boolean;
+  templates: PerformanceRemarkTemplateTier[];
+  error?: string;
+}> {
+  const auth = await requireAdminSession(["SUPER_ADMIN", "TEACHER"]);
+  if (!auth.ok) {
+    return { success: false, templates: [], error: auth.error };
+  }
+  const templates = await getServerRemarkTemplates();
+  return { success: true, templates };
+}
+
+/**
+ * Super Admin: Save & persist edited Performance Remark Templates across sessions.
+ */
+export async function saveRemarkTemplatesAction(
+  templates: PerformanceRemarkTemplateTier[]
+): Promise<{
+  success: boolean;
+  templates: PerformanceRemarkTemplateTier[];
+  error?: string;
+}> {
+  const auth = await requireAdminSession(["SUPER_ADMIN"]);
+  if (!auth.ok) {
+    return { success: false, templates: [], error: auth.error };
+  }
+  try {
+    const saved = await saveServerRemarkTemplates(templates);
+    revalidatePath("/admin/cbt");
+    return { success: true, templates: saved };
+  } catch (err: any) {
+    return {
+      success: false,
+      templates: [],
+      error: sanitizeErrorMessage(err, "Failed to save remark templates."),
+    };
   }
 }

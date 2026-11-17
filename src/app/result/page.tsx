@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { verifyScratchCardAction, VerifyCardResult } from "@/app/actions/verify-card";
 import { getStudentAvailableTermsAction } from "@/app/actions/terminal-result-admin";
 import { SCHOOL_BRAND, SCHOOL_NAME } from "@/constants/school";
+import { ResultPortalSkeleton } from "@/components/ui/Skeleton";
 import {
   KeyRound,
   UserCheck,
@@ -476,16 +477,7 @@ function ResultPortalContent() {
 
 export default function ResultPortalLoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-          <div className="p-8 bg-white rounded-2xl shadow-lg border border-slate-200 flex flex-col items-center gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-800" />
-            <p className="text-sm font-bold text-slate-700">Loading Result Portal...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<ResultPortalSkeleton />}>
       <ResultPortalContent />
     </Suspense>
   );

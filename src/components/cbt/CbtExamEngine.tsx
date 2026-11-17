@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import CbtMiniCalculator from "./CbtMiniCalculator";
 import { FormattedMathText } from "./FormattedMathText";
+import { CbtExamRoomSkeleton } from "@/components/ui/Skeleton";
 import { shuffleArrayWithSeed } from "@/lib/cbt-utils";
 import {
   ClientExamPayload,
@@ -818,19 +819,7 @@ export default function CbtExamEngine({ examId, student, initialResult }: Props)
   // Loading & Error States
   // --------------------------------------------------------------------------
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white p-6 space-y-4">
-        <div className="w-16 h-16 rounded-full bg-blue-900/40 border-2 border-blue-500 border-t-yellow-400 animate-spin flex items-center justify-center shadow-2xl shadow-blue-500/20" />
-        <div className="text-center space-y-1">
-          <h3 className="text-lg font-bold text-white tracking-tight">
-            Preparing Examination Terminal...
-          </h3>
-          <p className="text-xs text-slate-400">
-            Fetching single exam payload. All questions are loaded into secure memory.
-          </p>
-        </div>
-      </div>
-    );
+    return <CbtExamRoomSkeleton />;
   }
 
   if (loadError || !payload) {

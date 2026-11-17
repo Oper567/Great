@@ -26,6 +26,7 @@ import {
   deleteScratchCardAction,
   resetScratchCardAction,
 } from "@/app/actions/scratch-card-admin";
+import { ToastBanner, ToastFeedbackState } from "@/components/ui/ToastBanner";
 
 interface Props {
   initialCardsData: {
@@ -41,6 +42,15 @@ interface Props {
 
 export default function ScratchCardGeneratorTab({ initialCardsData }: Props) {
   const [cards, setCards] = useState<any[]>(initialCardsData?.cards || []);
+  const [actionToast, setActionToast] = useState<ToastFeedbackState | null>(null);
+  const showToast = (type: "success" | "error", text: string, durationMs = 3600) => {
+    setActionToast({ type, text });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setActionToast((prev) => (prev?.text === text ? null : prev));
+      }, durationMs);
+    }
+  };
 
   useEffect(() => {
     if (initialCardsData?.cards) {
@@ -78,12 +88,16 @@ export default function ScratchCardGeneratorTab({ initialCardsData }: Props) {
     startTransition(async () => {
       const res = await generateScratchCardsAction(formData);
       if (!res.success) {
-        setFeedback({ type: "error", text: res.error || "Failed to generate scratch cards." });
+        const errMsg = res.error || "Failed to generate scratch cards.";
+        setFeedback({ type: "error", text: errMsg });
+        showToast("error", errMsg);
       } else {
+        const okMsg = `Created ${res.count} scratch card(s) with strictly 3-check usage limit!`;
         setFeedback({
           type: "success",
-          text: `Successfully created ${res.count} scratch cards with strictly 3-check usage limit!`,
+          text: okMsg,
         });
+        showToast("success", `Created ${res.count} scratch card PIN(s)!`);
         if (res.cards && res.cards.length > 0) {
           setCards((prev) => [...res.cards!, ...prev]);
         }
@@ -103,8 +117,12 @@ export default function ScratchCardGeneratorTab({ initialCardsData }: Props) {
       const res = await deleteScratchCardAction(cardId);
       if (res.success) {
         setCards((prev) => prev.filter((c) => c.id !== cardId));
+        setFeedback({ type: "success", text: "Deleted! Scratch card PIN removed." });
+        showToast("success", "Deleted! Scratch card PIN removed.");
       } else {
-        alert(res.error || "Failed to delete card.");
+        const errMsg = res.error || "Failed to delete card.";
+        setFeedback({ type: "error", text: errMsg });
+        showToast("error", errMsg);
       }
     });
   };
@@ -117,8 +135,12 @@ export default function ScratchCardGeneratorTab({ initialCardsData }: Props) {
         setCards((prev) =>
           prev.map((c) => (c.id === cardId ? { ...c, usageCount: 0, admNo: null, status: "active" } : c))
         );
+        setFeedback({ type: "success", text: "Reset! Card checks reset to 0." });
+        showToast("success", "Reset! Card checks reset to 0.");
       } else {
-        alert(res.error || "Failed to reset card.");
+        const errMsg = res.error || "Failed to reset card.";
+        setFeedback({ type: "error", text: errMsg });
+        showToast("error", errMsg);
       }
     });
   };
@@ -705,6 +727,7 @@ export default function ScratchCardGeneratorTab({ initialCardsData }: Props) {
           </div>
         </div>
       )}
+      <ToastBanner toast={actionToast} onDismiss={() => setActionToast(null)} />
     </div>
   );
 }

@@ -75,6 +75,8 @@ import StaffManagementTab from "@/components/admin/StaffManagementTab";
 import { MathToolbar, FloatingMathButton } from "./MathToolbar";
 import { FormattedMathText } from "./FormattedMathText";
 import { FlaggedQuestionsModal } from "./FlaggedQuestionsModal";
+import { PortalDashboardSkeleton } from "@/components/ui/Skeleton";
+import { ToastBanner, ToastFeedbackState } from "@/components/ui/ToastBanner";
 
 type AdminTabId =
   | "exams"
@@ -210,16 +212,27 @@ export default function AdminCbtDashboardClient({
     selectTab("results");
   };
 
-  // Transitions
+  // Transitions & Toast Feedback
   const [isPending, startTransition] = useTransition();
+  const [actionToast, setActionToast] = useState<ToastFeedbackState | null>(null);
+  const showActionToast = (type: "success" | "error", text: string, durationMs = 3600) => {
+    setActionToast({ type, text });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setActionToast((prev) => (prev?.text === text ? null : prev));
+      }, durationMs);
+    }
+  };
 
   // --------------------------------------------------------------------------
   // Admin Login State (If not authenticated)
   // --------------------------------------------------------------------------
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isRedirectingLogin, setIsRedirectingLogin] = useState(false);
 
   const handleAdminLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isRedirectingLogin) return;
     setLoginError(null);
     const formData = new FormData(e.currentTarget);
     startTransition(async () => {
@@ -227,7 +240,8 @@ export default function AdminCbtDashboardClient({
       if (!res.success) {
         setLoginError(res.error || "Login failed.");
       } else {
-        window.location.reload();
+        setIsRedirectingLogin(true);
+        window.location.replace("/admin/cbt");
       }
     });
   };
@@ -296,6 +310,9 @@ export default function AdminCbtDashboardClient({
 
           form.reset();
           setIsCreateExamOpen(false);
+          const createdMsg = `Created! Examination paper "${newSubject} (${newClass})" is ready.`;
+          setQuestionSuccess(createdMsg);
+          showActionToast("success", createdMsg);
           router.refresh();
         }
       } catch (err: any) {
@@ -306,9 +323,17 @@ export default function AdminCbtDashboardClient({
 
   const handleToggleStatus = (examId: number, currentStatus: boolean) => {
     startTransition(async () => {
-      await toggleExamStatusAction(examId, !currentStatus);
+      const res = await toggleExamStatusAction(examId, !currentStatus).catch(() => ({ success: false }));
+      if (res?.success === false) {
+        showActionToast("error", "Could not update exam status.");
+        return;
+      }
       setExams((prev) =>
         prev.map((ex) => (ex.id === examId ? { ...ex, isActive: !currentStatus } : ex))
+      );
+      showActionToast(
+        "success",
+        `Updated! Examination status changed to ${!currentStatus ? "Active (Live)" : "Inactive (Hidden)"}.`
       );
     });
   };
@@ -415,7 +440,9 @@ export default function AdminCbtDashboardClient({
         setSelectedExamIdForQuestions(newExamId);
         setIsQuickSubjectModalOpen(false);
         form.reset();
-        setQuestionSuccess(`Created custom subject "${newSubject}"! You can author questions for it below.`);
+        const msg = `Created custom subject "${newSubject}"! You can author questions for it below.`;
+        setQuestionSuccess(msg);
+        showActionToast("success", msg);
       }
     });
   };
@@ -454,7 +481,8 @@ export default function AdminCbtDashboardClient({
         if (!res || !res.success) {
           setQuestionFormError(res?.error || "Failed to save question. Please check server connection.");
         } else {
-          setQuestionSuccess("Objective question added successfully!");
+          setQuestionSuccess("Created! Objective question added successfully.");
+          showActionToast("success", "Created! Objective question added.");
           setObjectiveImagePreview(null);
           setAdminObjQuestionText("");
           form.reset();
@@ -497,7 +525,8 @@ export default function AdminCbtDashboardClient({
         if (!res || !res.success) {
           setQuestionFormError(res?.error || "Failed to save theory question. Please check server connection.");
         } else {
-          setQuestionSuccess("Theory prompt added successfully!");
+          setQuestionSuccess("Created! Theory prompt added successfully.");
+          showActionToast("success", "Created! Theory prompt added.");
           setTheoryImagePreview(null);
           setAdminTheoryQuestionText("");
           form.reset();
@@ -526,7 +555,11 @@ export default function AdminCbtDashboardClient({
   const handleDeleteQuestion = (type: "objective" | "theory", qId: number) => {
     if (!confirm("Are you sure you want to delete this question?")) return;
     startTransition(async () => {
-      await deleteQuestionAction(type, qId);
+      const res = await deleteQuestionAction(type, qId).catch(() => ({ success: false }));
+      if (res?.success === false) {
+        showActionToast("error", "Failed to delete question.");
+        return;
+      }
       loadExamQuestions(selectedExamIdForQuestions);
       setExams((prev) =>
         prev.map((ex) => {
@@ -549,6 +582,7 @@ export default function AdminCbtDashboardClient({
           return ex;
         })
       );
+      showActionToast("success", "Deleted! Question removed from paper.");
     });
   };
 
@@ -570,15 +604,16 @@ export default function AdminCbtDashboardClient({
           setExams((prev) =>
             prev.map((ex) => (ex.id === examId ? { ...ex, isArchived: true, isActive: false } : ex))
           );
-          setQuestionSuccess(
-            res.isArchived
-              ? `Examination course ${label} safely removed from the active CBT page. All ${attemptsCount} student grading(s) remain intact and preserved!`
-              : `Examination course ${label} deleted successfully!`
-          );
+          const archivedMsg = res.isArchived
+            ? `Removed ${label} from active CBT page (all ${attemptsCount} student scores preserved).`
+            : `Deleted examination course ${label}!`;
+          setQuestionSuccess(archivedMsg);
+          showActionToast("success", archivedMsg);
           router.refresh();
         }
       } catch (err: any) {
         setQuestionFormError(err?.message || "Error removing exam course.");
+        showActionToast("error", err?.message || "Error removing exam course.");
       }
     });
   };
@@ -590,11 +625,14 @@ export default function AdminCbtDashboardClient({
         const res = await restoreArchivedExamAction(examId);
         if (!res || !res.success) {
           setQuestionFormError(res?.error || "Failed to restore exam course.");
+          showActionToast("error", res?.error || "Failed to restore exam course.");
         } else {
           setExams((prev) =>
             prev.map((ex) => (ex.id === examId ? { ...ex, isArchived: false, isActive: true } : ex))
           );
-          setQuestionSuccess(`Examination course ${label} restored to active CBT page!`);
+          const restoredMsg = `Restored ${label} back to active CBT exam list!`;
+          setQuestionSuccess(restoredMsg);
+          showActionToast("success", restoredMsg);
           router.refresh();
         }
       } catch (err: any) {
@@ -616,14 +654,20 @@ export default function AdminCbtDashboardClient({
       try {
         const res = await deleteExamAction(examId, true);
         if (!res || !res.success) {
-          setQuestionFormError(res?.error || "Failed to permanently delete course.");
+          const errMsg = res?.error || "Failed to permanently delete course.";
+          setQuestionFormError(errMsg);
+          showActionToast("error", errMsg);
         } else {
           setExams((prev) => prev.filter((ex) => ex.id !== examId));
-          setQuestionSuccess(`Course ${label} has been permanently deleted from the system.`);
+          const delMsg = `Course ${label} has been permanently deleted from the system.`;
+          setQuestionSuccess(delMsg);
+          showActionToast("success", `Deleted! Course ${label} permanently removed.`);
           router.refresh();
         }
       } catch (err: any) {
-        setQuestionFormError(err?.message || "Error permanently deleting course.");
+        const errMsg = err?.message || "Error permanently deleting course.";
+        setQuestionFormError(errMsg);
+        showActionToast("error", errMsg);
       }
     });
   };
@@ -655,8 +699,9 @@ export default function AdminCbtDashboardClient({
         if (!res.success) {
           setQuestionFormError(res.error || "Failed to update objective question.");
         } else {
-          setQuestionSuccess("Objective question updated and corrected successfully!");
           setEditingObjectiveQuestion(null);
+          setQuestionSuccess("Updated! Objective question saved.");
+          showActionToast("success", "Updated! Objective question saved.");
           setEditObjectiveImagePreview(null);
           loadExamQuestions(selectedExamIdForQuestions);
           router.refresh();
@@ -685,8 +730,9 @@ export default function AdminCbtDashboardClient({
         if (!res.success) {
           setQuestionFormError(res.error || "Failed to update theory question.");
         } else {
-          setQuestionSuccess("Theory prompt updated and corrected successfully!");
           setEditingTheoryQuestion(null);
+          setQuestionSuccess("Updated! Theory prompt saved.");
+          showActionToast("success", "Updated! Theory prompt saved.");
           setEditTheoryImagePreview(null);
           loadExamQuestions(selectedExamIdForQuestions);
           router.refresh();
@@ -715,7 +761,8 @@ export default function AdminCbtDashboardClient({
           if (examQuestionsPreview && examQuestionsPreview.id === examId) {
             setExamQuestionsPreview((prev: any) => ({ ...prev, durationMinutes: newDuration }));
           }
-          setQuestionSuccess(`Exam allocated time updated to ${newDuration} minutes successfully!`);
+          setQuestionSuccess(`Exam allocated time updated to ${newDuration} minutes!`);
+          showActionToast("success", `Updated! Exam time set to ${newDuration} minutes.`);
           router.refresh();
         }
       } catch (err: any) {
@@ -764,7 +811,9 @@ export default function AdminCbtDashboardClient({
             }));
           }
           setEditingExamForSettings(null);
-          setQuestionSuccess(`Exam "${updated.subject}" settings updated successfully!`);
+          const settingsMsg = `Updated! Exam settings saved for "${updated.subject}".`;
+          setQuestionSuccess(settingsMsg);
+          showActionToast("success", settingsMsg);
           router.refresh();
         }
       } catch (err: any) {
@@ -786,9 +835,12 @@ export default function AdminCbtDashboardClient({
       try {
         const res = await clearAllExamQuestionsAction(examId);
         if (!res || !res.success) {
-          setQuestionFormError(res?.error || "Failed to clear questions.");
+          const errMsg = res?.error || "Failed to clear questions.";
+          setQuestionFormError(errMsg);
+          showActionToast("error", errMsg);
         } else {
           setQuestionSuccess("All questions for this course paper have been cleared.");
+          showActionToast("success", "Cleared! All questions removed from this paper.");
           loadExamQuestions(examId);
           setExams((prev) =>
             prev.map((ex) =>
@@ -807,7 +859,9 @@ export default function AdminCbtDashboardClient({
           router.refresh();
         }
       } catch (err: any) {
-        setQuestionFormError(err?.message || "Error clearing questions.");
+        const errMsg = err?.message || "Error clearing questions.";
+        setQuestionFormError(errMsg);
+        showActionToast("error", errMsg);
       }
     });
   };
@@ -953,6 +1007,7 @@ export default function AdminCbtDashboardClient({
         )
       );
       setSaveSuccessMsg((prev) => ({ ...prev, [attemptId]: true }));
+      showActionToast("success", `Saved! Theory score (${scoreVal} pts) updated.`);
       setTimeout(() => {
         setSaveSuccessMsg((prev) => ({ ...prev, [attemptId]: false }));
       }, 2500);
@@ -978,12 +1033,15 @@ export default function AdminCbtDashboardClient({
           type: "success",
           text: `✓ Session re-opened for ${studentName} (+${extraMins} mins added, all saved answers preserved). They can now log in and continue!`,
         });
+        showActionToast("success", `Re-opened! Session unlocked for ${studentName} (+${extraMins}m).`);
         setTimeout(() => setGradingFeedback(null), 5000);
       } else {
+        const errMsg = res.error || "Failed to re-open student session.";
         setGradingFeedback({
           type: "error",
-          text: res.error || "Failed to re-open student session.",
+          text: errMsg,
         });
+        showActionToast("error", errMsg);
       }
     } finally {
       setRecoveringAttemptId(null);
@@ -1008,12 +1066,15 @@ export default function AdminCbtDashboardClient({
           type: "success",
           text: `✓ Finalized & graded ${res.answeredCount ?? answeredCount} saved answer(s) for ${studentName} (OBJ Score: ${res.objectiveScore} pts).`,
         });
+        showActionToast("success", `Finalized! Graded ${res.answeredCount ?? answeredCount} answer(s) for ${studentName}.`);
         setTimeout(() => setGradingFeedback(null), 5000);
       } else {
+        const errMsg = res.error || "Failed to finalize interrupted attempt.";
         setGradingFeedback({
           type: "error",
-          text: res.error || "Failed to finalize interrupted attempt.",
+          text: errMsg,
         });
+        showActionToast("error", errMsg);
       }
     } finally {
       setRecoveringAttemptId(null);
@@ -1116,13 +1177,16 @@ export default function AdminCbtDashboardClient({
         type: "success",
         text: `Successfully cleared ${res.count || 0} student attempt(s) for ${paperName}.`,
       });
+      showActionToast("success", `Cleared! Removed ${res.count || 0} student attempt(s).`);
       setTimeout(() => setGradingFeedback(null), 3500);
       router.refresh();
     } else {
+      const errMsg = res.error || "Failed to clear student attempts.";
       setGradingFeedback({
         type: "error",
-        text: res.error || "Failed to clear student attempts.",
+        text: errMsg,
       });
+      showActionToast("error", errMsg);
       setTimeout(() => setGradingFeedback(null), 4000);
     }
   };
@@ -1167,13 +1231,16 @@ export default function AdminCbtDashboardClient({
         type: "success",
         text: `Cleared attempt for ${studentName}.`,
       });
+      showActionToast("success", `Deleted! Cleared attempt for ${studentName}.`);
       setTimeout(() => setGradingFeedback(null), 3000);
       router.refresh();
     } else {
+      const errMsg = res.error || "Failed to delete attempt.";
       setGradingFeedback({
         type: "error",
-        text: res.error || "Failed to delete attempt.",
+        text: errMsg,
       });
+      showActionToast("error", errMsg);
       setTimeout(() => setGradingFeedback(null), 4000);
     }
   };
@@ -1182,6 +1249,17 @@ export default function AdminCbtDashboardClient({
   // If Not Authenticated as Admin
   // --------------------------------------------------------------------------
   if (!admin) {
+    if (isRedirectingLogin) {
+      return (
+        <div className="min-h-screen bg-slate-950">
+          <div className="bg-emerald-950/90 border-b border-emerald-700/60 px-4 py-2 text-center text-xs font-bold text-emerald-300">
+            ✓ Signed in! Loading Super Admin Command Center...
+          </div>
+          <PortalDashboardSkeleton variant="admin" />
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
@@ -1299,6 +1377,7 @@ export default function AdminCbtDashboardClient({
 
   return (
     <div className="dash-mobile min-h-screen bg-slate-900 text-slate-100 flex flex-col selection:bg-yellow-500 selection:text-blue-950 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <ToastBanner toast={actionToast} onDismiss={() => setActionToast(null)} />
       {/* Sticky top chrome: header + desktop tab rail share one sticky wrapper so offsets never drift */}
       <div className="sticky top-0 z-30 no-print">
         {/* Top Super Admin Navbar */}

@@ -36,6 +36,7 @@ import {
   Download,
   ChevronLeft,
   Clock,
+  MessageSquareText,
 } from "lucide-react";
 import {
   saveTerminalResultAction,
@@ -45,8 +46,19 @@ import {
   getAllTerminalResultsAction,
   saveBatchTerminalResultsAction,
   autoRankCohortPositionsAction,
+  getRemarkTemplatesAction,
+  saveRemarkTemplatesAction,
   BatchResultInputItem,
 } from "@/app/actions/terminal-result-admin";
+import {
+  DEFAULT_REMARK_TEMPLATES,
+  PerformanceRemarkTemplateTier,
+  REMARK_TEMPLATES_STORAGE_KEY,
+  normalizeRemarkTemplates,
+  resolvePerformanceRemark,
+} from "@/lib/remark-templates";
+import { RemarkTemplatesModal } from "@/components/admin/RemarkTemplatesModal";
+import { ToastBanner, ToastFeedbackState } from "@/components/ui/ToastBanner";
 import {
   getAllTeacherCourseDraftsForAdminAction,
   finalizeAndPublishClassDraftResultsAction,
@@ -510,7 +522,9 @@ export default function TerminalResultPreparationTab({
 
   // Roster Mode State
   const [selectedRosterAdmNos, setSelectedRosterAdmNos] = useState<Set<string>>(new Set());
-  const [rosterInputs, setRosterInputs] = useState<Record<string, { average?: string; decision?: string; remark?: string }>>({});
+  const [rosterInputs, setRosterInputs] = useState<
+    Record<string, { average?: string; decision?: string; remark?: string; principalRemark?: string }>
+  >({});
   const [quickFillAverage, setQuickFillAverage] = useState("");
 
   // Paste & File Upload Mode State (Optimized for 1,000+ Students)
@@ -536,6 +550,36 @@ export default function TerminalResultPreparationTab({
   const [isGradingModalOpen, setIsGradingModalOpen] = useState(false);
   const [editingStandards, setEditingStandards] = useState<GradeStandardTier[]>(DEFAULT_GRADE_STANDARDS);
   const [standardsFeedback, setStandardsFeedback] = useState<string | null>(null);
+
+  // Performance Remark Templates State (Excellent Result, Very Good, Good, Fair, Pass)
+  const [remarkTemplates, setRemarkTemplates] = useState<PerformanceRemarkTemplateTier[]>(DEFAULT_REMARK_TEMPLATES);
+  const [isRemarkModalOpen, setIsRemarkModalOpen] = useState(false);
+  const [isSavingRemarkTemplates, setIsSavingRemarkTemplates] = useState(false);
+  const [remarkTemplatesFeedback, setRemarkTemplatesFeedback] = useState<string | null>(null);
+  const [autoSyncRemarks, setAutoSyncRemarks] = useState(true);
+
+  useEffect(() => {
+    try {
+      const localRaw = localStorage.getItem(REMARK_TEMPLATES_STORAGE_KEY);
+      if (localRaw) {
+        setRemarkTemplates(normalizeRemarkTemplates(JSON.parse(localRaw)));
+      }
+    } catch {
+      // ignore local fallback read errors
+    }
+
+    getRemarkTemplatesAction()
+      .then((res) => {
+        if (res?.success && Array.isArray(res.templates) && res.templates.length > 0) {
+          const normalized = normalizeRemarkTemplates(res.templates);
+          setRemarkTemplates(normalized);
+          try {
+            localStorage.setItem(REMARK_TEMPLATES_STORAGE_KEY, JSON.stringify(normalized));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Load custom standards on mount
   useEffect(() => {
@@ -606,6 +650,15 @@ export default function TerminalResultPreparationTab({
 
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [actionToast, setActionToast] = useState<ToastFeedbackState | null>(null);
+  const showToast = (type: "success" | "error", text: string, durationMs = 3600) => {
+    setActionToast({ type, text });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setActionToast((prev) => (prev?.text === text ? null : prev));
+      }, durationMs);
+    }
+  };
 
   // Calculations - Dynamic Average based on scores
   const totalScore = subjects.reduce((sum, s) => sum + (s.totalScore || 0), 0);
@@ -628,6 +681,20 @@ export default function TerminalResultPreparationTab({
       }, 0)
     : totalScore;
   const overallCumulativeAverage = subjects.length > 0 ? (cumulativeTotal / subjects.length).toFixed(1) : "0.0";
+  const effectiveStudentAverage =
+    subjects.length > 0
+      ? Number(term === "Third Term" && hasCumulative ? overallCumulativeAverage : overallAverage) || 0
+      : 0;
+
+  useEffect(() => {
+    if (!isModalOpen || !autoSyncRemarks || subjects.length === 0) return;
+    const matched = resolvePerformanceRemark(effectiveStudentAverage, remarkTemplates, {
+      studentName,
+      className,
+    });
+    setTeacherRemark(matched.teacherRemark);
+    setPrincipalRemark(matched.principalRemark);
+  }, [isModalOpen, autoSyncRemarks, subjects.length, effectiveStudentAverage, remarkTemplates, studentName, className]);
 
   // Dynamic cohort class average calculation (stream-aware)
   const computeDynamicClassAverage = useCallback(
@@ -1002,8 +1069,16 @@ export default function TerminalResultPreparationTab({
         nextTermBegins: batchNextTermBegins,
         formMasterName: batchFormMasterName,
         principalName: batchPrincipalName,
-        teacherRemark: custom.remark || (avgNum >= 75 ? "An exceptionally diligent scholar with commendable character." : avgNum >= 60 ? "Good academic progress shown this term." : "Needs more disciplined focus in core subjects."),
-        principalRemark: avgNum >= 75 ? "Distinguished academic performance. Keep soaring higher!" : avgNum >= 60 ? "Very commendable result. Maintain this momentum." : "Can achieve higher grades with sustained diligence.",
+        ...(() => {
+          const resolved = resolvePerformanceRemark(avgNum, remarkTemplates, {
+            studentName: st.fullName,
+            className: st.currentClass || batchClass,
+          });
+          return {
+            teacherRemark: (custom.remark || "").trim() || resolved.teacherRemark,
+            principalRemark: (custom.principalRemark || "").trim() || resolved.principalRemark,
+          };
+        })(),
       };
     });
 
@@ -1029,21 +1104,27 @@ export default function TerminalResultPreparationTab({
           return next;
         });
 
+        const okMsg = `Uploaded ${res.savedCount} student result dossiers! (Class positions automatically re-ranked)`;
         setBatchFeedback({
           type: "success",
           text: `🎉 Successfully uploaded ${res.savedCount} student result dossiers! (Class positions automatically re-ranked)`,
         });
+        showToast("success", `Saved! ${okMsg}`);
       } else {
+        const errMsg = res.error || "Failed to upload batch.";
         setBatchFeedback({
           type: "error",
-          text: res.error || "Failed to upload batch.",
+          text: errMsg,
         });
+        showToast("error", errMsg);
       }
     } catch (err: any) {
+      const errMsg = `Batch upload error: ${err?.message || "Unknown error"}`;
       setBatchFeedback({
         type: "error",
-        text: `Batch upload error: ${err?.message || "Unknown error"}`,
+        text: errMsg,
       });
+      showToast("error", errMsg);
     } finally {
       setIsBatchProcessing(false);
     }
@@ -1095,8 +1176,16 @@ export default function TerminalResultPreparationTab({
         nextTermBegins: batchNextTermBegins,
         formMasterName: batchFormMasterName,
         principalName: batchPrincipalName,
-        teacherRemark: r.average >= 75 ? "An exceptionally diligent scholar with commendable character." : r.average >= 60 ? "Good academic progress shown this term." : "Needs more disciplined focus in core subjects.",
-        principalRemark: r.average >= 75 ? "Distinguished academic performance. Keep soaring higher!" : r.average >= 60 ? "Very commendable result. Maintain this momentum." : "Can achieve higher grades with sustained diligence.",
+        ...(() => {
+          const resolved = resolvePerformanceRemark(r.average, remarkTemplates, {
+            studentName: r.studentName,
+            className: rowClass,
+          });
+          return {
+            teacherRemark: resolved.teacherRemark,
+            principalRemark: resolved.principalRemark,
+          };
+        })(),
       };
     });
 
@@ -1120,23 +1209,29 @@ export default function TerminalResultPreparationTab({
             type: "success",
             text: `✓ Chunk ${chunkIndex + 1} (${chunkRows.length} students) uploaded! Ready for Chunk ${nextChunk + 1} of ${totalChunks}.`,
           });
+          showToast("success", `Saved! Chunk ${chunkIndex + 1} (${chunkRows.length} students) uploaded.`);
         } else {
           setBatchFeedback({
             type: "success",
             text: `🎉 All ${validRows.length} student results uploaded successfully! All cohort positions re-ranked.`,
           });
+          showToast("success", `Uploaded! All ${validRows.length} student results saved.`);
         }
       } else {
+        const errMsg = res.error || "Chunk upload failed.";
         setBatchFeedback({
           type: "error",
-          text: res.error || "Chunk upload failed.",
+          text: errMsg,
         });
+        showToast("error", errMsg);
       }
     } catch (err: any) {
+      const errMsg = `Upload error: ${err?.message || "Unknown error"}`;
       setBatchFeedback({
         type: "error",
-        text: `Upload error: ${err?.message || "Unknown error"}`,
+        text: errMsg,
       });
+      showToast("error", errMsg);
     } finally {
       setIsBatchProcessing(false);
     }
@@ -1195,8 +1290,16 @@ export default function TerminalResultPreparationTab({
           nextTermBegins: batchNextTermBegins,
           formMasterName: batchFormMasterName,
           principalName: batchPrincipalName,
-          teacherRemark: r.average >= 75 ? "An exceptionally diligent scholar with commendable character." : r.average >= 60 ? "Good academic progress shown this term." : "Needs more disciplined focus.",
-          principalRemark: r.average >= 75 ? "Distinguished academic performance. Keep soaring higher!" : r.average >= 60 ? "Very commendable result. Maintain this momentum." : "Can achieve higher grades.",
+          ...(() => {
+            const resolved = resolvePerformanceRemark(r.average, remarkTemplates, {
+              studentName: r.studentName,
+              className: rowClass,
+            });
+            return {
+              teacherRemark: resolved.teacherRemark,
+              principalRemark: resolved.principalRemark,
+            };
+          })(),
         };
       });
 
@@ -1229,6 +1332,7 @@ export default function TerminalResultPreparationTab({
       type: "success",
       text: `🎉 Sequential batch upload complete! All ${totalStudents} students uploaded safely without server strain. All class cohorts auto-ranked.`,
     });
+    showToast("success", `Uploaded! All ${totalStudents} student results saved & ranked.`);
   };
 
   const handleAutoRankCohort = async () => {
@@ -1245,17 +1349,22 @@ export default function TerminalResultPreparationTab({
           type: "success",
           text: `🏆 Cohort ranked successfully! Updated positions (1st, 2nd, 3rd) for ${res.count} students in ${batchClass}.`,
         });
+        showToast("success", `Ranked! Updated positions for ${res.count} students in ${batchClass}.`);
       } else {
+        const errMsg = res.error || "Failed to auto-rank cohort.";
         setBatchFeedback({
           type: "error",
-          text: res.error || "Failed to auto-rank cohort.",
+          text: errMsg,
         });
+        showToast("error", errMsg);
       }
     } catch (err: any) {
+      const errMsg = `Ranking error: ${err?.message || "Unknown error"}`;
       setBatchFeedback({
         type: "error",
-        text: `Ranking error: ${err?.message || "Unknown error"}`,
+        text: errMsg,
       });
+      showToast("error", errMsg);
     } finally {
       setIsRankingCohort(false);
     }
@@ -1403,16 +1512,62 @@ export default function TerminalResultPreparationTab({
       })
     );
     setStandardsFeedback("Grading standards saved & applied to current dossier!");
+    showToast("success", "Saved! Grading standards applied.");
     setTimeout(() => {
       setStandardsFeedback(null);
       setIsGradingModalOpen(false);
     }, 1100);
   };
 
+  const handleSaveRemarkTemplates = async (updatedTemplates: PerformanceRemarkTemplateTier[]) => {
+    setIsSavingRemarkTemplates(true);
+    setRemarkTemplatesFeedback(null);
+    const normalized = normalizeRemarkTemplates(updatedTemplates);
+    try {
+      const res = await saveRemarkTemplatesAction(normalized);
+      const saved = res?.success && res.templates.length > 0 ? res.templates : normalized;
+      setRemarkTemplates(saved);
+      try {
+        localStorage.setItem(REMARK_TEMPLATES_STORAGE_KEY, JSON.stringify(saved));
+      } catch {}
+
+      if (isModalOpen && autoSyncRemarks && subjects.length > 0) {
+        const matched = resolvePerformanceRemark(effectiveStudentAverage, saved, {
+          studentName,
+          className,
+        });
+        setTeacherRemark(matched.teacherRemark);
+        setPrincipalRemark(matched.principalRemark);
+      }
+
+      setRemarkTemplatesFeedback("Performance remark templates saved and activated for Result Uploader!");
+      showToast("success", "Saved! Performance remark templates updated.");
+      setTimeout(() => {
+        setRemarkTemplatesFeedback(null);
+        setIsRemarkModalOpen(false);
+      }, 950);
+    } catch {
+      setRemarkTemplates(normalized);
+      try {
+        localStorage.setItem(REMARK_TEMPLATES_STORAGE_KEY, JSON.stringify(normalized));
+      } catch {}
+      setRemarkTemplatesFeedback("Saved remark templates locally.");
+      showToast("success", "Saved! Remark templates saved locally.");
+      setTimeout(() => {
+        setRemarkTemplatesFeedback(null);
+        setIsRemarkModalOpen(false);
+      }, 950);
+    } finally {
+      setIsSavingRemarkTemplates(false);
+    }
+  };
+
   const openNewResultModal = () => {
     const activeTerm = selectedTermFilter !== "ALL" ? selectedTermFilter : term;
     const activeSession = selectedSessionFilter !== "ALL" ? selectedSessionFilter : session;
+    const defaultMatched = resolvePerformanceRemark(75, remarkTemplates);
     setEditingId(null);
+    setAutoSyncRemarks(true);
     setAdmNo(`GFMS/${new Date().getFullYear()}/${Math.floor(100 + Math.random() * 900)}`);
     setStudentName("");
     setClassName(selectedClassFilter !== "ALL" ? selectedClassFilter : "JSS 2 Diamond");
@@ -1426,8 +1581,8 @@ export default function TerminalResultPreparationTab({
     setDecision(activeTerm === "Third Term" ? "PROMOTED" : "");
     setNextClass(activeTerm === "Third Term" ? "JSS 3 Platinum" : "");
     setNextTermBegins("Monday, 14th September 2026");
-    setTeacherRemark("An exceptionally diligent scholar with commendable character.");
-    setPrincipalRemark("Distinguished academic performance. Keep soaring higher!");
+    setTeacherRemark(defaultMatched.teacherRemark);
+    setPrincipalRemark(defaultMatched.principalRemark);
     setFormMasterName("Mr. Emmanuel Eze (B.Sc Ed)");
     setPrincipalName("Hon Okolie Peter Isioma JP MCArb (Director)");
     setGender("FEMALE");
@@ -1450,6 +1605,7 @@ export default function TerminalResultPreparationTab({
   const handleEditResult = (resItem: any) => {
     const loadedTerm = resItem.term || "Third Term";
     setEditingId(resItem.id);
+    setAutoSyncRemarks(false);
     setAdmNo(resItem.admNo || resItem.adm_no);
     setStudentName(resItem.studentName || resItem.student_name);
     {
@@ -1555,7 +1711,12 @@ export default function TerminalResultPreparationTab({
     if (existing) {
       handleEditResult(existing);
     } else {
+      const prefillDefault = resolvePerformanceRemark(75, remarkTemplates, {
+        studentName: prefillTarget.studentName || "",
+        className: prefillTarget.className || "JSS 2 Diamond",
+      });
       setEditingId(null);
+      setAutoSyncRemarks(true);
       setAdmNo(targetAdmNo);
       setStudentName(prefillTarget.studentName || "");
       setClassName(
@@ -1576,8 +1737,8 @@ export default function TerminalResultPreparationTab({
       setDecision(term === "Third Term" ? "PROMOTED" : "");
       setNextClass(term === "Third Term" ? "JSS 3 Platinum" : "");
       setNextTermBegins("Monday, 14th September 2026");
-      setTeacherRemark("An exceptionally diligent scholar with commendable character.");
-      setPrincipalRemark("Distinguished academic performance. Keep soaring higher!");
+      setTeacherRemark(prefillDefault.teacherRemark);
+      setPrincipalRemark(prefillDefault.principalRemark);
       setFormMasterName("Mr. Emmanuel Eze (B.Sc Ed)");
       setPrincipalName("Hon Okolie Peter Isioma JP MCArb (Director)");
       setIsClassAverageManual(false);
@@ -1648,8 +1809,9 @@ export default function TerminalResultPreparationTab({
       const res = await deleteTerminalResultAction(id);
       if (res.success) {
         setResults((prev) => prev.filter((r) => r.id !== id));
+        showToast("success", "Deleted! Terminal result dossier removed.");
       } else {
-        alert(res.error || "Failed to delete result.");
+        showToast("error", res.error || "Failed to delete result.");
       }
     });
   };
@@ -1801,6 +1963,12 @@ export default function TerminalResultPreparationTab({
               ? "Terminal result dossier finalized and published to student portal!"
               : "Result dossier saved as Draft (Pending Admin Finalization).",
           });
+          showToast(
+            "success",
+            publishNow
+              ? "Published! Terminal result dossier finalized for student portal."
+              : "Saved! Result dossier saved as Draft."
+          );
           setTimeout(() => {
             setIsModalOpen(false);
             setFeedback(null);
@@ -1917,6 +2085,20 @@ export default function TerminalResultPreparationTab({
             <Award className="w-3.5 h-3.5 text-emerald-400" />
             <span className="sm:hidden">Grading</span>
             <span className="hidden sm:inline">Grading Standards</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRemarkTemplatesFeedback(null);
+              setIsRemarkModalOpen(true);
+            }}
+            className="px-2.5 sm:px-3.5 py-2 sm:py-2.5 bg-slate-900 border border-indigo-500/40 hover:border-indigo-400 text-indigo-300 font-bold text-xs rounded-xl shadow flex items-center justify-center gap-1.5 transition"
+            title="Configure & edit Excellent Result, Very Good, Good, Fair, and Pass remarks for the Result Uploader"
+          >
+            <MessageSquareText className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="sm:hidden">Remarks</span>
+            <span className="hidden sm:inline">Remark Templates</span>
           </button>
 
           <button
@@ -3555,64 +3737,170 @@ export default function TerminalResultPreparationTab({
               </div>
 
               {/* Section 3: Teacher & Principal Remarks */}
-              <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-4">
-                <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Edit3 className="w-4 h-4" />
-                  <span>3. Teacher & Principal Appraisal Remarks</span>
-                </h4>
+              {(() => {
+                const liveMatch = resolvePerformanceRemark(effectiveStudentAverage, remarkTemplates, {
+                  studentName,
+                  className,
+                });
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Class Teacher&apos;s Remark
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={teacherRemark}
-                      onChange={(e) => setTeacherRemark(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
-                    />
-                  </div>
+                return (
+                  <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h4 className="text-xs font-bold text-yellow-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Edit3 className="w-4 h-4" />
+                        <span>3. Teacher &amp; Principal Appraisal Remarks</span>
+                      </h4>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Director / Principal&apos;s Remark
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={principalRemark}
-                      onChange={(e) => setPrincipalRemark(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-950/90 border border-indigo-700 text-indigo-200 font-bold">
+                          Performance ({effectiveStudentAverage.toFixed(1)}%): {liveMatch.tier.label}
+                        </span>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Form Master Official Signatory Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formMasterName}
-                      onChange={(e) => setFormMasterName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
-                    />
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextAuto = !autoSyncRemarks;
+                            setAutoSyncRemarks(nextAuto);
+                            if (nextAuto) {
+                              setTeacherRemark(liveMatch.teacherRemark);
+                              setPrincipalRemark(liveMatch.principalRemark);
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg font-bold border transition ${
+                            autoSyncRemarks
+                              ? "bg-emerald-950/80 border-emerald-600 text-emerald-300"
+                              : "bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                          }`}
+                          title="Automatically update Teacher & Principal remarks whenever student score average changes"
+                        >
+                          {autoSyncRemarks ? "✓ Auto-Sync by Score" : "Manual Edit Mode"}
+                        </button>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                      Principal / Director Official Signatory Name
-                    </label>
-                    <input
-                      type="text"
-                      value={principalName}
-                      onChange={(e) => setPrincipalName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
-                    />
+                        {!autoSyncRemarks && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTeacherRemark(liveMatch.teacherRemark);
+                              setPrincipalRemark(liveMatch.principalRemark);
+                              setAutoSyncRemarks(true);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold transition"
+                          >
+                            Apply &ldquo;{liveMatch.tier.label}&rdquo;
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRemarkTemplatesFeedback(null);
+                            setIsRemarkModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 border border-indigo-700 text-indigo-200 font-bold inline-flex items-center gap-1 transition"
+                        >
+                          <MessageSquareText className="w-3 h-3" />
+                          <span>Edit Templates</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick 5-Tier Remark Template Switcher */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">
+                        Templates:
+                      </span>
+                      {remarkTemplates.map((tier) => {
+                        const isMatchedTier = liveMatch.tier.id === tier.id;
+                        return (
+                          <button
+                            key={tier.id}
+                            type="button"
+                            onClick={() => {
+                              const formatted = resolvePerformanceRemark(
+                                Math.round((tier.minScore + tier.maxScore) / 2),
+                                [tier],
+                                { studentName, className }
+                              );
+                              setAutoSyncRemarks(false);
+                              setTeacherRemark(formatted.teacherRemark);
+                              setPrincipalRemark(formatted.principalRemark);
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition active:scale-95 ${
+                              isMatchedTier
+                                ? "bg-indigo-600/30 border-indigo-400 text-white shadow-sm"
+                                : "bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-600 hover:text-white"
+                            }`}
+                            title={`Load "${tier.label}" remark template (${tier.minScore}% - ${tier.maxScore}%)`}
+                          >
+                            {tier.label}{" "}
+                            <span className="text-[9px] text-slate-400 font-mono">
+                              ({tier.minScore}-{tier.maxScore}%)
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                          Class Teacher&apos;s Remark <span className="text-slate-500">(Editable)</span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={teacherRemark}
+                          onChange={(e) => {
+                            setAutoSyncRemarks(false);
+                            setTeacherRemark(e.target.value);
+                          }}
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                          Director / Principal&apos;s Remark <span className="text-slate-500">(Editable)</span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={principalRemark}
+                          onChange={(e) => {
+                            setAutoSyncRemarks(false);
+                            setPrincipalRemark(e.target.value);
+                          }}
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-800">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                          Form Master Official Signatory Name
+                        </label>
+                        <input
+                          type="text"
+                          value={formMasterName}
+                          onChange={(e) => setFormMasterName(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                          Principal / Director Official Signatory Name
+                        </label>
+                        <input
+                          type="text"
+                          value={principalName}
+                          onChange={(e) => setPrincipalName(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:border-yellow-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Section 4: Psychomotor & Affective Traits Profile */}
               <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-3">
@@ -4152,6 +4440,19 @@ export default function TerminalResultPreparationTab({
 
                   <button
                     type="button"
+                    onClick={() => {
+                      setRemarkTemplatesFeedback(null);
+                      setIsRemarkModalOpen(true);
+                    }}
+                    className="px-2.5 py-1.5 bg-indigo-950/90 hover:bg-indigo-900 border border-indigo-700 text-indigo-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition"
+                    title="View and edit Excellent Result, Very Good, Good, Fair, and Pass remark templates"
+                  >
+                    <MessageSquareText className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>Remark Templates</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setIsSharedSettingsOpen(!isSharedSettingsOpen)}
                     className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold rounded-xl flex items-center gap-1 transition"
                     title="Configure Next Term Date, Form Master, and Principal remarks for this batch"
@@ -4391,13 +4692,14 @@ export default function TerminalResultPreparationTab({
                             <th className="p-3">Student Name</th>
                             <th className="p-3 text-center">Current Status</th>
                             <th className="p-3 w-36 text-center">Overall Average %</th>
+                            <th className="p-3 min-w-[230px]">Performance &amp; Remark (Editable)</th>
                             <th className="p-3 w-36 text-center">Decision</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800/60">
                           {cohortStudents.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="p-8 text-center text-slate-500">
+                              <td colSpan={8} className="p-8 text-center text-slate-500">
                                 No registered students found for {batchClass}. You can register students in the
                                 Student Registry tab or use the &ldquo;Paste from Excel&rdquo; tab above.
                               </td>
@@ -4414,7 +4716,13 @@ export default function TerminalResultPreparationTab({
                               const isUploaded = Boolean(existing);
                               const currentVal = rosterInputs[st.admNo]?.average ?? (isUploaded ? String(existing?.average || "") : "");
                               const numAvg = parseFloat(currentVal);
+                              const effectiveRosterAvg = !isNaN(numAvg) ? numAvg : 70;
                               const gradeInfo = !isNaN(numAvg) ? computeGradeAndRemark(numAvg, gradeStandards) : null;
+                              const matchedRemarkInfo = resolvePerformanceRemark(
+                                effectiveRosterAvg,
+                                remarkTemplates,
+                                { studentName: st.fullName, className: st.currentClass || batchClass }
+                              );
 
                               return (
                                 <tr
@@ -4499,6 +4807,55 @@ export default function TerminalResultPreparationTab({
                                           {gradeInfo.grade}
                                         </span>
                                       )}
+                                    </div>
+                                  </td>
+                                  <td className="p-3">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between gap-1.5">
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-950/90 border border-indigo-700/80 text-indigo-200">
+                                          {matchedRemarkInfo.tier.label}
+                                        </span>
+                                        {rosterInputs[st.admNo]?.remark !== undefined && (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setRosterInputs((prev) => ({
+                                                ...prev,
+                                                [st.admNo]: {
+                                                  ...(prev[st.admNo] || {}),
+                                                  remark: undefined,
+                                                },
+                                              }))
+                                            }
+                                            className="text-[9px] text-amber-400 hover:underline"
+                                          >
+                                            Reset Template
+                                          </button>
+                                        )}
+                                      </div>
+                                      <input
+                                        type="text"
+                                        value={
+                                          rosterInputs[st.admNo]?.remark ??
+                                          (isUploaded ? existing?.teacherRemark || matchedRemarkInfo.teacherRemark : matchedRemarkInfo.teacherRemark)
+                                        }
+                                        onChange={(e) => {
+                                          const txt = e.target.value;
+                                          setRosterInputs((prev) => ({
+                                            ...prev,
+                                            [st.admNo]: {
+                                              ...(prev[st.admNo] || {}),
+                                              remark: txt,
+                                            },
+                                          }));
+                                          if (!selectedRosterAdmNos.has(st.admNo)) {
+                                            setSelectedRosterAdmNos((prev) => new Set(prev).add(st.admNo));
+                                          }
+                                        }}
+                                        placeholder={matchedRemarkInfo.teacherRemark}
+                                        title={`Principal Remark: ${matchedRemarkInfo.principalRemark}`}
+                                        className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded-lg text-[11px] text-slate-200 focus:border-indigo-500 focus:outline-none"
+                                      />
                                     </div>
                                   </td>
                                   <td className="p-3 text-center">
@@ -4839,6 +5196,7 @@ export default function TerminalResultPreparationTab({
                               <th className="p-3">Student Name</th>
                               <th className="p-3">Class</th>
                               <th className="p-3 text-center">Average %</th>
+                              <th className="p-3 text-center">Performance Remark Tier</th>
                               <th className="p-3 text-center">Decision</th>
                               <th className="p-3 text-center">Chunk</th>
                               <th className="p-3 text-center">Status</th>
@@ -4853,7 +5211,7 @@ export default function TerminalResultPreparationTab({
                               if (currentSlice.length === 0) {
                                 return (
                                   <tr>
-                                    <td colSpan={8} className="p-6 text-center text-slate-500 text-xs">
+                                    <td colSpan={9} className="p-6 text-center text-slate-500 text-xs">
                                       No students match the current filter.
                                     </td>
                                   </tr>
@@ -4894,6 +5252,22 @@ export default function TerminalResultPreparationTab({
                                     </td>
                                     <td className="p-3 text-center font-bold text-emerald-400">
                                       {r.average}%
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      {(() => {
+                                        const matched = resolvePerformanceRemark(r.average, remarkTemplates, {
+                                          studentName: r.studentName,
+                                          className: r.className || batchClass,
+                                        });
+                                        return (
+                                          <span
+                                            className="px-2 py-0.5 rounded-full bg-indigo-950/90 border border-indigo-700/80 text-indigo-200 text-[10px] font-bold"
+                                            title={`Teacher: ${matched.teacherRemark}\nPrincipal: ${matched.principalRemark}`}
+                                          >
+                                            {matched.tier.label}
+                                          </span>
+                                        );
+                                      })()}
                                     </td>
                                     <td className="p-3 text-center text-slate-300">
                                       {r.decision}
@@ -5033,6 +5407,16 @@ export default function TerminalResultPreparationTab({
           </div>
         </div>
       )}
+
+      <RemarkTemplatesModal
+        isOpen={isRemarkModalOpen}
+        onClose={() => setIsRemarkModalOpen(false)}
+        templates={remarkTemplates}
+        onSave={handleSaveRemarkTemplates}
+        isSaving={isSavingRemarkTemplates}
+        feedbackMsg={remarkTemplatesFeedback}
+      />
+      <ToastBanner toast={actionToast} onDismiss={() => setActionToast(null)} />
     </div>
   );
 }

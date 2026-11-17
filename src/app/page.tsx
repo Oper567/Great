@@ -184,13 +184,14 @@ export default function HomePage() {
                 src={slide.image}
                 alt=""
                 aria-hidden="true"
-                fill
+                width={1600}
+                height={900}
                 priority={idx === 0}
                 fetchPriority={idx === 0 ? "high" : "low"}
                 loading={idx === 0 ? undefined : "lazy"}
                 decoding="async"
                 sizes="100vw"
-                className="object-cover object-center"
+                className="absolute inset-0 w-full h-full object-cover object-center"
               />
               {/* Editorial High-Contrast Scrim */}
               <div className="absolute inset-0 bg-gradient-to-r from-primary-950/95 via-primary-950/80 to-primary-950/45" />
@@ -363,11 +364,12 @@ export default function HomePage() {
                 <Image
                   src="/assets/images/campus-courtyard.webp"
                   alt="Great-Favour Montessori School Courtyard and Scholars"
-                  fill
+                  width={800}
+                  height={600}
                   loading="lazy"
                   decoding="async"
                   sizes="(max-width: 1024px) 100vw, 42vw"
-                  className="object-cover editorial-img-zoom"
+                  className="absolute inset-0 w-full h-full object-cover editorial-img-zoom"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary-950/75 via-transparent to-transparent" />
                 <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 text-white">
@@ -520,11 +522,12 @@ export default function HomePage() {
                     <Image
                       src={div.image}
                       alt={div.title}
-                      fill
+                      width={640}
+                      height={480}
                       loading="lazy"
                       decoding="async"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover editorial-img-zoom"
+                      className="absolute inset-0 w-full h-full object-cover editorial-img-zoom"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
                     <span className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded bg-primary-950/90 text-secondary-400 text-[10px] sm:text-[11px] font-bold tracking-wide">

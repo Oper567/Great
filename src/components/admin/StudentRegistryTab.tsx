@@ -34,6 +34,7 @@ import {
   formatClassWithArm,
   doesStudentMatchClassFilter,
 } from "@/lib/cbt-utils";
+import { ToastBanner, ToastFeedbackState } from "@/components/ui/ToastBanner";
 
 interface Props {
   initialStudents: any[];
@@ -84,6 +85,15 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
 
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [actionToast, setActionToast] = useState<ToastFeedbackState | null>(null);
+  const showToast = (type: "success" | "error", text: string, durationMs = 3600) => {
+    setActionToast({ type, text });
+    if (durationMs > 0) {
+      setTimeout(() => {
+        setActionToast((prev) => (prev?.text === text ? null : prev));
+      }, durationMs);
+    }
+  };
 
   const openSingleModal = () => {
     setEditingStudentId(null);
@@ -154,9 +164,12 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
         formData.append("studentId", String(editingStudentId));
         const res = await updateStudentAction(formData);
         if (!res.success) {
-          setFeedback({ type: "error", text: res.error || "Failed to update student." });
+          const errMsg = res.error || "Failed to update student.";
+          setFeedback({ type: "error", text: errMsg });
+          showToast("error", errMsg);
         } else {
-          setFeedback({ type: "success", text: "Student updated successfully!" });
+          setFeedback({ type: "success", text: "Updated! Student record saved successfully." });
+          showToast("success", "Updated! Student record saved.");
           setStudents((prev) =>
             prev.map((s) =>
               s.id === editingStudentId
@@ -172,9 +185,12 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
       } else {
         const res = await createStudentAction(formData);
         if (!res.success) {
-          setFeedback({ type: "error", text: res.error || "Failed to register student." });
+          const errMsg = res.error || "Failed to register student.";
+          setFeedback({ type: "error", text: errMsg });
+          showToast("error", errMsg);
         } else {
-          setFeedback({ type: "success", text: `Student registered with RegNo: ${res.student.admNo}` });
+          setFeedback({ type: "success", text: `Created! Student registered with RegNo: ${res.student.admNo}` });
+          showToast("success", `Created! Student registered (${res.student.admNo}).`);
           setStudents((prev) => [res.student, ...prev]);
           setTimeout(() => {
             setIsSingleModalOpen(false);
@@ -200,9 +216,13 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
     startTransition(async () => {
       const res = await generateBatchStudentsAction(formData);
       if (!res.success) {
-        setFeedback({ type: "error", text: res.error || "Failed to batch generate students." });
+        const errMsg = res.error || "Failed to batch generate students.";
+        setFeedback({ type: "error", text: errMsg });
+        showToast("error", errMsg);
       } else {
-        setFeedback({ type: "success", text: `Generated ${res.count} candidate RegNos for ${batchClass}${effectiveBatchArm ? ` (${effectiveBatchArm})` : ""}!` });
+        const okMsg = `Created ${res.count} candidate RegNos for ${batchClass}${effectiveBatchArm ? ` (${effectiveBatchArm})` : ""}!`;
+        setFeedback({ type: "success", text: okMsg });
+        showToast("success", `Created ${res.count} candidate RegNos!`);
         if (res.students && res.students.length > 0) {
           setStudents((prev) => [...res.students!, ...prev]);
         }
@@ -220,8 +240,9 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
       const res = await deleteStudentAction(id);
       if (res.success) {
         setStudents((prev) => prev.filter((s) => s.id !== id));
+        showToast("success", "Deleted! Student record removed.");
       } else {
-        alert(res.error || "Failed to delete student.");
+        showToast("error", res.error || "Failed to delete student.");
       }
     });
   };
@@ -254,6 +275,7 @@ export default function StudentRegistryTab({ initialStudents, onPrepareResult }:
 
   return (
     <div className="space-y-6">
+      <ToastBanner toast={actionToast} onDismiss={() => setActionToast(null)} />
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-lg">
         <div>

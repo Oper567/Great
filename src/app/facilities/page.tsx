@@ -9,7 +9,6 @@ import {
   Sparkles,
   Activity,
   Trophy,
-  ChevronRight,
 } from "lucide-react";
 
 export default function FacilitiesPage() {
@@ -31,13 +30,6 @@ export default function FacilitiesPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-primary-950 via-primary-950/95 to-primary-950/80" />
         </div>
         <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-12 relative z-10">
-          <nav className="flex items-center gap-2 text-xs text-slate-300 mb-3">
-            <Link href="/" className="hover:text-secondary-400 transition">
-              Home
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
-            <span className="text-secondary-400 font-semibold">Campus &amp; Facilities</span>
-          </nav>
           <div className="max-w-3xl space-y-3 reveal-init reveal-fade-up delay-100">
             <div className="flex items-center gap-2.5">
               <span className="w-8 h-[2px] bg-secondary-400" />
@@ -76,10 +68,12 @@ export default function FacilitiesPage() {
                   <Image
                     src="/assets/images/ict-lab.webp"
                     alt="Great-Favour Montessori School Modern ICT Center"
-                    fill
+                    width={800}
+                    height={600}
                     loading="lazy"
                     decoding="async"
-                    className="object-cover editorial-img-zoom"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="absolute inset-0 w-full h-full object-cover editorial-img-zoom"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <span className="absolute bottom-2 left-2.5 text-[10px] font-bold text-white bg-primary-950/90 px-2 py-0.5 rounded">
@@ -109,10 +103,12 @@ export default function FacilitiesPage() {
                   <Image
                     src="/assets/images/science-lab.webp"
                     alt="Great-Favour Montessori School Advanced Science Laboratories"
-                    fill
+                    width={800}
+                    height={600}
                     loading="lazy"
                     decoding="async"
-                    className="object-cover editorial-img-zoom"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="absolute inset-0 w-full h-full object-cover editorial-img-zoom"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <span className="absolute bottom-2 left-2.5 text-[10px] font-bold text-white bg-accent-green-800/90 px-2 py-0.5 rounded">
@@ -142,10 +138,12 @@ export default function FacilitiesPage() {
                   <Image
                     src="/assets/images/classroom.webp"
                     alt="Great-Favour Montessori School Eco-Friendly Learning Environment"
-                    fill
+                    width={800}
+                    height={600}
                     loading="lazy"
                     decoding="async"
-                    className="object-cover object-center editorial-img-zoom"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="absolute inset-0 w-full h-full object-cover object-center editorial-img-zoom"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <span className="absolute bottom-2 left-2.5 text-[10px] font-bold text-white bg-accent-green-800/90 px-2 py-0.5 rounded">
